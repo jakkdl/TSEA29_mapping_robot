@@ -96,8 +96,10 @@ short command_start()
     return 0;
 }
 
-short navigate_forward(short dir) {
-    switch (dir) {
+short navigate_forward(short dir)
+{
+    switch (dir)
+    {
         case 0:
             NAVIGATION_GOAL_X += 1;
             break;
@@ -127,19 +129,23 @@ short command_set_target_square(short id)
     short dir;
 
     // right
-    if (CURRENT_HEADING < FULL_TURN/8 || CURRENT_HEADING > FULL_TURN*7/8) {
+    if (CURRENT_HEADING < FULL_TURN/8 || CURRENT_HEADING > FULL_TURN*7/8)
+    {
         dir = 0;
     }
     // up
-    else if (CURRENT_HEADING < FULL_TURN*3/8) {
+    else if (CURRENT_HEADING < FULL_TURN*3/8)
+    {
         dir = 1;
     }
     // left
-    else if (CURRENT_HEADING < FULL_TURN*5/8) {
+    else if (CURRENT_HEADING < FULL_TURN*5/8)
+    {
         dir = 2;
     }
     // down
-    else {
+    else
+    {
         dir = 3;
     }
 
@@ -169,6 +175,7 @@ short command_set_target_square(short id)
     }
 }
 
-int main() {
+int main()
+{
     return 0;
 }
