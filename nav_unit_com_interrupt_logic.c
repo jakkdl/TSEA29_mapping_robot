@@ -1,32 +1,32 @@
 #include "robot.h"
 #include "navigation_unit.h"
-
+#include "nav_unit_com_interrupt_logic.h"
 
 //assumes data is not corrupt, does not check parity
 uint8_t communication_unit_interrupt(struct Com_packet* data) {
     // verify valid data packet count
-    if (data->adress != ADR_DEBUG)
+    if (data->address != debug)
     {
-        if (data->packet_count != ADR_DATA_PACKETS[data->adress])
+        if (data->packet_count != ADR_DATA_PACKETS[data->address])
         {
             //Invalid number of data packets
             return -1;
         }
     }
 
-    if (data->adress == ADR_PARITY_ERROR)
+    if (data->address == parity_error)
     {
-        //send the data associated with adress data_packets[0];
+        //send the data associated with address data_packets[0];
         return resend(data->data_packets[0]);
     }
 
-    switch (data->adress)
+    switch (data->address)
     {
-        case ADR_COMMAND:
-            return handle_command(data->data_packets[0]);
-        case ADR_PD_KP:
+        case command:
+            return handle_command((enum directionID) data->data_packets[0]);
+        case pd_kp:
             return set_pd_kp(data->data_packets[0]);
-        case ADR_PD_KD:
+        case pd_kd:
             return set_pd_kd(data->data_packets[0]);
         default:
             return -1;
@@ -36,16 +36,16 @@ uint8_t communication_unit_interrupt(struct Com_packet* data) {
 
 
 
-uint8_t handle_command(uint8_t id)
+uint8_t handle_command(enum directionID id)
 {
     switch (id)
     {
-        case ID_STOP:
+        case stop:
             return command_stop();
-        case ID_START:
+        case start:
             return command_start();
         default:
-            if (navigationMode != NAVIGATION_MODE_MANUAL)
+            if (navigationMode != manual)
             {
                 return -1;
             }
@@ -55,9 +55,9 @@ uint8_t handle_command(uint8_t id)
 }
 
 
-// resend the data last sent with that adress
+// resend the data last sent with that address
 // might not be needed
-uint8_t resend(uint8_t _adress)
+uint8_t resend(uint8_t _address)
 {
     return -1;
 }
@@ -82,8 +82,8 @@ uint8_t command_stop()
 {
     wheelSpeedLeft = 0;
     wheelSpeedRight = 0;
-    navigationGoalType = NAVIGATION_GOAL_NONE;
-    navigationMode = NAVIGATION_MODE_MANUAL;
+    navigationGoalType = none;
+    navigationMode = manual;
     return 0;
 }
 
@@ -91,8 +91,8 @@ uint8_t command_stop()
 // Set navigation to automatic
 uint8_t command_start()
 {
-    navigationGoalType = NAVIGATION_GOAL_NONE;
-    navigationMode = NAVIGATION_MODE_AUTONOMOUS;
+    navigationGoalType = none;
+    navigationMode = autonomous;
     return 0;
 }
 
@@ -115,7 +115,7 @@ uint8_t navigate_forward(uint8_t dir)
         default:
             return -1;
     }
-    navigationGoalType = NAVIGATION_GOAL_MOVE;
+    navigationGoalType = move;
     return 0;
 }
 
@@ -153,22 +153,22 @@ uint8_t command_set_target_square(uint8_t id)
 
     switch (id)
     {
-        case ID_FORWARD:
+        case forward:
             return navigate_forward(dir);
-        case ID_BACKWARD:
+        case backward:
             //going backward is the same as a half-turn and forward
             return navigate_forward((dir+2) % 4);
-        case ID_FW_LEFT:
+        case fw_left:
             return navigate_forward((dir+1) % 4);
-        case ID_FW_RIGHT:
+        case fw_right:
             return navigate_forward((dir+3) % 4);
-        case ID_TURN_LEFT:
+        case turn_left:
             navigationGoalHeading = ((dir+1) % 4) / 4 * FULL_TURN;
-            navigationGoalType = NAVIGATION_GOAL_TURN;
+            navigationGoalType = turn;
             return 0;
-        case ID_TURN_RIGHT:
+        case turn_right:
             navigationGoalHeading = ((dir+3) % 4) / 4 * FULL_TURN;
-            navigationGoalType = NAVIGATION_GOAL_TURN;
+            navigationGoalType = turn;
             return 0;
         default:
             return -1;
