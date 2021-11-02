@@ -7,47 +7,38 @@
 #include "robot.h"
 
 //TODO make these Enums
-#define NAVIGATION_MODE_MANUAL 0
-#define NAVIGATION_MODE_AUTONOMOUS 1
+enum NavigationMode {
+    manual,
+    autonomous
+};
 
-#define DIR_FORWARD 0
-#define DIR_BACKWARD 1
+enum Direction {
+    dir_forward,
+    dir_backward
+};
 
 // Unsure how to represent this, currently broke it into
+enum NavigationGoal {
 // no goal set
-#define NAVIGATION_GOAL_NONE 0
+    none,
 // We only want to change our direction to NAVIGATION_GOAL_HEADING
 // ignore NAVIGATION_GOAL_X & Y
-#define NAVIGATION_GOAL_TURN 1
+    turn,
 // We want to move to NAVIGATION_GOAL_X & Y, and might need to turn.
 // ignore NAVIGATION_GOAL_HEADING
-#define NAVIGATION_GOAL_MOVE 2
+    move
+};
 
 #define FULL_TURN 65536 // 1 << 16
 
 #define grid_to_mm(coord) { (coord)*250 + 125 }
 
-struct Com_packet
-{
-    uint8_t adress;
-    uint8_t packet_count;
-    uint8_t data_packets[7];
-};
-
-
-uint8_t handle_command(uint8_t id);
-uint8_t resend(uint8_t adress);
-uint8_t set_pd_kd(uint8_t kd);
-uint8_t set_pd_kp(uint8_t kp);
-uint8_t command_stop();
-uint8_t command_start();
-uint8_t command_set_target_square(uint8_t id);
 
 
 /* GLOBAL VARIABLES */
 
 // navigation mode manual/auto
-uint8_t navigationMode = NAVIGATION_MODE_MANUAL;
+enum NavigationMode navigationMode = manual;
 
 // PD-constants
 uint8_t pdkd = 0;
@@ -68,8 +59,8 @@ uint16_t currentPosX = grid_to_mm(24);
 uint16_t currentPosY = 0;
 
 // We can either use bool + unsigned
-bool wheelDirLeft = DIR_FORWARD;
-bool wheelDirRight = DIR_FORWARD;
+enum Direction wheelDirLeft = dir_forward;
+enum Direction wheelDirRight = dir_forward;
 uint8_t wheelSpeedLeft = 0;
 uint8_t wheelSpeedRight = 0;
 
@@ -80,7 +71,7 @@ uint8_t wheelSpeedRight = 0;
 // and/or what the navigation algorithm wanna use.
 
 // Current navigation goal
-uint8_t navigationGoalType = NAVIGATION_GOAL_NONE;
+enum NavigationGoal navigationGoalType = none;
 uint8_t navigationGoalX = 24;
 uint8_t navigationGoalY = 0;
 uint8_t navigationGoalHeading = 0;
