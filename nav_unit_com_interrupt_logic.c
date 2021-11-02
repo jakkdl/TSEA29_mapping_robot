@@ -45,7 +45,7 @@ uint8_t handle_command(uint8_t id)
         case ID_START:
             return command_start();
         default:
-            if (NAVIGATION_MODE != NAVIGATION_MODE_MANUAL)
+            if (navigationMode != NAVIGATION_MODE_MANUAL)
             {
                 return -1;
             }
@@ -64,13 +64,13 @@ uint8_t resend(uint8_t _adress)
 // Set the PD-constant KP
 uint8_t set_pd_kp(uint8_t kp)
 {
-    PD_KP = kp;
+    pdkp = kp;
     return 0;
 }
 // Set the PD-constant KD
 uint8_t set_pd_kd(uint8_t kd)
 {
-    PD_KD = kd;
+    pdkd = kd;
     return 0;
 }
 
@@ -80,10 +80,10 @@ uint8_t set_pd_kd(uint8_t kd)
 // set navigation to manual
 uint8_t command_stop()
 {
-    WHEEL_SPEED_LEFT = 0;
-    WHEEL_SPEED_RIGHT = 0;
-    NAVIGATION_GOAL_TYPE = NAVIGATION_GOAL_NONE;
-    NAVIGATION_MODE = NAVIGATION_MODE_MANUAL;
+    wheelSpeedLeft = 0;
+    wheelSpeedRight = 0;
+    navigationGoalType = NAVIGATION_GOAL_NONE;
+    navigationMode = NAVIGATION_MODE_MANUAL;
     return 0;
 }
 
@@ -91,8 +91,8 @@ uint8_t command_stop()
 // Set navigation to automatic
 uint8_t command_start()
 {
-    NAVIGATION_GOAL_TYPE = NAVIGATION_GOAL_NONE;
-    NAVIGATION_MODE = NAVIGATION_MODE_AUTONOMOUS;
+    navigationGoalType = NAVIGATION_GOAL_NONE;
+    navigationMode = NAVIGATION_MODE_AUTONOMOUS;
     return 0;
 }
 
@@ -101,21 +101,21 @@ uint8_t navigate_forward(uint8_t dir)
     switch (dir)
     {
         case 0:
-            NAVIGATION_GOAL_X += 1;
+            navigationGoalX += 1;
             break;
         case 1:
-            NAVIGATION_GOAL_Y += 1;
+            navigationGoalY += 1;
             break;
         case 2:
-            NAVIGATION_GOAL_X -= 1;
+            navigationGoalX -= 1;
             break;
         case 3:
-            NAVIGATION_GOAL_Y -= 1;
+            navigationGoalY -= 1;
             break;
         default:
             return -1;
     }
-    NAVIGATION_GOAL_TYPE = NAVIGATION_GOAL_MOVE;
+    navigationGoalType = NAVIGATION_GOAL_MOVE;
     return 0;
 }
 
@@ -129,17 +129,17 @@ uint8_t command_set_target_square(uint8_t id)
     uint8_t dir;
 
     // right
-    if (CURRENT_HEADING < FULL_TURN/8 || CURRENT_HEADING > FULL_TURN*7/8)
+    if (currentHeading < FULL_TURN/8 || currentHeading > FULL_TURN*7/8)
     {
         dir = 0;
     }
     // up
-    else if (CURRENT_HEADING < FULL_TURN*3/8)
+    else if (currentHeading < FULL_TURN*3/8)
     {
         dir = 1;
     }
     // left
-    else if (CURRENT_HEADING < FULL_TURN*5/8)
+    else if (currentHeading < FULL_TURN*5/8)
     {
         dir = 2;
     }
@@ -163,12 +163,12 @@ uint8_t command_set_target_square(uint8_t id)
         case ID_FW_RIGHT:
             return navigate_forward((dir+3) % 4);
         case ID_TURN_LEFT:
-            NAVIGATION_GOAL_HEADING = ((dir+1) % 4) / 4 * FULL_TURN;
-            NAVIGATION_GOAL_TYPE = NAVIGATION_GOAL_TURN;
+            navigationGoalHeading = ((dir+1) % 4) / 4 * FULL_TURN;
+            navigationGoalType = NAVIGATION_GOAL_TURN;
             return 0;
         case ID_TURN_RIGHT:
-            NAVIGATION_GOAL_HEADING = ((dir+3) % 4) / 4 * FULL_TURN;
-            NAVIGATION_GOAL_TYPE = NAVIGATION_GOAL_TURN;
+            navigationGoalHeading = ((dir+3) % 4) / 4 * FULL_TURN;
+            navigationGoalType = NAVIGATION_GOAL_TURN;
             return 0;
         default:
             return -1;
