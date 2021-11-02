@@ -1,32 +1,32 @@
 #include "robot.h"
 #include "navigation_unit.h"
-
+#include "nav_unit_com_interrupt_logic.h"
 
 //assumes data is not corrupt, does not check parity
-short communication_unit_interrupt(struct Com_packet* data) {
+uint8_t communication_unit_interrupt(struct Com_packet* data) {
     // verify valid data packet count
-    if (data->adress != ADR_DEBUG)
+    if (data->address != debug)
     {
-        if (data->packet_count != ADR_DATA_PACKETS[data->adress])
+        if (data->packet_count != ADR_DATA_PACKETS[data->address])
         {
             //Invalid number of data packets
             return -1;
         }
     }
 
-    if (data->adress == ADR_PARITY_ERROR)
+    if (data->address == parity_error)
     {
-        //send the data associated with adress data_packets[0];
+        //send the data associated with address data_packets[0];
         return resend(data->data_packets[0]);
     }
 
-    switch (data->adress)
+    switch (data->address)
     {
-        case ADR_COMMAND:
-            return handle_command(data->data_packets[0]);
-        case ADR_PD_KP:
+        case command:
+            return handle_command((enum directionID) data->data_packets[0]);
+        case pd_kp:
             return set_pd_kp(data->data_packets[0]);
-        case ADR_PD_KD:
+        case pd_kd:
             return set_pd_kd(data->data_packets[0]);
         default:
             return -1;
@@ -36,16 +36,16 @@ short communication_unit_interrupt(struct Com_packet* data) {
 
 
 
-short handle_command(short id)
+uint8_t handle_command(enum directionID id)
 {
     switch (id)
     {
-        case ID_STOP:
+        case stop:
             return command_stop();
-        case ID_START:
+        case start:
             return command_start();
         default:
-            if (NAVIGATION_MODE != NAVIGATION_MODE_MANUAL)
+            if (navigationMode != manual)
             {
                 return -1;
             }
@@ -55,22 +55,22 @@ short handle_command(short id)
 }
 
 
-// resend the data last sent with that adress
+// resend the data last sent with that address
 // might not be needed
-short resend(short _adress)
+uint8_t resend(uint8_t _address)
 {
     return -1;
 }
 // Set the PD-constant KP
-short set_pd_kp(short kp)
+uint8_t set_pd_kp(uint8_t kp)
 {
-    PD_KP = kp;
+    pdkp = kp;
     return 0;
 }
 // Set the PD-constant KD
-short set_pd_kd(short kd)
+uint8_t set_pd_kd(uint8_t kd)
 {
-    PD_KD = kd;
+    pdkd = kd;
     return 0;
 }
 
@@ -78,68 +78,68 @@ short set_pd_kd(short kd)
 // Stop both wheels
 // clear the navigation goal
 // set navigation to manual
-short command_stop()
+uint8_t command_stop()
 {
-    WHEEL_SPEED_LEFT = 0;
-    WHEEL_SPEED_RIGHT = 0;
-    NAVIGATION_GOAL_TYPE = NAVIGATION_GOAL_NONE;
-    NAVIGATION_MODE = NAVIGATION_MODE_MANUAL;
+    wheelSpeedLeft = 0;
+    wheelSpeedRight = 0;
+    navigationGoalType = none;
+    navigationMode = manual;
     return 0;
 }
 
 // Start exploring the maze autonomously
 // Set navigation to automatic
-short command_start()
+uint8_t command_start()
 {
-    NAVIGATION_GOAL_TYPE = NAVIGATION_GOAL_NONE;
-    NAVIGATION_MODE = NAVIGATION_MODE_AUTONOMOUS;
+    navigationGoalType = none;
+    navigationMode = autonomous;
     return 0;
 }
 
-short navigate_forward(short dir)
+uint8_t navigate_forward(uint8_t dir)
 {
     switch (dir)
     {
         case 0:
-            NAVIGATION_GOAL_X += 1;
+            navigationGoalX += 1;
             break;
         case 1:
-            NAVIGATION_GOAL_Y += 1;
+            navigationGoalY += 1;
             break;
         case 2:
-            NAVIGATION_GOAL_X -= 1;
+            navigationGoalX -= 1;
             break;
         case 3:
-            NAVIGATION_GOAL_Y -= 1;
+            navigationGoalY -= 1;
             break;
         default:
             return -1;
     }
-    NAVIGATION_GOAL_TYPE = NAVIGATION_GOAL_MOVE;
+    navigationGoalType = move;
     return 0;
 }
 
-short command_set_target_square(short id)
+uint8_t command_set_target_square(uint8_t id)
 {
     // get current heading, rounded to nearest quarter turn
     // 0 = straight right
     // FULL_TURN / 2 = straight left
     // FULL_TURN / 4 = straight up
     // FULL_TURN * 3 / 4 = straight down
-    short dir;
+    uint8_t dir;
 
     // right
-    if (CURRENT_HEADING < FULL_TURN/8 || CURRENT_HEADING > FULL_TURN*7/8)
+    if (currentHeading < FULL_TURN/8 || currentHeading > FULL_TURN*7/8)
     {
         dir = 0;
     }
     // up
-    else if (CURRENT_HEADING < FULL_TURN*3/8)
+    else if (currentHeading < FULL_TURN*3/8)
     {
         dir = 1;
     }
     // left
-    else if (CURRENT_HEADING < FULL_TURN*5/8)
+    else if (currentHeading < FULL_TURN*5/8)
     {
         dir = 2;
     }
@@ -153,29 +153,24 @@ short command_set_target_square(short id)
 
     switch (id)
     {
-        case ID_FORWARD:
+        case forward:
             return navigate_forward(dir);
-        case ID_BACKWARD:
+        case backward:
             //going backward is the same as a half-turn and forward
             return navigate_forward((dir+2) % 4);
-        case ID_FW_LEFT:
+        case fw_left:
             return navigate_forward((dir+1) % 4);
-        case ID_FW_RIGHT:
+        case fw_right:
             return navigate_forward((dir+3) % 4);
-        case ID_TURN_LEFT:
-            NAVIGATION_GOAL_HEADING = ((dir+1) % 4) / 4 * FULL_TURN;
-            NAVIGATION_GOAL_TYPE = NAVIGATION_GOAL_TURN;
+        case turn_left:
+            navigationGoalHeading = ((dir+1) % 4) / 4 * FULL_TURN;
+            navigationGoalType = turn;
             return 0;
-        case ID_TURN_RIGHT:
-            NAVIGATION_GOAL_HEADING = ((dir+3) % 4) / 4 * FULL_TURN;
-            NAVIGATION_GOAL_TYPE = NAVIGATION_GOAL_TURN;
+        case turn_right:
+            navigationGoalHeading = ((dir+3) % 4) / 4 * FULL_TURN;
+            navigationGoalType = turn;
             return 0;
         default:
             return -1;
     }
-}
-
-int main()
-{
-    return 0;
 }

@@ -1,69 +1,83 @@
+// Global data variables and constants used across the whole navigation unit
+
 #ifndef NAVIGATION_UNIT_H
 #define NAVIGATION_UNIT_H
 #include <stdbool.h>
 
 #include "robot.h"
 
-#define NAVIGATION_MODE_MANUAL 0
-#define NAVIGATION_MODE_AUTONOMOUS 1
+//TODO make these Enums
+enum NavigationMode {
+    manual,
+    autonomous
+};
 
-#define DIR_FORWARD 0
-#define DIR_BACKWARD 1
+enum Direction {
+    dir_forward,
+    dir_backward
+};
 
+// Unsure how to represent this, currently broke it into
+enum NavigationGoal {
+// no goal set
+    none,
+// We only want to change our direction to NAVIGATION_GOAL_HEADING
+// ignore NAVIGATION_GOAL_X & Y
+    turn,
+// We want to move to NAVIGATION_GOAL_X & Y, and might need to turn.
+// ignore NAVIGATION_GOAL_HEADING
+    move
+};
 
 #define FULL_TURN 65536 // 1 << 16
 
-
-struct Com_packet
-{
-    short adress;
-    short packet_count;
-    short data_packets[7];
-};
+#define grid_to_mm(coord) { (coord)*250 + 125 }
 
 
-short handle_command(short id);
-short resend(short adress);
-short set_pd_kd(short kd);
-short set_pd_kp(short kp);
-short command_stop();
-short command_start();
-short command_set_target_square(short id);
 
-short NAVIGATION_MODE = NAVIGATION_MODE_MANUAL;
-short PD_KD = 0;
-short PD_KP = 0;
+/* GLOBAL VARIABLES */
 
-// Don't yet know how this is specified for the competition
-int CURRENT_HEADING = FULL_TURN/4;
-short CURRENT_POS_X = 24;
-short CURRENT_POS_Y = 0;
+// navigation mode manual/auto
+enum NavigationMode navigationMode = manual;
+
+// PD-constants
+uint8_t pdkd = 0;
+uint8_t pdkp = 0;
+
+// Current heading, specified as a fraction of the maximal value (FULL_TURN) for the
+// equivalent fraction around a full turn. So e.g. 1/3 of FULL_TURN is 1/3 turn to the left.
+// right = 0
+// up   = FULL_TURN/4   = 0b01 << 14 = 16384 = pow(2, 14)
+// left = FULL_TURN/2   = 0b10 << 14 = 32768 = pow(2, 15)
+// down = FULL_TURN*3/4 = 0b11 << 14 = 49152 pow(2, 14) + pow(2, 15)
+// Don't yet know how the initial value of the heading is specified for the competition
+uint16_t currentHeading = FULL_TURN/4;
+
+// Current position in millimetre, relative to bottom left
+// We assume we start in the middle (square 24) in the X direction.
+uint16_t currentPosX = grid_to_mm(24);
+uint16_t currentPosY = 0;
 
 // We can either use bool + unsigned
-bool WHEEL_DIR_LEFT = DIR_FORWARD;
-bool WHEEL_DIR_RIGHT = DIR_FORWARD;
-unsigned short WHEEL_SPEED_LEFT = 0;
-unsigned short WHEEL_SPEED_RIGHT = 0;
+enum Direction wheelDirLeft = dir_forward;
+enum Direction wheelDirRight = dir_forward;
+uint8_t wheelSpeedLeft = 0;
+uint8_t wheelSpeedRight = 0;
 
 // or a signed value.
-//short WHEEL_SPEED_LEFT = 0;
-//short WHEEL_SPEED_RIGHT = 0;
+//int8_t WHEEL_SPEED_LEFT = 0;
+//int8_t WHEEL_SPEED_RIGHT = 0;
 // depending on what's easiest when translating to PWM values for the robot
+// and/or what the navigation algorithm wanna use.
 
-// Unsure how to represent this, currently broke it into
-// no goal set
-#define NAVIGATION_GOAL_NONE 0
-// We only want to change our direction to NAVIGATION_GOAL_HEADING
-// ignore NAVIGATION_GOAL_X & Y
-#define NAVIGATION_GOAL_TURN 1
-// We want to move to NAVIGATION_GOAL_X & Y, and might need to turn.
-// ignore NAVIGATION_GOAL_HEADING
-#define NAVIGATION_GOAL_MOVE 2
+// Current navigation goal
+enum NavigationGoal navigationGoalType = none;
+uint8_t navigationGoalX = 24;
+uint8_t navigationGoalY = 0;
+uint8_t navigationGoalHeading = 0;
 
-short NAVIGATION_GOAL_TYPE = NAVIGATION_GOAL_NONE;
-short NAVIGATION_GOAL_X = 24;
-short NAVIGATION_GOAL_Y = 0;
-short NAVIGATION_GOAL_HEADING = 0;
 
+// Map
+uint8_t navigationMap[49][25];
 
 #endif
