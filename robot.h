@@ -7,6 +7,7 @@
 //typedef int8_t short;
 //typedef int16_t int;
 
+//TODO Enums
 #define ADR_LIDAR_FORWARD   0
 #define ADR_LIDAR_BACKWARD  1
 #define ADR_IR_LEFTFRONT    2
