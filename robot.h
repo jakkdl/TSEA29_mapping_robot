@@ -24,7 +24,7 @@
 #define ADR_PD_KD           0xE
 #define ADR_PARITY_ERROR    0xF
 
-const short ADR_DATA_PACKETS[] = {
+const uint8_t ADR_DATA_PACKETS[] = {
     2,  //LIDAR_FORWARD
     2,  //LIDAR_BACKWARD
     2,  //IR_LEFTFRONT
