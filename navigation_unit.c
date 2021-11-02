@@ -3,7 +3,7 @@
 
 
 //assumes data is not corrupt, does not check parity
-short communication_unit_interrupt(struct Com_packet* data) {
+uint8_t communication_unit_interrupt(struct Com_packet* data) {
     // verify valid data packet count
     if (data->adress != ADR_DEBUG)
     {
@@ -36,7 +36,7 @@ short communication_unit_interrupt(struct Com_packet* data) {
 
 
 
-short handle_command(short id)
+uint8_t handle_command(uint8_t id)
 {
     switch (id)
     {
@@ -57,18 +57,18 @@ short handle_command(short id)
 
 // resend the data last sent with that adress
 // might not be needed
-short resend(short _adress)
+uint8_t resend(uint8_t _adress)
 {
     return -1;
 }
 // Set the PD-constant KP
-short set_pd_kp(short kp)
+uint8_t set_pd_kp(uint8_t kp)
 {
     PD_KP = kp;
     return 0;
 }
 // Set the PD-constant KD
-short set_pd_kd(short kd)
+uint8_t set_pd_kd(uint8_t kd)
 {
     PD_KD = kd;
     return 0;
@@ -78,7 +78,7 @@ short set_pd_kd(short kd)
 // Stop both wheels
 // clear the navigation goal
 // set navigation to manual
-short command_stop()
+uint8_t command_stop()
 {
     WHEEL_SPEED_LEFT = 0;
     WHEEL_SPEED_RIGHT = 0;
@@ -89,14 +89,14 @@ short command_stop()
 
 // Start exploring the maze autonomously
 // Set navigation to automatic
-short command_start()
+uint8_t command_start()
 {
     NAVIGATION_GOAL_TYPE = NAVIGATION_GOAL_NONE;
     NAVIGATION_MODE = NAVIGATION_MODE_AUTONOMOUS;
     return 0;
 }
 
-short navigate_forward(short dir)
+uint8_t navigate_forward(uint8_t dir)
 {
     switch (dir)
     {
@@ -119,14 +119,14 @@ short navigate_forward(short dir)
     return 0;
 }
 
-short command_set_target_square(short id)
+uint8_t command_set_target_square(uint8_t id)
 {
     // get current heading, rounded to nearest quarter turn
     // 0 = straight right
     // FULL_TURN / 2 = straight left
     // FULL_TURN / 4 = straight up
     // FULL_TURN * 3 / 4 = straight down
-    short dir;
+    uint8_t dir;
 
     // right
     if (CURRENT_HEADING < FULL_TURN/8 || CURRENT_HEADING > FULL_TURN*7/8)
@@ -173,9 +173,4 @@ short command_set_target_square(short id)
         default:
             return -1;
     }
-}
-
-int main()
-{
-    return 0;
 }
