@@ -1,39 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef struct
-{
-    int *array;
-    size_t used;
-    size_t size;
-} Array;
-
-void initArray(Array *a, size_t initialSize)
-{
-    a->array = malloc(initialSize * sizeof(int));
-    a->used = 0;
-    a->size = initialSize;
-}
-
-void insertArray(Array *a, int element)
-{
-    // a->used is the number of used entries, because a->array[a->used++] updates a->used only *after* the array has been accessed.
-    // Therefore a->used can go up to a->size
-    if (a->used == a->size)
-    {
-        a->size *= 2;
-        a->array = realloc(a->array, a->size * sizeof(int));
-    }
-    a->array[a->used++] = element;
-}
-
-void freeArray(Array *a)
-{
-    free(a->array);
-    a->array = NULL;
-    a->used = a->size = 0;
-}
-
 void start_exploring()
 {
 }
@@ -78,12 +45,101 @@ int unexplored_cells()
 {
 }
 
-void sample_search(int endPoint)
+void sample_search(int robotCoord[], int endPoint[])
 {
+    int queue[1000][3];
+    int adjacentCells[4][3];
     int counter = 0;
 
-    Array a;
-    int i;
+    queue[0][0] = endPoint[0];
+    queue[0][1] = endPoint[1];
+    queue[0][2] = counter;
+    int currentNode[] = queue[0];
+    counter++;
 
-    initArray(&a, 5);
+    for (int direction = 0; direction < 4; direction++)
+    {
+        for (int j = 0; j < 3; j++)
+        {
+            if (j < 2)
+            {
+                adjacentCells[direction][j] = get_adjacent_cell(direction, j, currentNode);
+            }
+            else
+            {
+                adjacentCells[direction][j] = counter;
+            }
+        }
+    }
+
+    for (int i = 0; i < 4; i++)
+    {
+        if (isWall(adjacentCells[i]))
+        {
+            //delete cell or mark the cell in some way so it doesn't get included
+        }
+        else
+        {
+        }
+    }
+}
+
+int get_adjacent_cell(int direction, int xy, int currentNode[])
+{
+    /*  each case returns the x & y coordinate for the adjacent cell separately.
+    direction == 0: left cell
+    direction == 1: upper cell
+    direction == 2: right cell
+    direction == 3: lower cell */
+
+    switch (direction)
+    {
+    case 0:
+        if (xy == 0)
+        {
+            return currentNode[0] - 1;
+        }
+        else
+        {
+            return currentNode[1];
+        }
+        break;
+    case 1:
+        if (xy == 0)
+        {
+            return currentNode[0];
+        }
+        else
+        {
+            return currentNode[1] - 1;
+        }
+        break;
+    case 2:
+        if (xy == 0)
+        {
+            return currentNode[0] + 1;
+        }
+        else
+        {
+            return currentNode[1];
+        }
+        break;
+    case 3:
+        if (xy == 0)
+        {
+            return currentNode[0];
+        }
+        else
+        {
+            return currentNode[1] + 1;
+        }
+        break;
+    }
+}
+int is_wall(int cell[])
+{
+}
+int main(void)
+{
+    sample_search();
 }
