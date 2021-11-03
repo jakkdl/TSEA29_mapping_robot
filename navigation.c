@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 void start_exploring()
 {
@@ -50,36 +51,66 @@ void sample_search(int robotCoord[], int endPoint[])
     int queue[1000][3];
     int adjacentCells[4][3];
     int counter = 0;
+    bool adjacentInQueue = false;
+    bool startPointInQueue = false;
+    int queueIndex = 0;
 
     queue[0][0] = endPoint[0];
     queue[0][1] = endPoint[1];
     queue[0][2] = counter;
-    int currentNode[] = queue[0];
     counter++;
 
-    for (int direction = 0; direction < 4; direction++)
+    while (queueIndex < sizeof(queue))
     {
-        for (int j = 0; j < 3; j++)
+        for (int direction = 0; direction < 4; direction++)
         {
-            if (j < 2)
+            for (int j = 0; j < 3; j++)
             {
-                adjacentCells[direction][j] = get_adjacent_cell(direction, j, currentNode);
-            }
-            else
-            {
-                adjacentCells[direction][j] = counter;
+                if (j < 2)
+                {
+                    adjacentCells[direction][j] = get_adjacent_cell(direction, j, queue[queueIndex]);
+                }
+                else
+                {
+                    adjacentCells[direction][j] = counter;
+                }
             }
         }
-    }
-
-    for (int i = 0; i < 4; i++)
-    {
-        if (isWall(adjacentCells[i]))
+        for (int i = 0; i < 4; i++)
         {
-            //delete cell or mark the cell in some way so it doesn't get included
+            if (!isWall(adjacentCells[i]))
+            {
+                for (int j = 0; j < sizeof(queue); j++)
+                {
+                    //Check if the queue contains the adjacent cell
+                    if (adjacentCells[i] == queue[j])
+                    {
+                        adjacentInQueue = true;
+                        break;
+                    }
+                }
+                if (!adjacentInQueue)
+                {
+                    queueIndex++;
+                    queue[queueIndex][0] = adjacentCells[i][0];
+                    queue[queueIndex][1] = adjacentCells[i][1];
+                    queue[queueIndex][2] = adjacentCells[i][2];
+                }
+                adjacentInQueue = false;
+            }
         }
-        else
+        for (int i = 0; i < sizeof(queue); i++)
         {
+            if (queue[i] == robotCoord)
+            {
+                startPointInQueue = true;
+                break;
+            }
+        }
+        if (!startPointInQueue)
+        {
+            queueIndex++;
+            counter++;
         }
     }
 }
