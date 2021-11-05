@@ -169,13 +169,21 @@ int get_adjacent_cell(int direction, int xy, int *currentCell)
     }
 }  */
 
-void follow_path(int **queue, int *robotPosition)
+void follow_path(int **queue)
 {
+    int rows = 4;
+    int cols = 3;
 
-    //int adjacentCells[4][3] = malloc(sizeof(adjacentCells));
-    //int traversableCells[4][3] = malloc(sizeof(traversableCells));
-    int **adjacentCells = calloc(4, sizeof(int *));
-    int **traversableCells = calloc(4, sizeof(int *));
+    //memory allocation
+    int robotPosition[] = {10, 3};
+    int **adjacentCells = malloc(rows * sizeof(int *));
+    int **traversableCells = malloc(rows * sizeof(int *));
+
+    for (int i = 0; i < rows; i++)
+    {
+        adjacentCells[i] = malloc(cols * sizeof(int));
+        traversableCells[i] = malloc(cols * sizeof(int));
+    }
 
     for (int direction = 0; direction < 4; direction++)
     {
@@ -191,8 +199,6 @@ void follow_path(int **queue, int *robotPosition)
             }
         }
     }
-    printf("%d ", adjacentCells[0][0]);
-
     for (int i = 0; i < sizeof(adjacentCells); i++)
     {
         for (int j = 0; j < sizeof(queue); i++)
@@ -216,31 +222,58 @@ void follow_path(int **queue, int *robotPosition)
             index = i;
         }
     }  */
+    printf("hej hej!");
+    //free memory
+    for (int i = 0; i < rows; i++)
+    {
+        free(adjacentCells[i]);
+        free(traversableCells[i]);
+    }
+    free(adjacentCells);
+    free(traversableCells);
 }
 
-void test(int *arr, int m, int n)
+void test(int rows, int cols, int **queue)
 {
-    for (int i = 0; i < m; i++)
-        for (int j = 0; j < n; j++)
-            printf("%d ", *((arr + i * n) + j));
+    for (int i = 0; i < rows; i++)
+    {
+        for (int j = 0; j < cols; j++)
+        {
+            printf("%d", queue[i][j]);
+        }
+        printf("\n");
+    }
 }
 
 int main(void)
 {
-    int **queue = malloc(3 * sizeof(int *));
-    for (int i = 0; i < 3; i++)
+    int rows = 3;
+    int cols = 3;
+    int robotPosition[] = {10, 3};
+    int **queue = malloc(rows * sizeof(int *));
+
+    for (int i = 0; i < rows; i++)
     {
-        queue[i] = malloc(3 * sizeof(int));
+        queue[i] = malloc(cols * sizeof(int));
     }
 
-    //int queue[3][3] = {{10, 4, 3}, {4, 5, 6}, {7, 8, 9}};
-    int m = 3, n = 3;
-    int robotPosition[] = {10, 3};
+    for (int i = 0, kk = 0; i < rows; i++)
+    {
+        for (int j = 0; j < cols; j++)
+        {
+            queue[i][j] = kk;
+            kk++;
+        }
+    }
 
-    // We can also use "print(&arr[0][0], m, n);"
-    //test((int *)arr, m, n);
-    //printf("%d ", get_adjacent_cell(0, 1, currentNode));
-    //get_adjacent_cell(0, 0, (int *)currentNode)
-    //follow_path((int **)queue, robotPosition);
+    test(rows, cols, queue);
+    follow_path(queue);
+
+    for (int i = 0; i < rows; i++)
+    {
+        free(queue[i]);
+    }
+    free(queue);
+
     return 0;
 }
