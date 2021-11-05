@@ -4,7 +4,9 @@
  * Created: 2021-11-05 08:37:58
  * Author : simda769
  */ 
-#define F_CPU 20000000
+#define F_CPU 16000000UL
+//change fuses to match oscilator connect ST to VCC
+// look at clock selectionsection of datasheet
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
@@ -13,28 +15,34 @@ void next_input_pin();
 void start_adc();
 void adc_init();
 void pin_init();
-
+double adc_val = 0;
 int main(void)
 {
     /* Replace with your application code */
 	pin_init();
-	adc_init();
-	sei();
-	start_adc();
+	//adc_init();
+	//sei();
+	//start_adc();
 	//PORTD = (1 << PIND7);
-	//DDRD = (1 << PIND7);
+	//DDRD = (1 << PORTD7);
     while (1) 
     {
-		//_delay_ms(100);
+		PORTD = 0x80;
+		_delay_ms(100);
+		PORTD = 0;
     }
 }
 void pin_init()
 {
 	// define output pins
-	DDRB = (1 << DDB4) | (1 << DDB6);
-	DDRA = (1 << DDA4);
-	DDRC = (1 << DDC4);
-	DDRD = (1 << DDD0) | (1 << DDD7); // D7 for debugging purposes
+	DDRB = (1 << PORTB4) | (1 << PORTB6);
+	PORTB = 0;
+	DDRA = (1 << PORTA4);
+	PORTA = 0;
+	DDRC = (1 << PORTC4);
+	PORTC = 0;
+	DDRD = (1 << PORTD0) | (1 << PORTD7); // D7 for debugging purposes
+	PORTD = 0;
 }
 
 void adc_init()
@@ -80,10 +88,11 @@ ISR(ADC_vect)
 {
 	//store value in correct place in memory
 	//next_input_pin(); //update ADMUX
-	PORTD = (1 << PIND7);
+	//PORTD = (1 << PIND7);
+	adc_val = ADC;
 	// update memory for next ad conversion
-	start_adc();
-	_delay_ms(100);
-	PORTD = (0 << PIND7);
-	_delay_ms(100);
+	//start_adc();
+	//_delay_ms(100);
+	//PORTD = (0 << PIND7);
+	//_delay_ms(100);
 }
