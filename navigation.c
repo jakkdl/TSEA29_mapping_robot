@@ -138,36 +138,9 @@ int get_adjacent_cell(int direction, int xy, int *currentCell)
     }
 }
 
-/* int is_wall(int cell[])
+int wall_in_front()
 {
-} */
-
-/* void follow_path(int *robotCoord, int *endPoint, int *queue)
-{
-    //printf(queue[0][0]);
-
-    int adjacentCells[4][3];
-    for (int direction = 0; direction < 4; direction++)
-    {
-        for (int j = 0; j < 3; j++)
-        {
-            if (j < 2)
-            {
-                adjacentCells[direction][j] = get_adjacent_cell(direction, j, robotCoord);
-            }
-        }
-    }
-
-    for (int i = 0; i < sizeof(adjacentCells); i++)
-    {
-        for (int j = 0; j < sizeof(queue); i++)
-        {
-            if (adjacentCells[i][0] == queue[j][0] && adjacentCells[i][1] == queue[j][1])
-            {
-            }
-        }
-    }
-}  */
+}
 
 void follow_path(int **queue)
 {
@@ -175,6 +148,7 @@ void follow_path(int **queue)
     int cols = 3;
 
     //memory allocation
+
     int robotPosition[] = {10, 3};
     int **adjacentCells = malloc(rows * sizeof(int *));
     int **traversableCells = malloc(rows * sizeof(int *));
@@ -184,6 +158,8 @@ void follow_path(int **queue)
         adjacentCells[i] = malloc(cols * sizeof(int));
         traversableCells[i] = malloc(cols * sizeof(int));
     }
+
+    //Create array of the robot's adjacent cells
 
     for (int direction = 0; direction < 4; direction++)
     {
@@ -199,9 +175,14 @@ void follow_path(int **queue)
             }
         }
     }
-    for (int i = 0; i < sizeof(adjacentCells); i++)
+
+    //Compare the robot's adjacent cells to those in the queue.
+    //If one or more of them exist in the queue, add them to the array of
+    //traversable cells.
+
+    for (int i = 0; i < 4; i++)
     {
-        for (int j = 0; j < sizeof(queue); i++)
+        for (int j = 0; j < 4; j++)
         {
             if (adjacentCells[i][0] == queue[j][0] && adjacentCells[i][1] == queue[j][1])
             {
@@ -212,7 +193,8 @@ void follow_path(int **queue)
         }
     }
 
-    /*     int temp = 1000;
+    //Pick the traversable cell with the lowest counter number
+    int temp = 1000;
     int index;
     for (int i = 0; i < sizeof(traversableCells); i++)
     {
@@ -221,8 +203,13 @@ void follow_path(int **queue)
             temp = traversableCells[i][2];
             index = i;
         }
-    }  */
-    printf("hej hej!");
+    }
+
+    //The grid's direction is stationary, but the robot is not.
+    //How do we know which way the robot is facing and so in which direction it should go?
+
+    //goToTheTraversableCell();
+
     //free memory
     for (int i = 0; i < rows; i++)
     {
@@ -232,6 +219,8 @@ void follow_path(int **queue)
     free(adjacentCells);
     free(traversableCells);
 }
+
+//For debugging purposes only
 
 void test(int rows, int cols, int **queue)
 {
@@ -247,7 +236,7 @@ void test(int rows, int cols, int **queue)
 
 int main(void)
 {
-    int rows = 3;
+    int rows = 4;
     int cols = 3;
     int robotPosition[] = {10, 3};
     int **queue = malloc(rows * sizeof(int *));
@@ -266,7 +255,7 @@ int main(void)
         }
     }
 
-    test(rows, cols, queue);
+    //test(rows, cols, queue);
     follow_path(queue);
 
     for (int i = 0; i < rows; i++)
