@@ -31,8 +31,9 @@ enum NavigationGoal {
 
 #define FULL_TURN 65536 // 1 << 16
 
-#define grid_to_mm(coord) { (coord)*250 + 125 }
-
+// This broke with {}'s, unsure why /john
+#define grid_to_mm(coord) (coord)*250 + 125
+#define mm_to_grid(coord) (coord)/250
 
 
 /* GLOBAL VARIABLES */
@@ -74,7 +75,7 @@ uint8_t wheelSpeedRight = 0;
 enum NavigationGoal navigationGoalType = none;
 uint8_t navigationGoalX = 24;
 uint8_t navigationGoalY = 0;
-uint8_t navigationGoalHeading = 0;
+uint16_t navigationGoalHeading = 0;
 
 
 // Map
