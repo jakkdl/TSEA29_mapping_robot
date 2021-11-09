@@ -5,34 +5,33 @@ void UART_Init(uint8_t interface)
 {
     if (interface == 0)
     {
-        /* Set baud rate */
+    /* Set baud rate see page 174 in avr doccumentationc*/
+        // set upper part
         UBRR0H = (unsigned char)(UART_BAUD>>8);
+        // set lower part
         UBRR0L = (unsigned char)UART_BAUD;
 
         /* Enable receiver and transmitter */
         UCSR0B = (1<<RXEN0)|(1<<TXEN0);
-
-        /* Set frame format: 8data, 2stop bit */
-        //UCSRnC = (1<<USBSn)|(3<<UCSZn0);
 
         /* Set frame format: 8data, 1stop bit, 1 parity bit */
         UCSR0C = (3<<UCSZ00);
     }
     else
     {
-        /* Set baud rate */
+        /* Set baud rate see page 174 in avr doccumentationc*/
+        // set upper part
         UBRR1H = (unsigned char)(UART_BAUD>>8);
+        // set lower part
         UBRR1L = (unsigned char)UART_BAUD;
 
         /* Enable receiver and transmitter */
         UCSR1B = (1<<RXEN1)|(1<<TXEN1);
 
-        /* Set frame format: 8data, 2stop bit */
-        //UCSRnC = (1<<USBSn)|(3<<UCSZn0);
-
         /* Set frame format: 8data, 1stop bit, 1 parity bit */
         UCSR1C = (3<<UCSZ10);
     }
+    /* 0_0_1_1_0_1_1_0*/
 }
 
 void UART_Transmit(uint8_t interface, unsigned char data )
