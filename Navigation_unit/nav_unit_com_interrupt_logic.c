@@ -14,11 +14,11 @@ uint8_t communication_unit_interrupt(struct Com_packet* data) {
         }
     }
 
-    if (data->address == parity_error)
+    /*if (data->address == parity_error)
     {
         //send the data associated with address data_packets[0];
         return resend(data->data_packets[0]);
-    }
+    }*/
 
     switch (data->address)
     {
@@ -57,10 +57,10 @@ uint8_t handle_command(enum directionID id)
 
 // resend the data last sent with that address
 // might not be needed
-uint8_t resend(uint8_t _address)
+/*uint8_t resend(uint8_t _address)
 {
     return -1;
-}
+}*/
 // Set the PD-constant KP
 uint8_t set_pd_kp(uint8_t kp)
 {
@@ -101,16 +101,20 @@ uint8_t navigate_forward(uint8_t dir)
     switch (dir)
     {
         case 0:
-            navigationGoalX += 1;
+            navigationGoalX = mm_to_grid(currentPosX) + 1;
+            navigationGoalY = mm_to_grid(currentPosY);
             break;
         case 1:
-            navigationGoalY += 1;
+            navigationGoalX = mm_to_grid(currentPosX);
+            navigationGoalY = mm_to_grid(currentPosY) + 1;
             break;
         case 2:
-            navigationGoalX -= 1;
+            navigationGoalX = mm_to_grid(currentPosX) - 1;
+            navigationGoalY = mm_to_grid(currentPosY);
             break;
         case 3:
-            navigationGoalY -= 1;
+            navigationGoalX = mm_to_grid(currentPosX);
+            navigationGoalY = mm_to_grid(currentPosY) - 1;
             break;
         default:
             return -1;
@@ -173,4 +177,91 @@ uint8_t command_set_target_square(uint8_t id)
         default:
             return -1;
     }
+}
+
+#include "test.h"
+Test_test(Test, uartCommandStart)
+{
+    enum NavigationGoal oldGoalType = navigationGoalType;
+    enum NavigationMode oldNavigationMode = navigationMode;
+    struct Com_packet data;
+    data.address = command;
+    data.packet_count = 1;
+    data.data_packets[0] = start;
+    Test_assertEquals(communication_unit_interrupt(&data), 0);
+
+    Test_assertEquals(navigationGoalType, none);
+    Test_assertEquals(navigationMode, autonomous);
+
+    navigationGoalType = oldGoalType;
+    navigationMode = oldNavigationMode;
+}
+Test_test(Test, uartCommand_turn_left)
+{
+    enum NavigationGoal oldGoalType = navigationGoalType;
+    enum NavigationMode oldNavigationMode = navigationMode;
+    uint16_t oldNavigationGoalHeading = navigationGoalHeading;
+
+    struct Com_packet data;
+    data.address = command;
+    data.packet_count = 1;
+
+    data.data_packets[0] = turn_left;
+
+    // Test it doesn't do anything in auto mode
+    navigationMode = autonomous;
+    Test_assertEquals(communication_unit_interrupt(&data), 255);
+    Test_assertEquals(navigationGoalType, oldGoalType);
+    Test_assertEquals(navigationMode, autonomous);
+    Test_assertEquals(oldNavigationGoalHeading, navigationGoalHeading);
+
+    // Test actual move
+    navigationMode = manual;
+    currentHeading = 0;
+
+    Test_assertEquals(communication_unit_interrupt(&data), 0);
+    Test_assertEquals(navigationGoalType, turn);
+    Test_assertEquals(navigationMode, manual);
+    //Test_assertEquals(navigationGoalHeading, FULL_TURN/4);
+
+    navigationGoalType = oldGoalType;
+    navigationMode = oldNavigationMode;
+    navigationGoalHeading = oldNavigationGoalHeading;
+}
+
+Test_test(Test, uartCommand_fw_left)
+{
+    enum NavigationGoal oldGoalType = navigationGoalType;
+    enum NavigationMode oldNavigationMode = navigationMode;
+    uint8_t oldNavigationGoalX = navigationGoalX;
+    uint8_t oldNavigationGoalY = navigationGoalY;
+
+    struct Com_packet data;
+    data.address = command;
+    data.packet_count = 1;
+
+    data.data_packets[0] = fw_left;
+
+    // Test it doesn't do anything in auto mode
+    navigationMode = autonomous;
+    Test_assertEquals(communication_unit_interrupt(&data), 255);
+    Test_assertEquals(navigationGoalType, oldGoalType);
+    Test_assertEquals(navigationMode, autonomous);
+
+    // Test actual move
+    navigationMode = manual;
+    currentHeading = 0;
+    currentPosX = grid_to_mm(24);
+    currentPosY = 0;
+
+    Test_assertEquals(communication_unit_interrupt(&data), 0);
+    Test_assertEquals(navigationGoalType, move);
+    Test_assertEquals(navigationMode, manual);
+    Test_assertEquals(navigationGoalX, 24);
+    Test_assertEquals(navigationGoalY, 1);
+
+    navigationGoalType = oldGoalType;
+    navigationMode = oldNavigationMode;
+    navigationGoalX = oldNavigationGoalX;
+    navigationGoalY = oldNavigationGoalY;
 }
