@@ -1,115 +1,156 @@
-#include "test.h"
-
 #include <stdlib.h>
 #include <string.h>
+#include <avr/io.h>
+#include <stdio.h>
 
+#include "test.h"
+#include "uart.h"
+
+
+/*#ifndef F_CPU
+#define F_CPU 8000000
+#endif
+#include "simavr/simavr/sim/avr/avr_mcu_section.h"
+AVR_MCU(F_CPU, "atmega1284p");
+*/
 Test_TestHolder* m_Test_head;
 
 Test_TestHolder* m_Test_activeTest;
 
 typedef struct Test_ResultType
 {
-	uint16_t totalTests;
-	uint16_t successCount;
-	uint16_t failureCount;
+    uint16_t totalTests;
+    uint16_t successCount;
+    uint16_t failureCount;
 } Test_ResultType;
 
 Test_ResultType m_Test_result;
 
+// This crashes simavr, and I have no clue why, so we can't get
+/*
+   const struct avr_mmcu_vcd_trace_t _mytrace[]  _MMCU_ = {
+   { AVR_MCU_VCD_SYMBOL("UDR0"), .what = (void*)&UDR0, },
+   { AVR_MCU_VCD_SYMBOL("UDRE0"), .mask = (1 << UDRE0), .what = (void*)&UCSR0A, },
+   };*/
+
+static int uart_putchar(char c, FILE *stream) {
+    if (c == '\n')
+        uart_putchar('\r', stream);
+    // included with avr/io.h
+    loop_until_bit_is_set(UCSR0A, UDRE0);
+    UDR0 = c;
+    return 0;
+}
+
+// define a FILE to be used by custom printf
+static FILE mystdout = FDEV_SETUP_STREAM(uart_putchar, NULL,
+        _FDEV_SETUP_WRITE);
 // Initialise the test framework
 void Test_init(void)
 {
-	m_Test_head = NULL;
-	m_Test_activeTest = NULL;
+    m_Test_head = NULL;
+    m_Test_activeTest = NULL;
 
-	m_Test_result.totalTests = 0;
-	m_Test_result.successCount = 0;
-	m_Test_result.failureCount = 0;
+    m_Test_result.totalTests = 0;
+    m_Test_result.successCount = 0;
+    m_Test_result.failureCount = 0;
 }
 
 void Test_add(Test_TestHolder* test)
 {
-	// Put to front of chain
-	test->next = m_Test_head;
-	m_Test_head = test;
+    // Put to front of chain
+    test->next = m_Test_head;
+    m_Test_head = test;
 }
 
 void Test_assertTrueLog(uint8_t condition, uint16_t lineNumber)
 {
-	// We have the active test
-	if( !(condition) )
-	{
-		m_Test_activeTest->testResult = FAILURE;
-		m_Test_activeTest->line = lineNumber;
-	}
+    // We have the active test
+    if( !(condition) )
+    {
+        m_Test_activeTest->testResult = FAILURE;
+        m_Test_activeTest->line = lineNumber;
+    }
 }
 
 void Test_assertEqualLog(uint16_t expected, uint16_t actual,
-    uint16_t lineNumber)
+        uint16_t lineNumber)
 {
-	if( expected != actual )
-	{
-		m_Test_activeTest->testResult = FAILURE;
-		m_Test_activeTest->line = lineNumber;
-	}
+    if( expected != actual )
+    {
+        m_Test_activeTest->testResult = FAILURE;
+        m_Test_activeTest->line = lineNumber;
+    }
 }
 
 // Run through all the tests
 void Test_runall(void)
 {
-	// Reset counts
-	m_Test_result.totalTests = 0;
-	m_Test_result.successCount = 0;
-	m_Test_result.failureCount = 0;
+    // Print to UART, which simavr for some reason
+    // prints?
+    stdout = &mystdout;
 
-	// Reset status of all
-	m_Test_activeTest = m_Test_head;
-	while( m_Test_activeTest != NULL )
-	{
-		m_Test_result.totalTests++;
+    // Reset counts
+    m_Test_result.totalTests = 0;
+    m_Test_result.successCount = 0;
+    m_Test_result.failureCount = 0;
 
-		m_Test_activeTest->testResult = NOT_RUN;
-		m_Test_activeTest->line = 0;
+    // Reset status of all
+    m_Test_activeTest = m_Test_head;
+    while( m_Test_activeTest != NULL )
+    {
+        m_Test_result.totalTests++;
 
-		// next in the chain
-		m_Test_activeTest = m_Test_activeTest->next;
-	}
+        m_Test_activeTest->testResult = NOT_RUN;
+        m_Test_activeTest->line = 0;
 
-	// Now execute the tests
-	m_Test_activeTest = m_Test_head;
-	while( m_Test_activeTest != NULL )
-	{
-		m_Test_activeTest->testFunction();
+        // next in the chain
+        m_Test_activeTest = m_Test_activeTest->next;
+    }
 
-		if( m_Test_activeTest->testResult == NOT_RUN )
-		{
-			m_Test_activeTest->testResult = SUCCESS;
-			m_Test_result.successCount++;
-		}
-		else
-		{
-			m_Test_result.failureCount++;
-		}
+    // Now execute the tests
+    m_Test_activeTest = m_Test_head;
+    while( m_Test_activeTest != NULL )
+    {
+        m_Test_activeTest->testFunction();
 
-		__asm__ ("nop");
+        if( m_Test_activeTest->testResult == NOT_RUN )
+        {
+            m_Test_activeTest->testResult = SUCCESS;
+            m_Test_result.successCount++;
+        }
+        else
+        {
+            printf("FAIL: %s\n", m_Test_activeTest->name);
+            m_Test_result.failureCount++;
+        }
 
-		// next in the chain
-		m_Test_activeTest = m_Test_activeTest->next;
-	}
+        __asm__ ("nop");
 
-	// Get the results
-	__asm__ ("nop");
+        // next in the chain
+        m_Test_activeTest = m_Test_activeTest->next;
+    }
+
+    // Get the results
+    __asm__ ("nop");
+    /*UART_Init(0);
+    UART_Transmit(0, m_Test_result.successCount);*/
+
+
+    printf("Total Tests: %d\n", m_Test_result.totalTests);
+    printf("Success Count: %d\n", m_Test_result.successCount);
+    printf("Fail Count: %d\n", m_Test_result.failureCount);
 }
 
 // Examples
-
+/*
 Test_test(Test, testWillFail)
 {
-	Test_assertEquals(1, 0);
-}
-
+    Test_assertEquals(1, 0);
+}*/
+/*
 Test_test(Test, testWillPass)
 {
-	Test_assertTrue(1);
-}
+    Test_assertTrue(1);
+}*/
 

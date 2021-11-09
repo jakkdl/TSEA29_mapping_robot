@@ -1,5 +1,5 @@
-#ifndef TEST_H
-#define TEST_H
+#ifndef _TEST_H
+#define _TEST_H
 
 #include <inttypes.h>
 
@@ -36,9 +36,9 @@ void Test_runall(void);
 
 #if __TEST__
 
-/*void Test_init(void) __attribute__ ((naked))
-    __attribute__ ((section (".init7")));*/
-void Test_init(void);
+void Test_init(void) __attribute__ ((naked))
+    __attribute__ ((section (".init7")));
+//void Test_init(void);
 
 #define Test_run() {Test_runall(); for(;;); }
 
@@ -46,16 +46,8 @@ void Test_init(void);
  * mod_appendtest_name
  * m_mod_test_name
  */
-#define Test_test(MODULE, NAME) \
-	void MODULE##_test_##NAME(void); /*declare mod_test_name */ \
-	void MODULE##_appendtest_##NAME(void); /* declare mod_appendtest_name */ \
-	Test_TestHolder m_##MODULE##_test_##NAME = { #NAME, \
-            MODULE##_test_##NAME, __FILE__, 0, NOT_RUN, 0 }; /* create struct m_mod_test_name*/ \
-	void MODULE##_appendtest_##NAME(void) { \
-            Test_add( &m_##MODULE##_test_##NAME ); }; /*define mod_appendtest_name*/ \
-	void MODULE##_test_##NAME(void) /*define mod_test_name*/
 
-//#define Test_test(MODULE, NAME) \
+#define Test_test(MODULE, NAME) \
 	void MODULE##_test_##NAME(void); /*declare mod_test_name */ \
 	void MODULE##_appendtest_##NAME(void) \
             __attribute__ ((naked)) \
