@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 #include "test.h"
-#include "uart.h"
+#include "../AVR_common/uart.h"
 
 
 /*#ifndef F_CPU
