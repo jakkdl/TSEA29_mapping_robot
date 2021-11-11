@@ -4,7 +4,7 @@
 #define NAVIGATION_UNIT_H
 #include <stdbool.h>
 
-#include "robot.h"
+#include "../AVR_common/robot.h"
 
 //TODO make these Enums
 enum NavigationMode {

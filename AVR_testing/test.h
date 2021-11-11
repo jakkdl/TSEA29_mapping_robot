@@ -29,7 +29,7 @@ void Test_add(Test_TestHolder* test);
 
 void Test_assertTrueLog(uint8_t condition, uint16_t lineNumber);
 
-void Test_assertEqualLog(uint16_t expected, uint16_t actual,
+void Test_assertEqualLog(uint16_t actual, uint16_t expected,
     uint16_t lineNumber);
 
 void Test_runall(void);
@@ -38,14 +38,8 @@ void Test_runall(void);
 
 void Test_init(void) __attribute__ ((naked))
     __attribute__ ((section (".init7")));
-//void Test_init(void);
 
 #define Test_run() {Test_runall(); for(;;); }
-
-/* mod_test_name
- * mod_appendtest_name
- * m_mod_test_name
- */
 
 #define Test_test(MODULE, NAME) \
 	void MODULE##_test_##NAME(void); /*declare mod_test_name */ \
