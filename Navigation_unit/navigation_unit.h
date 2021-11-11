@@ -4,37 +4,39 @@
 #define NAVIGATION_UNIT_H
 #include <stdbool.h>
 
-#include "robot.h"
+#include "../AVR_common/robot.h"
 
 //TODO make these Enums
-enum NavigationMode {
+enum NavigationMode
+{
     manual,
     autonomous
 };
 
-enum Direction {
+enum Direction
+{
     dir_forward,
     dir_backward
 };
 
 // Unsure how to represent this, currently broke it into
-enum NavigationGoal {
-// no goal set
+enum NavigationGoal
+{
+    // no goal set
     none,
-// We only want to change our direction to NAVIGATION_GOAL_HEADING
-// ignore NAVIGATION_GOAL_X & Y
+    // We only want to change our direction to NAVIGATION_GOAL_HEADING
+    // ignore NAVIGATION_GOAL_X & Y
     turn,
-// We want to move to NAVIGATION_GOAL_X & Y, and might need to turn.
-// ignore NAVIGATION_GOAL_HEADING
+    // We want to move to NAVIGATION_GOAL_X & Y, and might need to turn.
+    // ignore NAVIGATION_GOAL_HEADING
     move
 };
 
 #define FULL_TURN 65536 // 1 << 16
 
 // This broke with {}'s, unsure why /john
-#define grid_to_mm(coord) (coord)*250 + 125
-#define mm_to_grid(coord) (coord)/250
-
+#define grid_to_mm(coord) (coord) * 250 + 125
+#define mm_to_grid(coord) (coord) / 250
 
 /* GLOBAL VARIABLES */
 
@@ -52,7 +54,7 @@ uint8_t pdkp = 0;
 // left = FULL_TURN/2   = 0b10 << 14 = 32768 = pow(2, 15)
 // down = FULL_TURN*3/4 = 0b11 << 14 = 49152 pow(2, 14) + pow(2, 15)
 // Don't yet know how the initial value of the heading is specified for the competition
-uint16_t currentHeading = FULL_TURN/4;
+uint16_t currentHeading = FULL_TURN / 4;
 
 // Current position in millimetre, relative to bottom left
 // We assume we start in the middle (square 24) in the X direction.
@@ -76,7 +78,6 @@ enum NavigationGoal navigationGoalType = none;
 uint8_t navigationGoalX = 24;
 uint8_t navigationGoalY = 0;
 uint16_t navigationGoalHeading = 0;
-
 
 // Map
 uint8_t navigationMap[49][25];
