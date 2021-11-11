@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 #include "test.h"
-#include "uart.h"
+#include "../AVR_common/uart.h"
 
 
 /*#ifndef F_CPU
@@ -73,7 +73,7 @@ void Test_assertTrueLog(uint8_t condition, uint16_t lineNumber)
     }
 }
 
-void Test_assertEqualLog(uint16_t expected, uint16_t actual,
+void Test_assertEqualLog(uint16_t actual, uint16_t expected,
         uint16_t lineNumber)
 {
     if( expected != actual )

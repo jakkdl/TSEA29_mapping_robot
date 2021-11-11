@@ -1,4 +1,4 @@
-#include "robot.h"
+#include "../AVR_common/robot.h"
 #include "navigation_unit.h"
 #include "nav_unit_com_interrupt_logic.h"
 
@@ -179,7 +179,7 @@ uint8_t command_set_target_square(uint8_t id)
     }
 }
 
-#include "test.h"
+#include "../AVR_testing/test.h"
 Test_test(Test, uartCommandStart)
 {
     enum NavigationGoal oldGoalType = navigationGoalType;
