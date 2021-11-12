@@ -9,15 +9,18 @@
 int LeftCount = 0;
 int RightCount = 0;
 bool ReadingDone = true;
+bool ReadMLX = false;
 /*
  * TODO:
  * implement storage in memory
- * implement MLX gyro
- * implement send to other devices
+ * implement angle rate integration
+ * implement communication with other devices
  * move around functions to correct positions
+ * testing functionality
  */
 void start_reading()
 {
+	ReadingDone = false;
 	start_adc();
 	measure_lidar();
 }
@@ -40,16 +43,17 @@ int main(void)
 	adc_init();
 	timer_init();
 	sei();
+	start_reading();
     while (1) 
     {
 		if(ReadingDone)
 		{
-			ReadingDone = false;
 			// send data;
 			start_reading();	
 		}
     }
 }
+
 int convert_odo(int val)
 {
 	// converts odo count to mm traveled;
@@ -60,6 +64,15 @@ int convert_odo(int val)
 }
 ISR(ADC_vect)
 {
+	if (ReadMLX)
+	{
+		cli();
+		int WantedAngle = 90; // placeholder should come from styrenhet
+		MLX_gyro(WantedAngle, ReadMLX);
+		sei();
+	}
+	else
+	{
 	double ADCVoltage = 0;
 	uint8_t IRDistance = 0;
 	uint8_t ADCLowBit = ADCL;
@@ -70,6 +83,7 @@ ISR(ADC_vect)
 	next_input_pin(); //update ADMUX
 	// update memory for next ad conversion
 	start_adc();
+	}
 }
 
 ISR(PCINT1_vect)
