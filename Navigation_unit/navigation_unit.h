@@ -59,7 +59,7 @@ uint16_t currentHeading = FULL_TURN / 4;
 // Current position in millimetre, relative to bottom left
 // We assume we start in the middle (square 24) in the X direction.
 uint16_t currentPosX = grid_to_mm(24);
-uint16_t currentPosY = 0;
+uint16_t currentPosY = 125;
 
 // We can either use bool + unsigned
 enum Direction wheelDirLeft = dir_forward;

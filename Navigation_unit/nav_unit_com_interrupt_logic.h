@@ -16,4 +16,5 @@ uint8_t set_pd_kp(uint8_t kp);
 uint8_t command_stop();
 uint8_t command_start();
 uint8_t command_set_target_square(uint8_t id);
+uint8_t navigate_forward(uint8_t dir);
 #endif

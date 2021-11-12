@@ -3,63 +3,59 @@
 #include <stdbool.h>
 #include "nav_unit_com_interrupt_logic.h"
 #include "navigation_unit.h"
+#include "map.h"
 
-int const queueRows = 1000;
-int const rowsAdjacent = 4;
-int const cols = 3;
-int const coordSize = 2;
-int queueSize = 0; //for easy iterations
+int const QUEUE_ROWS = 1000;
+int const COLS = 3;
+int const ROWS_ADJACENT = 4;
+int const COORD_SIZE = 2;
+int queueSize = 0; //for easy iterations through arrays
 int adjacentCellsSize = 0;
 
-int robotPosition[] = {10, 3};
-int startPosition[coordSize];
-int endPoint[coordSize];
-int islandStartPosition[coordSize];
+int startPosition[COORD_SIZE];
+int endPoint[COORD_SIZE];
+int islandStartPosition[COORD_SIZE];
 
-int queue[queueRows][cols];
-int adjacentCells[rowsAdjacent][cols];
-int traversableCells[rowsAdjacent][cols];
+uint8_t queue[QUEUE_ROWS][COLS];
+uint8_t adjacentCells[ROWS_ADJACENT][COLS];
+uint8_t traversableCells[ROWS_ADJACENT][COLS];
 
 void wall_follow();
 void sample_search();
-int get_adjacent_cell(int direction, int xy, int *currentCell);
-bool cell_is_wall(int cell[cols]);
-void move_one_cell(int queue[queueRows][cols]);
+uint8_t get_robot_adjacent_cell(int direction, int xy);
+uint8_t get_adjacent_cell(int direction, int xy, uint8_t *currentCell);
+bool cell_is_wall(uint8_t cell[COLS]);
+void move_one_cell(uint8_t queue[QUEUE_ROWS][COLS]);
+bool left_opening();
+bool right_opening();
+void reverse_controls();
+bool wall_in_front();
+bool reverseControls = false;
 
 /*
 Changed so that the algorithm looks for the end point instead of the 
 position of the robot. Same same but backwards.
 */
-/* 
+
 bool left_opening()
 {
     //get some sensordata
+    return true;
 }
 bool right_opening()
 {
     //get some sensordata
+    return true;
 }
-void turn_left()
-{
-}
-void turn_right()
-{
-}
-void go_forward()
-{
-}
-void reverse_controls()
-{
-} */
 
-/* void wall_follow()
+void wall_follow()
 {
-    while (robotPosition != startPosition)
+    //Save start position somehow. This is temporary
+    while (mm_to_grid(currentPosX) != startPosition[0] && mm_to_grid(currentPosY) != startPosition[1])
     {
         if (left_opening())
         {
-            turn_left();
-            go_forward();
+            command_set_target_square(fw_left);
         }
         else
         {
@@ -67,25 +63,30 @@ void reverse_controls()
             {
                 if (right_opening())
                 {
-                    turn_right();
-                    go_forward();
+                    command_set_target_square(fw_right);
                 }
                 else
                 {
-                    reverse_controls();
+                    //Turn around 180 degrees
+                    for (int i = 0; i < 2; i++)
+                    {
+                        command_set_target_square(turn_right);
+                    }
                 }
             }
             else
             {
-                go_forward();
+                command_set_target_square(forward);
             }
         }
     }
-    if (unexplored_cells())
+    if (unexplored_cells_exist())
     {
+        sample_search();
     }
-} */
+}
 
+//Path finding algorithm that might not work as expected. Can probably be replaced easily if so.
 void sample_search()
 {
     int counter = 0;
@@ -93,8 +94,8 @@ void sample_search()
     bool endPointInQueue = false;
     int queueIndex = 0;
 
-    queue[0][0] = robotPosition[0];
-    queue[0][1] = robotPosition[1];
+    queue[0][0] = mm_to_grid(currentPosX);
+    queue[0][1] = mm_to_grid(currentPosY);
     queue[0][2] = counter;
     counter++;
     queueSize++;
@@ -163,7 +164,8 @@ void sample_search()
     move_one_cell(queue);
 }
 
-int get_adjacent_cell(int direction, int xy, int *currentCell)
+//For sample search
+uint8_t get_adjacent_cell(int direction, int xy, uint8_t *currentCell)
 {
     //each case returns the x & y coordinate for the adjacent cell separately.
     //direction == 0: right cell
@@ -190,7 +192,7 @@ int get_adjacent_cell(int direction, int xy, int *currentCell)
         }
         else
         {
-            return currentCell[1] - 1;
+            return currentCell[1] + 1;
         }
         break;
     case 2:
@@ -210,7 +212,7 @@ int get_adjacent_cell(int direction, int xy, int *currentCell)
         }
         else
         {
-            return currentCell[1] + 1;
+            return currentCell[1] - 1;
         }
         break;
     default:
@@ -219,7 +221,64 @@ int get_adjacent_cell(int direction, int xy, int *currentCell)
     }
 }
 
-bool cell_is_wall(int cell[cols])
+//For robot
+uint8_t get_robot_adjacent_cell(int direction, int xy)
+{
+    //each case returns the x & y coordinate for the adjacent cell separately.
+    //direction == 0: right cell
+    //direction == 1: upper cell
+    //direction == 2: left cell
+    //direction == 3: lower cell
+
+    switch (direction)
+    {
+    case 0:
+        if (xy == 0)
+        {
+            return mm_to_grid(currentPosX) + 1;
+        }
+        else
+        {
+            return mm_to_grid(currentPosY);
+        }
+        break;
+    case 1:
+        if (xy == 0)
+        {
+            return mm_to_grid(currentPosX);
+        }
+        else
+        {
+            return mm_to_grid(currentPosY) + 1;
+        }
+        break;
+    case 2:
+        if (xy == 0)
+        {
+            return mm_to_grid(currentPosX) - 1;
+        }
+        else
+        {
+            return mm_to_grid(currentPosY);
+        }
+        break;
+    case 3:
+        if (xy == 0)
+        {
+            return mm_to_grid(currentPosX);
+        }
+        else
+        {
+            return mm_to_grid(currentPosY) - 1;
+        }
+        break;
+    default:
+        return 0;
+        break;
+    }
+}
+
+bool cell_is_wall(uint8_t cell[COLS])
 {
     /*     if(){
         false;
@@ -230,7 +289,7 @@ bool cell_is_wall(int cell[cols])
     return false;
 }
 
-void move_one_cell(int queue[queueRows][cols])
+void move_one_cell(uint8_t queue[QUEUE_ROWS][COLS])
 {
     //Create array of the robot's adjacent cells
 
@@ -240,7 +299,7 @@ void move_one_cell(int queue[queueRows][cols])
         {
             if (i < 2)
             {
-                adjacentCells[direction][i] = get_adjacent_cell(direction, i, robotPosition);
+                adjacentCells[direction][i] = get_robot_adjacent_cell(direction, i);
             }
             else
             {
@@ -253,7 +312,7 @@ void move_one_cell(int queue[queueRows][cols])
     //If one or more of them exist in the queue, add them to the array of
     //traversable cells.
 
-    for (int i = 0; i < rowsAdjacent; i++)
+    for (int i = 0; i < ROWS_ADJACENT; i++)
     {
         for (int j = 0; j < queueSize; j++)
         {
@@ -314,7 +373,7 @@ void turn_towards_cell()
         }
         else
         {
-            if (unexplored_cells())
+            if (unexplored_cells_exist())
             {
                 sample_search();
             }
@@ -346,9 +405,9 @@ void test(int rows, int cols, int queue[rows][cols])
 
 int main(void)
 {
-    for (int i = 0, kk = 0; i < queueRows; i++)
+    for (int i = 0, kk = 0; i < QUEUE_ROWS; i++)
     {
-        for (int j = 0; j < cols; j++)
+        for (int j = 0; j < COLS; j++)
         {
             queue[i][j] = kk;
             kk++;
