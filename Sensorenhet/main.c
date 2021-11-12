@@ -1,15 +1,21 @@
 #define F_CPU 16000000UL
 
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#include <util/delay.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <math.h>
 #include "adc.h"
 #include "lidar.h"
 
-int interrupts = 0;
+int LeftCount = 0;
+int RightCount = 0;
 bool ReadingDone = true;
+/*
+ * TODO:
+ * implement storage in memory
+ * implement MLX gyro
+ * implement send to other devices
+ * move around functions to correct positions
+ */
 void start_reading()
 {
 	start_adc();
@@ -19,7 +25,7 @@ void start_reading()
 void pin_init()
 {
 	// define output pins
-	DDRB = (1 << PORTB4) | (1 << PORTB6);
+	DDRB =  (1 << PORTB4) | (1 << PORTB6);
 	PORTB = (1 << PORTB4) | (1 << PORTB6);
 	DDRA = (1 << PORTA4);
 	PORTA = 0x00;
@@ -39,51 +45,67 @@ int main(void)
 		if(ReadingDone)
 		{
 			ReadingDone = false;
+			// send data;
 			start_reading();	
 		}
     }
 }
-
+int convert_odo(int val)
+{
+	// converts odo count to mm traveled;
+	int res = 0;
+	int openings = 40;
+	res = round(val * 65 * M_PI / openings);
+	return res;
+}
 ISR(ADC_vect)
 {
-	int ADCVoltage = 0;
+	double ADCVoltage = 0;
+	uint8_t IRDistance = 0;
 	uint8_t ADCLowBit = ADCL;
 	uint16_t ADCRes = ADCH<<8 | ADCLowBit; // puts result of ADC in ADCRes
 	ADCVoltage = ADCRes * 5 / 1024;
-	// lookup distance from adc voltage
-	//store value in correct place in memory
-	//next_input_pin(); //update ADMUX
+	IRDistance = convert_voltage(ADCVoltage);
+	// store value in correct place in memory
+	next_input_pin(); //update ADMUX
 	// update memory for next ad conversion
 	start_adc();
 }
 
 ISR(PCINT1_vect)
 {
-	timer_stop();
 	uint16_t PWMTime = 0;
-	long LidarDistance = 0;
-	if (interrupts == 0)
+	uint16_t LidarDistance = 0;
+	if ((PORTB & 0x20) & !(PORTB & 0x10)) // if PB5 is high but not PB4
 	{
 		timer_init();
-		interrupts++;
-	}
-	else if (interrupts == 1)
-	{
+		while (PORTB & 0x20){}
+		timer_stop();
+		cli();
 		PWMTime = TCNT1;
+		sei();
 		LidarDistance = PWMTime / 2;
-		// save distance in memory
-		interrupts++;
 	}
-	else if (interrupts == 2)
+	else if ((PORTB & 0x80) & !(PORTB & 0x40)) // if PB7 is high but not PB6 
 	{
 		timer_init();
-		interrupts++;
+		while (PORTB & 0x80){}
+		timer_stop();
+		cli();
+		PWMTime = TCNT1;
+		sei();
+		LidarDistance = PWMTime / 2;
+	}
+	// save lidar distance
+}
+ISR(PCINT2_vect)
+{
+	if(PORTC & 0x01)
+	{
+		LeftCount++;
 	}
 	else
 	{
-		PWMTime = TCNT1;
-		LidarDistance = PWMTime / 2; // distance in cm
-		// store distance in memory
-		interrupts = 0;
+		RightCount++;
 	}
 }

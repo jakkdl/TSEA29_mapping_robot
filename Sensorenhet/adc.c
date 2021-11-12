@@ -24,3 +24,12 @@ void next_input_pin()
 		start_adc();
 	}
 }
+
+uint8_t convert_voltage(double ADCVoltage)
+// converts the input voltage to closest cm only between 8-80 cm
+{
+	double res = 0;
+	res = 1/0.046053 * ADCVoltage;
+	uint8_t result = round(res);
+	return result;
+}
