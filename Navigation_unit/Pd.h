@@ -1,4 +1,4 @@
-
+#ifndef PD_CONTROLLER_H
 #define PD_CONTROLLER_H
 
 typedef struct {
@@ -18,3 +18,5 @@ typedef struct {
 void PDcontroller_Init(PDController *pd);
 
 float PDcontroller_Update(Pdcontrller *pd, float targetPos, float currentPos);
+
+#endif
