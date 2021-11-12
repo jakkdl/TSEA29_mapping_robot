@@ -5,18 +5,25 @@
 #include <math.h>
 #include "adc.h"
 #include "lidar.h"
+#include "gyro.h"
 
 int LeftCount = 0;
 int RightCount = 0;
+int Angle = 0;
+int fault = 1;
 bool ReadingDone = true;
+bool SendData = false;
 bool ReadMLX = false;
 /*
  * TODO:
  * implement storage in memory
- * implement angle rate integration
  * implement communication with other devices
  * move around functions to correct positions
- * testing functionality
+ * testing functionality:
+ * Multiple ir sensors
+ * lidar sensor/s
+ * odometer/s
+ * MLX gyro
  */
 void start_reading()
 {
@@ -46,7 +53,7 @@ int main(void)
 	start_reading();
     while (1) 
     {
-		if(ReadingDone)
+		if(ReadingDone & SendData)
 		{
 			// send data;
 			start_reading();	
@@ -68,8 +75,16 @@ ISR(ADC_vect)
 	{
 		cli();
 		int WantedAngle = 90; // placeholder should come from styrenhet
-		MLX_gyro(WantedAngle, ReadMLX);
+		Angle += MLX_gyro();
 		sei();
+		if ((Angle >= WantedAngle + fault) | (Angle <= WantedAngle - fault))
+		{
+			ReadMLX = false; // finished rotation
+		}
+		else
+		{
+			start_adc();
+		}
 	}
 	else
 	{
@@ -82,7 +97,6 @@ ISR(ADC_vect)
 	// store value in correct place in memory
 	next_input_pin(); //update ADMUX
 	// update memory for next ad conversion
-	start_adc();
 	}
 }
 
