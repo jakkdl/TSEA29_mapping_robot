@@ -1,8 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include "nav_unit_com_interrupt_logic.h"
-#include "navigation_unit.h"
 #include "map.h"
 
 void init_map()
