@@ -70,6 +70,8 @@ void Test_assertTrueLog(uint8_t condition, uint16_t lineNumber)
     {
         m_Test_activeTest->testResult = FAILURE;
         m_Test_activeTest->line = lineNumber;
+        m_Test_activeTest->actual = 1;
+        m_Test_activeTest->expected = 0;
     }
 }
 
@@ -80,6 +82,8 @@ void Test_assertEqualLog(uint16_t actual, uint16_t expected,
     {
         m_Test_activeTest->testResult = FAILURE;
         m_Test_activeTest->line = lineNumber;
+        m_Test_activeTest->actual = actual;
+        m_Test_activeTest->expected = expected;
     }
 }
 
@@ -97,6 +101,9 @@ void Test_runall(void)
 
     // Reset status of all
     m_Test_activeTest = m_Test_head;
+    Test_TestHolder* prev_test = NULL;
+    Test_TestHolder* curr_test = NULL;
+    Test_TestHolder* next_test = NULL;
     while( m_Test_activeTest != NULL )
     {
         m_Test_result.totalTests++;
@@ -105,7 +112,14 @@ void Test_runall(void)
         m_Test_activeTest->line = 0;
 
         // next in the chain
-        m_Test_activeTest = m_Test_activeTest->next;
+        // and reverse order
+        curr_test = m_Test_activeTest;
+        next_test = m_Test_activeTest->next;
+        m_Test_activeTest->next = prev_test;
+        m_Test_activeTest = next_test;
+        prev_test = curr_test;
+
+        m_Test_head = prev_test;
     }
 
     // Now execute the tests
@@ -121,7 +135,11 @@ void Test_runall(void)
         }
         else
         {
-            printf("FAIL: %s\n", m_Test_activeTest->name);
+            printf("FAIL: %s @ %d\n    got %d expected %d\n",
+                    m_Test_activeTest->name,
+                    m_Test_activeTest->line,
+                    m_Test_activeTest->actual,
+                    m_Test_activeTest->expected);
             m_Test_result.failureCount++;
         }
 

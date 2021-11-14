@@ -18,6 +18,8 @@ typedef struct Test_TestHolder
 	char * file;
 
 	int line;
+        uint16_t actual;
+        uint16_t expected;
 	TestResult testResult;
 
 	struct Test_TestHolder* next;
@@ -47,7 +49,7 @@ void Test_init(void) __attribute__ ((naked))
             __attribute__ ((naked)) \
             __attribute__ ((section (".init8"))); /* declare mod_appendtest_name */ \
 	Test_TestHolder m_##MODULE##_test_##NAME = { #NAME, \
-            MODULE##_test_##NAME, __FILE__, 0, NOT_RUN, 0 }; /* create struct m_mod_test_name*/ \
+            MODULE##_test_##NAME, __FILE__, 0, 0, 0, NOT_RUN, 0 }; /* create struct m_mod_test_name*/ \
 	void MODULE##_appendtest_##NAME(void) { \
             Test_add( &m_##MODULE##_test_##NAME ); }; /*define mod_appendtest_name*/ \
 	void MODULE##_test_##NAME(void) /*define mod_test_name*/
@@ -63,16 +65,18 @@ void Test_init(void);
 
 #endif
 
+// expected and actual got evaluated twice with the if statement
+// I have no clue what it is for, so I removed it for now.
 #define Test_assertTrue(condition) \
-    Test_assertTrueLog((condition), __LINE__); \
+    Test_assertTrueLog((condition), __LINE__); /*\
     if (!(condition)) { \
         return; \
-	}
+	}*/
 
-#define Test_assertEquals(expected, actual) \
-    Test_assertEqualLog((expected), (actual), __LINE__); \
-    if ((expected) != (actual)) { \
+#define Test_assertEquals(actual, expected) \
+    Test_assertEqualLog((actual), (expected), __LINE__); /*\
+    if ((actual) != (expected)) { \
         return; \
-    }
+    }*/
 
 #endif /* TEST_H */

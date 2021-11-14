@@ -22,14 +22,22 @@ enum Address {
     parity_error
 };
 
-const uint8_t ADR_DATA_PACKETS[] = {
+struct data_packet
+{
+    enum Address address;
+    uint8_t byte_count;
+    uint8_t bytes[7];
+};
+
+extern const uint8_t ADR_DATA_PACKETS[];
+/*{
     2,  //LIDAR_FORWARD
     2,  //LIDAR_BACKWARD
     2,  //IR_LEFTFRONT
     2,  //IR_LEFTBACK
     2,  //IR_RIGHTFRONT
     2,  //IR_RIGHTBACK
-    1,  //ODOMETER
+    2,  //ODOMETER **DESIGN SPEC INCORRECT**
     2,  //GYRO
     4,  //POSITION
     2,  //HEADER
@@ -39,7 +47,7 @@ const uint8_t ADR_DATA_PACKETS[] = {
     1,  //PD_KP
     1,  //PD_KD
     1   //PARITY_ERROR
-};
+};*/
 
 enum directionID {
     stop,
