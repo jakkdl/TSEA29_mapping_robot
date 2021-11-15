@@ -3,7 +3,8 @@
 #include "nav_unit_com_interrupt_logic.h"
 
 //assumes data is not corrupt, does not check parity
-int8_t communication_unit_interrupt(struct data_packet* data) {
+int8_t communication_unit_interrupt(struct data_packet *data)
+{
     // verify valid data packet count
     if (data->address != debug)
     {
@@ -22,38 +23,33 @@ int8_t communication_unit_interrupt(struct data_packet* data) {
 
     switch (data->address)
     {
-        case command:
-            return handle_command((enum directionID) data->bytes[0]);
-        case pd_kp:
-            return set_pd_kp(data->bytes[0]);
-        case pd_kd:
-            return set_pd_kd(data->bytes[0]);
-        default:
-            return -1;
+    case command:
+        return handle_command((enum directionID)data->bytes[0]);
+    case pd_kp:
+        return set_pd_kp(data->bytes[0]);
+    case pd_kd:
+        return set_pd_kd(data->bytes[0]);
+    default:
+        return -1;
     }
 }
-
-
-
 
 int8_t handle_command(enum directionID id)
 {
     switch (id)
     {
-        case stop:
-            return command_stop();
-        case start:
-            return command_start();
-        default:
-            if (navigationMode != manual)
-            {
-                return -1;
-            }
-            return command_set_target_square(id);
+    case stop:
+        return command_stop();
+    case start:
+        return command_start();
+    default:
+        if (navigationMode != manual)
+        {
+            return -1;
+        }
+        return command_set_target_square(id);
     }
-
 }
-
 
 // resend the data last sent with that address
 // might not be needed
@@ -100,24 +96,24 @@ int8_t navigate_forward(uint8_t dir)
 {
     switch (dir)
     {
-        case 0:
-            navigationGoalX = grid_to_mm(mm_to_grid(currentPosX) + 1);
-            navigationGoalY = currentPosY;
-            break;
-        case 1:
-            navigationGoalX = currentPosX;
-            navigationGoalY = grid_to_mm(mm_to_grid(currentPosY) + 1);
-            break;
-        case 2:
-            navigationGoalX = grid_to_mm(mm_to_grid(currentPosX) - 1);
-            navigationGoalY = currentPosY;
-            break;
-        case 3:
-            navigationGoalX = currentPosX;
-            navigationGoalY = grid_to_mm(mm_to_grid(currentPosY) - 1);
-            break;
-        default:
-            return -1;
+    case 0:
+        navigationGoalX = grid_to_mm(mm_to_grid(currentPosX) + 1);
+        navigationGoalY = currentPosY;
+        break;
+    case 1:
+        navigationGoalX = currentPosX;
+        navigationGoalY = grid_to_mm(mm_to_grid(currentPosY) + 1);
+        break;
+    case 2:
+        navigationGoalX = grid_to_mm(mm_to_grid(currentPosX) - 1);
+        navigationGoalY = currentPosY;
+        break;
+    case 3:
+        navigationGoalX = currentPosX;
+        navigationGoalY = grid_to_mm(mm_to_grid(currentPosY) - 1);
+        break;
+    default:
+        return -1;
     }
     navigationGoalType = move;
     return 0;
@@ -133,17 +129,17 @@ int8_t command_set_target_square(uint8_t id)
     uint8_t dir;
 
     // right
-    if (currentHeading < FULL_TURN/8 || currentHeading > FULL_TURN*7/8)
+    if (currentHeading < FULL_TURN / 8 || currentHeading > FULL_TURN * 7 / 8)
     {
         dir = 0;
     }
     // up
-    else if (currentHeading < FULL_TURN*3/8)
+    else if (currentHeading < FULL_TURN * 3 / 8)
     {
         dir = 1;
     }
     // left
-    else if (currentHeading < FULL_TURN*5/8)
+    else if (currentHeading < FULL_TURN * 5 / 8)
     {
         dir = 2;
     }
@@ -153,29 +149,27 @@ int8_t command_set_target_square(uint8_t id)
         dir = 3;
     }
 
-
-
     switch (id)
     {
-        case forward:
-            return navigate_forward(dir);
-        case backward:
-            //going backward is the same as a half-turn and forward
-            return navigate_forward((dir+2) % 4);
-        case fw_left:
-            return navigate_forward((dir+1) % 4);
-        case fw_right:
-            return navigate_forward((dir+3) % 4);
-        case turn_left:
-            navigationGoalHeading = ((dir+1) % 4) / 4 * FULL_TURN;
-            navigationGoalType = turn;
-            return 0;
-        case turn_right:
-            navigationGoalHeading = ((dir+3) % 4) / 4 * FULL_TURN;
-            navigationGoalType = turn;
-            return 0;
-        default:
-            return -1;
+    case forward:
+        return navigate_forward(dir);
+    case backward:
+        //going backward is the same as a half-turn and forward
+        return navigate_forward((dir + 2) % 4);
+    case fw_left:
+        return navigate_forward((dir + 1) % 4);
+    case fw_right:
+        return navigate_forward((dir + 3) % 4);
+    case turn_left:
+        navigationGoalHeading = ((dir + 1) % 4) / 4 * FULL_TURN;
+        navigationGoalType = turn;
+        return 0;
+    case turn_right:
+        navigationGoalHeading = ((dir + 3) % 4) / 4 * FULL_TURN;
+        navigationGoalType = turn;
+        return 0;
+    default:
+        return -1;
     }
 }
 

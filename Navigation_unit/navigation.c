@@ -1,26 +1,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-//#include "nav_unit_com_interrupt_logic.h"
-//#include "navigation_unit.h"
-//#include "map.h"
-#include "nav_unit_com_interrupt_logic.c"
-#include "map.c"
 
-int const QUEUE_ROWS = 1000;
-int const COLS = 3;
-int const ROWS_ADJACENT = 4;
-int const COORD_SIZE = 2;
+#include "nav_unit_com_interrupt_logic.h"
+#include "navigation_unit.h"
+#include "../AVR_common/robot.h"
+#include "navigation.h"
+
 int queueSize = 0; //for easy iterations through arrays
 int adjacentCellsSize = 0;
-
-int startPosition[COORD_SIZE];
-//int endPoint[COORD_SIZE];
-int islandStartPosition[COORD_SIZE];
 
 uint8_t queue[QUEUE_ROWS][COLS];
 uint8_t adjacentCells[ROWS_ADJACENT][COLS];
 uint8_t traversableCells[ROWS_ADJACENT][COLS];
+uint8_t endPoint[COORD_SIZE];
+uint16_t startPosX;
+uint16_t startPosY;
 
 int main(void);
 void wall_follow();
@@ -33,12 +28,46 @@ bool left_opening();
 bool right_opening();
 void reverse_controls();
 bool wall_in_front();
-bool reverseControls = false;
+bool at_start_pos();
 
 /*
 Changed so that the algorithm looks for the end point instead of the 
 position of the robot. Same same but backwards.
 */
+
+void save_start_pos()
+{
+    startPosX = mm_to_grid(currentPosX);
+    startPosY = mm_to_grid(currentPosY);
+}
+
+void init_map()
+{
+    for (int x = 0; x < 49; x++)
+    {
+        for (int y = 0; y < 25; y++)
+        {
+            navigationMap[x][y] = 0;
+        }
+    }
+}
+
+bool unexplored_cells_exist()
+{
+    for (int x = 0; x < 49; x++)
+    {
+        for (int y = 0; y < 25; y++)
+        {
+            if (navigationMap[x][y] == 0)
+            {
+                endPoint[0] = x;
+                endPoint[1] = y;
+                return true;
+            }
+        }
+    }
+    return false;
+}
 
 bool left_opening()
 {
@@ -56,14 +85,26 @@ bool wall_in_front()
     return false;
 }
 
+bool at_start_pos()
+{
+    if (mm_to_grid(currentPosX) != startPosX && mm_to_grid(currentPosY) != startPosY)
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
+}
+
 void wall_follow()
 {
     //Save start position somehow. This is temporary
-    while (mm_to_grid(currentPosX) != startPosition[0] && mm_to_grid(currentPosY) != startPosition[1])
+    while (!at_start_pos())
     {
         if (left_opening())
         {
-            command_set_target_square(fw_left);
+            //command_set_target_square(fw_left);
         }
         else
         {
@@ -71,31 +112,31 @@ void wall_follow()
             {
                 if (right_opening())
                 {
-                    command_set_target_square(fw_right);
+                    //command_set_target_square(fw_right);
                 }
                 else
                 {
                     //Turn around 180 degrees (this was "reverse controls" earlier)
                     for (int i = 0; i < 2; i++)
                     {
-                        command_set_target_square(turn_right);
+                        //command_set_target_square(turn_right);
                     }
                 }
             }
             else
             {
-                command_set_target_square(forward);
+                //command_set_target_square(forward);
             }
         }
     }
     if (unexplored_cells_exist())
     {
-        sample_search(map[cellToExplore]);
+        sample_search();
     }
 }
 
 //Path finding algorithm that might not work as expected. Can probably be replaced easily if so.
-void sample_search(uint8_t endPoint[2])
+void sample_search()
 {
     int counter = 0;
     bool adjacentInQueue = false;
