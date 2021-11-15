@@ -1,6 +1,7 @@
 Language: Cpp # Includes c
 BasedOnStyle: Mozilla
 AlignConsecutiveAssignments: Consecutive
+AlignConsecutiveDeclarations: Consecutive
 AlwaysBreakAfterReturnType: None
 AlwaysBreakAfterDefinitionReturnType: None
 BreakBeforeBraces: Allman
@@ -11,7 +12,6 @@ AccessModifierOffset: -2
 AlignAfterOpenBracket: Align
 AlignConsecutiveMacros: None
 AlignConsecutiveBitFields: None
-AlignConsecutiveDeclarations: None
 AlignEscapedNewlines: Right
 AlignOperands:   Align
 AlignTrailingComments: true

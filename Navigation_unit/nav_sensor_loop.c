@@ -12,10 +12,10 @@
 #define POS_SENSITIVITY 50
 
 struct sensor_data next_sensor_data;
-uint8_t sensor_count = 0;
+uint8_t            sensor_count = 0;
 
 int8_t nav_main(struct sensor_data* data);
-bool arrived_at_goal(void);
+bool   arrived_at_goal(void);
 
 int8_t handle_sensor_data(struct data_packet* data)
 {
@@ -148,8 +148,8 @@ bool arrived_at_goal(void)
 Test_test(Test, handle_sensor_data_lidar_forward)
 {
     // save old values to restore later
-    struct sensor_data old_sensor_data = next_sensor_data;
-    uint8_t old_sensor_count           = sensor_count;
+    struct sensor_data old_sensor_data  = next_sensor_data;
+    uint8_t            old_sensor_count = sensor_count;
 
     // set up environment
     sensor_count                   = 0;
@@ -175,8 +175,8 @@ Test_test(Test, handle_sensor_data_lidar_forward)
 Test_test(Test, handle_sensor_data_odometer)
 {
     // save old values to restore later
-    struct sensor_data old_sensor_data = next_sensor_data;
-    uint8_t old_sensor_count           = sensor_count;
+    struct sensor_data old_sensor_data  = next_sensor_data;
+    uint8_t            old_sensor_count = sensor_count;
 
     // set up environment
     sensor_count                    = 3;
@@ -202,9 +202,9 @@ Test_test(Test, handle_sensor_data_odometer)
 
 Test_test(Test, arrived_at_goal_turn)
 {
-    enum NavigationGoal oldGoalType   = navigationGoalType;
-    uint16_t oldNavigationGoalHeading = navigationGoalHeading;
-    uint16_t oldCurrentHeading        = currentHeading;
+    enum NavigationGoal oldGoalType              = navigationGoalType;
+    uint16_t            oldNavigationGoalHeading = navigationGoalHeading;
+    uint16_t            oldCurrentHeading        = currentHeading;
 
     navigationGoalType = turn;
 
@@ -250,11 +250,11 @@ Test_test(Test, arrived_at_goal_turn)
 
 Test_test(Test, arrived_at_goal_pos)
 {
-    enum NavigationGoal oldGoalType = navigationGoalType;
-    uint16_t oldNavigationGoalX     = navigationGoalX;
-    uint16_t oldNavigationGoalY     = navigationGoalY;
-    uint16_t oldCurrentPosX         = currentPosX;
-    uint16_t oldCurrentPosY         = currentPosY;
+    enum NavigationGoal oldGoalType        = navigationGoalType;
+    uint16_t            oldNavigationGoalX = navigationGoalX;
+    uint16_t            oldNavigationGoalY = navigationGoalY;
+    uint16_t            oldCurrentPosX     = currentPosX;
+    uint16_t            oldCurrentPosY     = currentPosY;
 
     navigationGoalType = move;
 

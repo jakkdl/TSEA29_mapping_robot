@@ -26,10 +26,10 @@ uint16_t currentPosX = grid_to_mm(24);
 uint16_t currentPosY = 0;
 
 // We can either use bool + unsigned
-enum Direction wheelDirLeft  = dir_forward;
-enum Direction wheelDirRight = dir_forward;
-uint8_t wheelSpeedLeft       = 0;
-uint8_t wheelSpeedRight      = 0;
+enum Direction wheelDirLeft    = dir_forward;
+enum Direction wheelDirRight   = dir_forward;
+uint8_t        wheelSpeedLeft  = 0;
+uint8_t        wheelSpeedRight = 0;
 
 // or a signed value.
 // int8_t WHEEL_SPEED_LEFT = 0;
@@ -38,10 +38,10 @@ uint8_t wheelSpeedRight      = 0;
 // and/or what the navigation algorithm wanna use.
 
 // Current navigation goal
-enum NavigationGoal navigationGoalType = none;
-uint16_t navigationGoalX               = 24;
-uint16_t navigationGoalY               = 0;
-uint16_t navigationGoalHeading         = 0;
+enum NavigationGoal navigationGoalType    = none;
+uint16_t            navigationGoalX       = 24;
+uint16_t            navigationGoalY       = 0;
+uint16_t            navigationGoalHeading = 0;
 
 // Map
 uint8_t navigationMap[49][25];

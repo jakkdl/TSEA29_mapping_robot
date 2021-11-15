@@ -26,8 +26,8 @@ enum Address
 struct data_packet
 {
     enum Address address;
-    uint8_t byte_count;
-    uint8_t bytes[7];
+    uint8_t      byte_count;
+    uint8_t      bytes[7];
 };
 
 extern const uint8_t ADR_DATA_PACKETS[];

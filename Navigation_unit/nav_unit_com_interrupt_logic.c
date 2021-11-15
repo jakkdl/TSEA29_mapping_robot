@@ -178,7 +178,7 @@ Test_test(Test, uartCommandStart)
 {
     enum NavigationGoal oldGoalType       = navigationGoalType;
     enum NavigationMode oldNavigationMode = navigationMode;
-    struct data_packet data;
+    struct data_packet  data;
     data.address    = command;
     data.byte_count = 1;
     data.bytes[0]   = start;
@@ -192,9 +192,9 @@ Test_test(Test, uartCommandStart)
 }
 Test_test(Test, uartCommand_turn_left)
 {
-    enum NavigationGoal oldGoalType       = navigationGoalType;
-    enum NavigationMode oldNavigationMode = navigationMode;
-    uint16_t oldNavigationGoalHeading     = navigationGoalHeading;
+    enum NavigationGoal oldGoalType              = navigationGoalType;
+    enum NavigationMode oldNavigationMode        = navigationMode;
+    uint16_t            oldNavigationGoalHeading = navigationGoalHeading;
 
     struct data_packet data;
     data.address    = command;
@@ -225,10 +225,10 @@ Test_test(Test, uartCommand_turn_left)
 
 Test_test(Test, uartCommand_fw_left)
 {
-    enum NavigationGoal oldGoalType       = navigationGoalType;
-    enum NavigationMode oldNavigationMode = navigationMode;
-    uint8_t oldNavigationGoalX            = navigationGoalX;
-    uint8_t oldNavigationGoalY            = navigationGoalY;
+    enum NavigationGoal oldGoalType        = navigationGoalType;
+    enum NavigationMode oldNavigationMode  = navigationMode;
+    uint8_t             oldNavigationGoalX = navigationGoalX;
+    uint8_t             oldNavigationGoalY = navigationGoalY;
 
     struct data_packet data;
     data.address    = command;

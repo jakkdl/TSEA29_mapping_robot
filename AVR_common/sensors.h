@@ -9,8 +9,8 @@ struct sensor_data
     uint16_t ir_leftback;
     uint16_t ir_rightfront;
     uint16_t ir_rightback;
-    uint8_t odometer_left;
-    uint8_t odometer_right;
+    uint8_t  odometer_left;
+    uint8_t  odometer_right;
     uint16_t gyro;
 };
 

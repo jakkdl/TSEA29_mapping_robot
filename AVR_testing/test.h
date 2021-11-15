@@ -17,9 +17,9 @@ typedef struct Test_TestHolder
     void (*testFunction)(void);
     char* file;
 
-    int line;
-    uint16_t actual;
-    uint16_t expected;
+    int        line;
+    uint16_t   actual;
+    uint16_t   expected;
     TestResult testResult;
 
     struct Test_TestHolder* next;
