@@ -3,7 +3,8 @@
 #define ROBOT_H
 #include <stdint.h>
 
-enum Address {
+enum Address
+{
     lidar_forward,
     lidar_backward,
     ir_leftfront,
@@ -49,7 +50,8 @@ extern const uint8_t ADR_DATA_PACKETS[];
     1   //PARITY_ERROR
 };*/
 
-enum directionID {
+enum directionID
+{
     stop,
     start,
     forward,

@@ -5,9 +5,8 @@
 #include "../AVR_testing/test.h"
 #include "navigation_unit.h"
 
-
 // robot will turn to a precision of at least 2.8 degrees
-#define TURN_SENSITIVITY FULL_TURN/128
+#define TURN_SENSITIVITY FULL_TURN / 128
 // robot will stop when the middle of the robot is within this many mm of
 // the middle of the target square along both the x and y axis
 #define POS_SENSITIVITY 50
@@ -27,7 +26,7 @@ int8_t handle_sensor_data(struct data_packet* data)
     {
         if (data->byte_count != ADR_DATA_PACKETS[data->address])
         {
-            //Invalid number of data packets
+            // Invalid number of data packets
             return -1;
         }
     }
@@ -39,29 +38,29 @@ int8_t handle_sensor_data(struct data_packet* data)
     switch (data->address)
     {
         case lidar_forward:
-            next_sensor_data.lidar_forward  = BYTES_TO_UINT16(data);
+            next_sensor_data.lidar_forward = BYTES_TO_UINT16(data);
             break;
         case lidar_backward:
             next_sensor_data.lidar_backward = BYTES_TO_UINT16(data);
             break;
         case ir_leftfront:
-            next_sensor_data.ir_leftfront   = BYTES_TO_UINT16(data);
+            next_sensor_data.ir_leftfront = BYTES_TO_UINT16(data);
             break;
         case ir_leftback:
-            next_sensor_data.ir_leftback    = BYTES_TO_UINT16(data);
+            next_sensor_data.ir_leftback = BYTES_TO_UINT16(data);
             break;
         case ir_rightfront:
-            next_sensor_data.ir_rightfront  = BYTES_TO_UINT16(data);
+            next_sensor_data.ir_rightfront = BYTES_TO_UINT16(data);
             break;
         case ir_rightback:
-            next_sensor_data.ir_rightback   = BYTES_TO_UINT16(data);
+            next_sensor_data.ir_rightback = BYTES_TO_UINT16(data);
             break;
         case odometer:
-            next_sensor_data.odometer_left  = data->bytes[0];
+            next_sensor_data.odometer_left = data->bytes[0];
             next_sensor_data.odometer_right = data->bytes[1];
             break;
         case gyro:
-            next_sensor_data.gyro           = BYTES_TO_UINT16(data);
+            next_sensor_data.gyro = BYTES_TO_UINT16(data);
             break;
         default:
             return -1;
@@ -92,20 +91,19 @@ int8_t nav_main(struct sensor_data* data)
         // have we arrived at the navigation goal?
         if (arrived_at_goal())
         {
-            //clear navigation goal
+            // clear navigation goal
             navigationGoalType = none;
-            //TODO stop moving
+            // TODO stop moving
         }
         else
         {
-            //TODO drive motors with pd towards the goal
+            // TODO drive motors with pd towards the goal
             __asm__("nop");
-            //TODO send debug values to com unit?
+            // TODO send debug values to com unit?
         }
     }
 
     // TODO send currentHeading, currentPosX and currentPosY to com-unit
-
 
     // run map update algorithm
     // which if there's updates, sends them to com-unit
@@ -115,7 +113,7 @@ int8_t nav_main(struct sensor_data* data)
     if (navigationMode == autonomous && navigationGoalType == none)
     {
         // run navigation algorithm, setting navigationGoal
-        //sample_search()
+        // sample_search()
     }
 
     return 0;
@@ -125,7 +123,8 @@ bool arrived_at_goal(void)
 {
     if (navigationGoalType == turn)
     {
-        if (abs(currentHeading - navigationGoalHeading) < TURN_SENSITIVITY) {
+        if (abs(currentHeading - navigationGoalHeading) < TURN_SENSITIVITY)
+        {
             return true;
         }
         return false;
@@ -142,7 +141,6 @@ bool arrived_at_goal(void)
     // if navigationGoalType == none
     return true;
 }
-
 
 /* #### UNIT TESTS #### */
 
@@ -169,7 +167,7 @@ Test_test(Test, handle_sensor_data_lidar_forward)
     Test_assertEquals(sensor_count, 1);
     Test_assertEquals(next_sensor_data.lidar_forward, 2000);
 
-    //restore old values
+    // restore old values
     next_sensor_data = old_sensor_data;
     sensor_count = old_sensor_count;
 }
@@ -197,7 +195,7 @@ Test_test(Test, handle_sensor_data_odometer)
     Test_assertEquals(next_sensor_data.odometer_left, 5);
     Test_assertEquals(next_sensor_data.odometer_right, 6);
 
-    //restore old values
+    // restore old values
     next_sensor_data = old_sensor_data;
     sensor_count = old_sensor_count;
 }
@@ -210,11 +208,11 @@ Test_test(Test, arrived_at_goal_turn)
 
     navigationGoalType = turn;
 
-    navigationGoalHeading = FULL_TURN/2;
-    currentHeading = FULL_TURN/2 + TURN_SENSITIVITY - 1;
+    navigationGoalHeading = FULL_TURN / 2;
+    currentHeading = FULL_TURN / 2 + TURN_SENSITIVITY - 1;
     Test_assertTrue(arrived_at_goal());
 
-    currentHeading = FULL_TURN/2 - TURN_SENSITIVITY + 1;
+    currentHeading = FULL_TURN / 2 - TURN_SENSITIVITY + 1;
     Test_assertTrue(arrived_at_goal());
 
     navigationGoalHeading = 0;
@@ -222,15 +220,15 @@ Test_test(Test, arrived_at_goal_turn)
     Test_assertTrue(arrived_at_goal());
 
     navigationGoalHeading = 0;
-    currentHeading = 1 -TURN_SENSITIVITY;
+    currentHeading = 1 - TURN_SENSITIVITY;
     Test_assertTrue(arrived_at_goal());
 
     // test falsity
-    navigationGoalHeading = FULL_TURN/2;
-    currentHeading = FULL_TURN/2 + TURN_SENSITIVITY;
+    navigationGoalHeading = FULL_TURN / 2;
+    currentHeading = FULL_TURN / 2 + TURN_SENSITIVITY;
     Test_assertTrue(!arrived_at_goal());
 
-    currentHeading = FULL_TURN/2 - TURN_SENSITIVITY;
+    currentHeading = FULL_TURN / 2 - TURN_SENSITIVITY;
     Test_assertTrue(!arrived_at_goal());
 
     navigationGoalHeading = 0;
