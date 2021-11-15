@@ -1,11 +1,10 @@
-#include <stdlib.h>
-#include <string.h>
 #include <avr/io.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "test.h"
 #include "../AVR_common/uart.h"
-
+#include "test.h"
 
 /*#ifndef F_CPU
 #define F_CPU 8000000
@@ -30,10 +29,12 @@ Test_ResultType m_Test_result;
 /*
    const struct avr_mmcu_vcd_trace_t _mytrace[]  _MMCU_ = {
    { AVR_MCU_VCD_SYMBOL("UDR0"), .what = (void*)&UDR0, },
-   { AVR_MCU_VCD_SYMBOL("UDRE0"), .mask = (1 << UDRE0), .what = (void*)&UCSR0A, },
+   { AVR_MCU_VCD_SYMBOL("UDRE0"), .mask = (1 << UDRE0), .what = (void*)&UCSR0A,
+   },
    };*/
 
-static int uart_putchar(char c, FILE *stream) {
+static int uart_putchar(char c, FILE* stream)
+{
     if (c == '\n')
         uart_putchar('\r', stream);
     // included with avr/io.h
@@ -43,8 +44,7 @@ static int uart_putchar(char c, FILE *stream) {
 }
 
 // define a FILE to be used by custom printf
-static FILE mystdout = FDEV_SETUP_STREAM(uart_putchar, NULL,
-        _FDEV_SETUP_WRITE);
+static FILE mystdout = FDEV_SETUP_STREAM(uart_putchar, NULL, _FDEV_SETUP_WRITE);
 // Initialise the test framework
 void Test_init(void)
 {
@@ -66,7 +66,7 @@ void Test_add(Test_TestHolder* test)
 void Test_assertTrueLog(uint8_t condition, uint16_t lineNumber)
 {
     // We have the active test
-    if( !(condition) )
+    if (!(condition))
     {
         m_Test_activeTest->testResult = FAILURE;
         m_Test_activeTest->line = lineNumber;
@@ -75,10 +75,11 @@ void Test_assertTrueLog(uint8_t condition, uint16_t lineNumber)
     }
 }
 
-void Test_assertEqualLog(uint16_t actual, uint16_t expected,
-        uint16_t lineNumber)
+void Test_assertEqualLog(uint16_t actual,
+                         uint16_t expected,
+                         uint16_t lineNumber)
 {
-    if( expected != actual )
+    if (expected != actual)
     {
         m_Test_activeTest->testResult = FAILURE;
         m_Test_activeTest->line = lineNumber;
@@ -104,7 +105,7 @@ void Test_runall(void)
     Test_TestHolder* prev_test = NULL;
     Test_TestHolder* curr_test = NULL;
     Test_TestHolder* next_test = NULL;
-    while( m_Test_activeTest != NULL )
+    while (m_Test_activeTest != NULL)
     {
         m_Test_result.totalTests++;
 
@@ -124,11 +125,11 @@ void Test_runall(void)
 
     // Now execute the tests
     m_Test_activeTest = m_Test_head;
-    while( m_Test_activeTest != NULL )
+    while (m_Test_activeTest != NULL)
     {
         m_Test_activeTest->testFunction();
 
-        if( m_Test_activeTest->testResult == NOT_RUN )
+        if (m_Test_activeTest->testResult == NOT_RUN)
         {
             m_Test_activeTest->testResult = SUCCESS;
             m_Test_result.successCount++;
@@ -136,24 +137,23 @@ void Test_runall(void)
         else
         {
             printf("FAIL: %s @ %d\n    got %d expected %d\n",
-                    m_Test_activeTest->name,
-                    m_Test_activeTest->line,
-                    m_Test_activeTest->actual,
-                    m_Test_activeTest->expected);
+                   m_Test_activeTest->name,
+                   m_Test_activeTest->line,
+                   m_Test_activeTest->actual,
+                   m_Test_activeTest->expected);
             m_Test_result.failureCount++;
         }
 
-        __asm__ ("nop");
+        __asm__("nop");
 
         // next in the chain
         m_Test_activeTest = m_Test_activeTest->next;
     }
 
     // Get the results
-    __asm__ ("nop");
+    __asm__("nop");
     /*UART_Init(0);
     UART_Transmit(0, m_Test_result.successCount);*/
-
 
     printf("Total Tests: %d\n", m_Test_result.totalTests);
     printf("Success Count: %d\n", m_Test_result.successCount);
@@ -171,4 +171,3 @@ Test_test(Test, testWillPass)
 {
     Test_assertTrue(1);
 }*/
-

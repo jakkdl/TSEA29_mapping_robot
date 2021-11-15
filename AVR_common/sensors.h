@@ -15,10 +15,10 @@ struct sensor_data
 };
 
 #define SENSOR_PACKETS 8
-//odometers are sent in the same packet
+// odometers are sent in the same packet
 
 // used to unpack a byte array into a uint16_t value
-#define BYTES_TO_UINT16(data) (uint16_t) (data->bytes[1] << 4 | data->bytes[0])
+#define BYTES_TO_UINT16(data) (uint16_t)(data->bytes[1] << 4 | data->bytes[0])
 
 // used to pack a uint16_t value into two bytes
 #define UINT16_TO_BYTE_0(value) (value) & 0b1111
