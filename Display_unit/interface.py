@@ -1,36 +1,32 @@
-import turtle
-
-window = turtle.Screen()
-map_frame = turtle.Turtle()
-console_frame = turtle.Turtle()
-movement_frame = turtle.Turtle()
-steering_frame = turtle.Turtle()
-
-# Will probably use Tkinter or PyQT instead of turtle
+from tkinter import *
 
 
-def create_window():
+class Cons:
 
-    WIDTH = 1000
-    HEIGHT = 1000
+    FRAME_WIDTH = 1000
+    FRAME_HEIGHT = 1000
 
-    window.title("Gudrid Interface")
-    window.bgcolor("gray")
-    window.setup(width=WIDTH, height=HEIGHT)
 
-    map_frame.speed(0)
-    map_frame.shape("square")
-    map_frame.color("white")
-    map_frame.penup()
-    map_frame.goto(-190, 190)
-    map_frame.shapesize(stretch_wid=30, stretch_len=30)
+class Map(Canvas):
 
-    window.tracer(0)
+    def __init__(self):
+        super().__init__(width=Cons.FRAME_WIDTH, height=Cons.FRAME_HEIGHT,
+                         background="gray", highlightthickness=0)
 
-# loop
-    while True:
-        window.update()
+        self.pack()
+
+
+class Interface(Frame):
+
+    def __init__(self):
+        super().__init__()
+
+        self.master.title('Gudrid Interface')
+        self.map = Map()
+        self.pack()
 
 
 if __name__ == '__main__':
-    create_window()
+    root = Tk()
+    nib = Interface()
+    root.mainloop()

@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include "nav_unit_com_interrupt_logic.h"
-#include "navigation_unit.h"
-#include "map.h"
+//#include "nav_unit_com_interrupt_logic.h"
+//#include "navigation_unit.h"
+//#include "map.h"
+#include "nav_unit_com_interrupt_logic.c"
+#include "map.c"
 
 int const QUEUE_ROWS = 1000;
 int const COLS = 3;
@@ -13,13 +15,14 @@ int queueSize = 0; //for easy iterations through arrays
 int adjacentCellsSize = 0;
 
 int startPosition[COORD_SIZE];
-int endPoint[COORD_SIZE];
+//int endPoint[COORD_SIZE];
 int islandStartPosition[COORD_SIZE];
 
 uint8_t queue[QUEUE_ROWS][COLS];
 uint8_t adjacentCells[ROWS_ADJACENT][COLS];
 uint8_t traversableCells[ROWS_ADJACENT][COLS];
 
+int main(void);
 void wall_follow();
 void sample_search();
 uint8_t get_robot_adjacent_cell(int direction, int xy);
@@ -48,6 +51,11 @@ bool right_opening()
     return true;
 }
 
+bool wall_in_front()
+{
+    return false;
+}
+
 void wall_follow()
 {
     //Save start position somehow. This is temporary
@@ -67,7 +75,7 @@ void wall_follow()
                 }
                 else
                 {
-                    //Turn around 180 degrees
+                    //Turn around 180 degrees (this was "reverse controls" earlier)
                     for (int i = 0; i < 2; i++)
                     {
                         command_set_target_square(turn_right);
@@ -82,12 +90,12 @@ void wall_follow()
     }
     if (unexplored_cells_exist())
     {
-        sample_search();
+        sample_search(map[cellToExplore]);
     }
 }
 
 //Path finding algorithm that might not work as expected. Can probably be replaced easily if so.
-void sample_search()
+void sample_search(uint8_t endPoint[2])
 {
     int counter = 0;
     bool adjacentInQueue = false;
@@ -143,7 +151,7 @@ void sample_search()
         }
         for (int i = 0; i < queueSize; i++)
         {
-            if (queue[i][0] == endPoint[0] && queue[i][1] == endPoint[1])
+            if (queue[i] == endPoint)
             {
                 endPointInQueue = true;
                 break;

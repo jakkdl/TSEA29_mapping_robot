@@ -23,8 +23,10 @@ bool unexplored_cells_exist()
         {
             if (map[row][col] == unknown_cell)
             {
+                cellToExplore = row;
                 return true;
             }
         }
     }
+    return false;
 }
