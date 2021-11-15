@@ -1,15 +1,15 @@
 Language: Cpp # Includes c
 BasedOnStyle: Mozilla
-IndentWidth: 4
+AlignConsecutiveAssignments: Consecutive
 AlwaysBreakAfterReturnType: None
 AlwaysBreakAfterDefinitionReturnType: None
 BreakBeforeBraces: Allman
+IndentWidth: 4
 
 # BasedOnStyle:  Mozilla
 AccessModifierOffset: -2
 AlignAfterOpenBracket: Align
 AlignConsecutiveMacros: None
-AlignConsecutiveAssignments: None
 AlignConsecutiveBitFields: None
 AlignConsecutiveDeclarations: None
 AlignEscapedNewlines: Right

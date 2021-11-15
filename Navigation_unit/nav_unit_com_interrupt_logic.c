@@ -76,10 +76,10 @@ int8_t set_pd_kd(uint8_t kd)
 // set navigation to manual
 int8_t command_stop()
 {
-    wheelSpeedLeft = 0;
-    wheelSpeedRight = 0;
+    wheelSpeedLeft     = 0;
+    wheelSpeedRight    = 0;
     navigationGoalType = none;
-    navigationMode = manual;
+    navigationMode     = manual;
     return 0;
 }
 
@@ -88,7 +88,7 @@ int8_t command_stop()
 int8_t command_start()
 {
     navigationGoalType = none;
-    navigationMode = autonomous;
+    navigationMode     = autonomous;
     return 0;
 }
 
@@ -162,11 +162,11 @@ int8_t command_set_target_square(uint8_t id)
             return navigate_forward((dir + 3) % 4);
         case turn_left:
             navigationGoalHeading = ((dir + 1) % 4) / 4 * FULL_TURN;
-            navigationGoalType = turn;
+            navigationGoalType    = turn;
             return 0;
         case turn_right:
             navigationGoalHeading = ((dir + 3) % 4) / 4 * FULL_TURN;
-            navigationGoalType = turn;
+            navigationGoalType    = turn;
             return 0;
         default:
             return -1;
@@ -176,28 +176,28 @@ int8_t command_set_target_square(uint8_t id)
 #include "../AVR_testing/test.h"
 Test_test(Test, uartCommandStart)
 {
-    enum NavigationGoal oldGoalType = navigationGoalType;
+    enum NavigationGoal oldGoalType       = navigationGoalType;
     enum NavigationMode oldNavigationMode = navigationMode;
     struct data_packet data;
-    data.address = command;
+    data.address    = command;
     data.byte_count = 1;
-    data.bytes[0] = start;
+    data.bytes[0]   = start;
     Test_assertEquals(communication_unit_interrupt(&data), 0);
 
     Test_assertEquals(navigationGoalType, none);
     Test_assertEquals(navigationMode, autonomous);
 
     navigationGoalType = oldGoalType;
-    navigationMode = oldNavigationMode;
+    navigationMode     = oldNavigationMode;
 }
 Test_test(Test, uartCommand_turn_left)
 {
-    enum NavigationGoal oldGoalType = navigationGoalType;
+    enum NavigationGoal oldGoalType       = navigationGoalType;
     enum NavigationMode oldNavigationMode = navigationMode;
-    uint16_t oldNavigationGoalHeading = navigationGoalHeading;
+    uint16_t oldNavigationGoalHeading     = navigationGoalHeading;
 
     struct data_packet data;
-    data.address = command;
+    data.address    = command;
     data.byte_count = 1;
 
     data.bytes[0] = turn_left;
@@ -218,20 +218,20 @@ Test_test(Test, uartCommand_turn_left)
     Test_assertEquals(navigationMode, manual);
     // Test_assertEquals(navigationGoalHeading, FULL_TURN/4);
 
-    navigationGoalType = oldGoalType;
-    navigationMode = oldNavigationMode;
+    navigationGoalType    = oldGoalType;
+    navigationMode        = oldNavigationMode;
     navigationGoalHeading = oldNavigationGoalHeading;
 }
 
 Test_test(Test, uartCommand_fw_left)
 {
-    enum NavigationGoal oldGoalType = navigationGoalType;
+    enum NavigationGoal oldGoalType       = navigationGoalType;
     enum NavigationMode oldNavigationMode = navigationMode;
-    uint8_t oldNavigationGoalX = navigationGoalX;
-    uint8_t oldNavigationGoalY = navigationGoalY;
+    uint8_t oldNavigationGoalX            = navigationGoalX;
+    uint8_t oldNavigationGoalY            = navigationGoalY;
 
     struct data_packet data;
-    data.address = command;
+    data.address    = command;
     data.byte_count = 1;
 
     data.bytes[0] = fw_left;
@@ -245,8 +245,8 @@ Test_test(Test, uartCommand_fw_left)
     // Test actual move
     navigationMode = manual;
     currentHeading = 0;
-    currentPosX = grid_to_mm(24);
-    currentPosY = 0;
+    currentPosX    = grid_to_mm(24);
+    currentPosY    = 0;
 
     Test_assertEquals(communication_unit_interrupt(&data), 0);
     Test_assertEquals(navigationGoalType, move);
@@ -255,7 +255,7 @@ Test_test(Test, uartCommand_fw_left)
     Test_assertEquals(navigationGoalY, grid_to_mm(1));
 
     navigationGoalType = oldGoalType;
-    navigationMode = oldNavigationMode;
-    navigationGoalX = oldNavigationGoalX;
-    navigationGoalY = oldNavigationGoalY;
+    navigationMode     = oldNavigationMode;
+    navigationGoalX    = oldNavigationGoalX;
+    navigationGoalY    = oldNavigationGoalY;
 }

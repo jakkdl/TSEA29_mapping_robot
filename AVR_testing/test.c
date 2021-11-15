@@ -48,10 +48,10 @@ static FILE mystdout = FDEV_SETUP_STREAM(uart_putchar, NULL, _FDEV_SETUP_WRITE);
 // Initialise the test framework
 void Test_init(void)
 {
-    m_Test_head = NULL;
+    m_Test_head       = NULL;
     m_Test_activeTest = NULL;
 
-    m_Test_result.totalTests = 0;
+    m_Test_result.totalTests   = 0;
     m_Test_result.successCount = 0;
     m_Test_result.failureCount = 0;
 }
@@ -59,7 +59,7 @@ void Test_init(void)
 void Test_add(Test_TestHolder* test)
 {
     // Put to front of chain
-    test->next = m_Test_head;
+    test->next  = m_Test_head;
     m_Test_head = test;
 }
 
@@ -69,9 +69,9 @@ void Test_assertTrueLog(uint8_t condition, uint16_t lineNumber)
     if (!(condition))
     {
         m_Test_activeTest->testResult = FAILURE;
-        m_Test_activeTest->line = lineNumber;
-        m_Test_activeTest->actual = 1;
-        m_Test_activeTest->expected = 0;
+        m_Test_activeTest->line       = lineNumber;
+        m_Test_activeTest->actual     = 1;
+        m_Test_activeTest->expected   = 0;
     }
 }
 
@@ -82,9 +82,9 @@ void Test_assertEqualLog(uint16_t actual,
     if (expected != actual)
     {
         m_Test_activeTest->testResult = FAILURE;
-        m_Test_activeTest->line = lineNumber;
-        m_Test_activeTest->actual = actual;
-        m_Test_activeTest->expected = expected;
+        m_Test_activeTest->line       = lineNumber;
+        m_Test_activeTest->actual     = actual;
+        m_Test_activeTest->expected   = expected;
     }
 }
 
@@ -96,12 +96,12 @@ void Test_runall(void)
     stdout = &mystdout;
 
     // Reset counts
-    m_Test_result.totalTests = 0;
+    m_Test_result.totalTests   = 0;
     m_Test_result.successCount = 0;
     m_Test_result.failureCount = 0;
 
     // Reset status of all
-    m_Test_activeTest = m_Test_head;
+    m_Test_activeTest          = m_Test_head;
     Test_TestHolder* prev_test = NULL;
     Test_TestHolder* curr_test = NULL;
     Test_TestHolder* next_test = NULL;
@@ -110,15 +110,15 @@ void Test_runall(void)
         m_Test_result.totalTests++;
 
         m_Test_activeTest->testResult = NOT_RUN;
-        m_Test_activeTest->line = 0;
+        m_Test_activeTest->line       = 0;
 
         // next in the chain
         // and reverse order
-        curr_test = m_Test_activeTest;
-        next_test = m_Test_activeTest->next;
+        curr_test               = m_Test_activeTest;
+        next_test               = m_Test_activeTest->next;
         m_Test_activeTest->next = prev_test;
-        m_Test_activeTest = next_test;
-        prev_test = curr_test;
+        m_Test_activeTest       = next_test;
+        prev_test               = curr_test;
 
         m_Test_head = prev_test;
     }
