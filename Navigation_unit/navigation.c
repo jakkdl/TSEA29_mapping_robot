@@ -6,6 +6,7 @@
 #include "navigation_unit.h"
 #include "../AVR_common/robot.h"
 #include "navigation.h"
+#include "../AVR_testing/test.h"
 
 //for easy iterations through arrays
 int queueSize = 0;
@@ -19,18 +20,20 @@ uint8_t endPoint[COORD_SIZE];
 uint16_t startPosX;
 uint16_t startPosY;
 
-//int main(void);
 void wall_follow();
 void sample_search();
-uint8_t get_robot_adjacent_cell(int direction, int xy);
+uint8_t get_robot_adjacent_coord(int direction, int xy);
 uint8_t get_adjacent_cell(int direction, int xy, uint8_t *currentCell);
-bool cell_is_wall(uint8_t cell[COLS]);
+bool cell_is_wall(uint8_t cell[COLS]); //Confusing function names at the moment. Will fix.
+bool is_wall(uint8_t dir);
 void move_one_cell(uint8_t queue[QUEUE_ROWS][COLS]);
 bool left_opening();
 bool right_opening();
-void reverse_controls();
 bool wall_in_front();
+bool is_wall(uint8_t dir);
+uint8_t get_heading();
 bool at_start_pos();
+void save_start_pos();
 
 /*
 Changed so that the algorithm looks for the end point instead of the 
@@ -73,18 +76,91 @@ bool unexplored_cells_exist()
 
 bool left_opening()
 {
-    //get some sensordata
-    return true;
-}
-bool right_opening()
-{
-    //get some sensordata
-    return true;
+    uint8_t dir = get_heading();
+
+    switch (dir)
+    {
+    case 0:
+        return !is_wall(dir + 1);
+        break;
+    case 1:
+        return !is_wall(dir + 1);
+        break;
+    case 2:
+        return !is_wall(dir + 1);
+        break;
+    case 3:
+        return !is_wall(dir - 3);
+        break;
+    default:
+        break;
+    }
 }
 
-bool wall_in_front()
+bool right_opening()
 {
-    return false;
+    uint8_t dir = get_heading();
+
+    switch (dir)
+    {
+    case 0:
+        return !is_wall(dir + 3);
+        break;
+    case 1:
+        return !is_wall(dir - 1);
+        break;
+    case 2:
+        return !is_wall(dir - 1);
+        break;
+    case 3:
+        return !is_wall(dir - 1);
+        break;
+    default:
+        break;
+    }
+}
+
+//checks if cell at navigationMap[x][y] is a wall
+bool is_wall(uint8_t dir)
+{
+    int x;
+    int y;
+
+    x = get_robot_adjacent_cell(dir, 0);
+    y = get_robot_adjacent_cell(dir, 1);
+    if (navigationMap[x][y] == 1)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+uint8_t get_heading()
+{
+
+    // right
+    if (currentHeading < FULL_TURN / 8 || currentHeading > FULL_TURN * 7 / 8)
+    {
+        return 0;
+    }
+    // up
+    else if (currentHeading < FULL_TURN * 3 / 8)
+    {
+        return 1;
+    }
+    // left
+    else if (currentHeading < FULL_TURN * 5 / 8)
+    {
+        return 2;
+    }
+    // down
+    else
+    {
+        return 3;
+    }
 }
 
 bool at_start_pos()
@@ -101,8 +177,7 @@ bool at_start_pos()
 
 void wall_follow()
 {
-    //Save start position somehow. This is temporary
-    while (!at_start_pos())
+    do
     {
         if (left_opening())
         {
@@ -110,7 +185,8 @@ void wall_follow()
         }
         else
         {
-            if (wall_in_front())
+            //wall in front of robot?
+            if (is_wall(get_heading))
             {
                 if (right_opening())
                 {
@@ -130,11 +206,12 @@ void wall_follow()
                 command_set_target_square(forward);
             }
         }
-    }
-    if (unexplored_cells_exist())
-    {
-        sample_search();
-    }
+
+        if (unexplored_cells_exist())
+        {
+            //sample_search();
+        }
+    } while (!at_start_pos());
 }
 
 //Path finding algorithm that might not work as expected. Can probably be replaced easily if so.
@@ -273,7 +350,7 @@ uint8_t get_adjacent_cell(int direction, int xy, uint8_t *currentCell)
 }
 
 //For robot
-uint8_t get_robot_adjacent_cell(int direction, int xy)
+uint8_t get_robot_adjacent_coord(int dir, int xy)
 {
     //each case returns the x & y coordinate for the adjacent cell separately.
     //direction == 0: right cell
@@ -281,7 +358,7 @@ uint8_t get_robot_adjacent_cell(int direction, int xy)
     //direction == 2: left cell
     //direction == 3: lower cell
 
-    switch (direction)
+    switch (dir)
     {
     case 0:
         if (xy == 0)
@@ -350,7 +427,7 @@ uint8_t get_robot_adjacent_cell(int direction, int xy)
         {
             if (i < 2)
             {
-                adjacentCells[direction][i] = get_robot_adjacent_cell(direction, i);
+                adjacentCells[direction][i] = get_robot_adjacent_coord(direction, i);
             }
             else
             {
@@ -401,9 +478,9 @@ uint8_t get_robot_adjacent_cell(int direction, int xy)
     } 
 } */
 
-void turn_towards_cell()
+/* void turn_towards_cell()
 {
-}
+} */
 
 /* int wall_in_front()
 {
@@ -440,33 +517,35 @@ void turn_towards_cell()
     }
 } */
 
-//For debugging purposes only
+//TESTS
 
-void test(int rows, int cols, int queue[rows][cols])
+Test_test(Test, test_unexplored_cells_exist)
 {
-    for (int i = 0; i < rows; i++)
+    Test_assertTrue(unexplored_cells_exist());
+}
+
+Test_test(Test, test_cells_exist)
+{
+    for (int x = 0; x < 49; x++)
     {
-        for (int j = 0; j < cols; j++)
+        for (int y = 0; y < 25; y++)
         {
-            printf("%d", queue[i][j]);
+            navigationMap[x][y] = 1;
         }
-        printf("\n");
+    }
+    Test_assertEquals(unexplored_cells_exist(), false);
+    navigationMap[0][1] = 0;
+    Test_assertEquals(unexplored_cells_exist(), true);
+    //reset map
+    for (int x = 0; x < 49; x++)
+    {
+        for (int y = 0; y < 25; y++)
+        {
+            navigationMap[x][y] = 0;
+        }
     }
 }
 
-/* int main(void)
+Test_test(Test, test_is_wall)
 {
-    for (int i = 0, kk = 0; i < QUEUE_ROWS; i++)
-    {
-        for (int j = 0; j < COLS; j++)
-        {
-            queue[i][j] = kk;
-            kk++;
-        }
-    }
-
-    //test(rows, cols, queue);
-    move_one_cell(queue);
-
-    return 0;
-} */
+}
