@@ -16,7 +16,6 @@ int main(void)
 	{
 	}
 }
-
 ISR(TIMER0_OVF_vect)
 {
 	OCR0A = g_leftSpeed;

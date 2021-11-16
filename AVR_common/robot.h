@@ -1,9 +1,10 @@
 // This file contains definitions and stuff that all units will need
-#ifndef ROBOT_H
-#define ROBOT_H
+#ifndef AVR_COMMON_ROBOT_H_
+#define AVR_COMMON_ROBOT_H_
 #include <stdint.h>
 
-enum Address {
+enum Address
+{
     lidar_forward,
     lidar_backward,
     ir_leftfront,
@@ -25,8 +26,8 @@ enum Address {
 struct data_packet
 {
     enum Address address;
-    uint8_t byte_count;
-    uint8_t bytes[7];
+    uint8_t      byte_count;
+    uint8_t      bytes[7];
 };
 
 extern const uint8_t ADR_DATA_PACKETS[];
@@ -49,7 +50,8 @@ extern const uint8_t ADR_DATA_PACKETS[];
     1   //PARITY_ERROR
 };*/
 
-enum directionID {
+enum directionID
+{
     stop,
     start,
     forward,
@@ -60,4 +62,4 @@ enum directionID {
     turn_right
 };
 
-#endif
+#endif // AVR_COMMON_ROBOT_H_

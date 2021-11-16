@@ -1,5 +1,5 @@
-#ifndef NAV_UNIT_COM_INTERRUPT_LOGIC_H
-#define NAV_UNIT_COM_INTERRUPT_LOGIC_H
+#ifndef NAVIGATION_UNIT_NAV_UNIT_COM_INTERRUPT_LOGIC_H_
+#define NAVIGATION_UNIT_NAV_UNIT_COM_INTERRUPT_LOGIC_H_
 
 #include "../AVR_common/robot.h"
 
@@ -10,4 +10,4 @@ int8_t set_pd_kp(uint8_t kp);
 int8_t command_stop();
 int8_t command_start();
 int8_t command_set_target_square(uint8_t id);
-#endif
+#endif // NAVIGATION_UNIT_NAV_UNIT_COM_INTERRUPT_LOGIC_H_

@@ -1,15 +1,16 @@
+#include "nav_unit_com_interrupt_logic.h"
 #include "../AVR_common/robot.h"
 #include "navigation_unit.h"
-#include "nav_unit_com_interrupt_logic.h"
 
-//assumes data is not corrupt, does not check parity
-int8_t communication_unit_interrupt(struct data_packet* data) {
+// assumes data is not corrupt, does not check parity
+int8_t communication_unit_interrupt(struct data_packet* data)
+{
     // verify valid data packet count
     if (data->address != debug)
     {
         if (data->byte_count != ADR_DATA_PACKETS[data->address])
         {
-            //Invalid number of data packets
+            // Invalid number of data packets
             return -1;
         }
     }
@@ -23,7 +24,7 @@ int8_t communication_unit_interrupt(struct data_packet* data) {
     switch (data->address)
     {
         case command:
-            return handle_command((enum directionID) data->bytes[0]);
+            return handle_command((enum directionID)data->bytes[0]);
         case pd_kp:
             return set_pd_kp(data->bytes[0]);
         case pd_kd:
@@ -32,9 +33,6 @@ int8_t communication_unit_interrupt(struct data_packet* data) {
             return -1;
     }
 }
-
-
-
 
 int8_t handle_command(enum directionID id)
 {
@@ -51,9 +49,7 @@ int8_t handle_command(enum directionID id)
             }
             return command_set_target_square(id);
     }
-
 }
-
 
 // resend the data last sent with that address
 // might not be needed
@@ -80,10 +76,10 @@ int8_t set_pd_kd(uint8_t kd)
 // set navigation to manual
 int8_t command_stop()
 {
-    wheelSpeedLeft = 0;
-    wheelSpeedRight = 0;
+    wheelSpeedLeft     = 0;
+    wheelSpeedRight    = 0;
     navigationGoalType = none;
-    navigationMode = manual;
+    navigationMode     = manual;
     return 0;
 }
 
@@ -92,7 +88,7 @@ int8_t command_stop()
 int8_t command_start()
 {
     navigationGoalType = none;
-    navigationMode = autonomous;
+    navigationMode     = autonomous;
     return 0;
 }
 
@@ -133,17 +129,17 @@ int8_t command_set_target_square(uint8_t id)
     uint8_t dir;
 
     // right
-    if (currentHeading < FULL_TURN/8 || currentHeading > FULL_TURN*7/8)
+    if (currentHeading < FULL_TURN / 8 || currentHeading > FULL_TURN * 7 / 8)
     {
         dir = 0;
     }
     // up
-    else if (currentHeading < FULL_TURN*3/8)
+    else if (currentHeading < FULL_TURN * 3 / 8)
     {
         dir = 1;
     }
     // left
-    else if (currentHeading < FULL_TURN*5/8)
+    else if (currentHeading < FULL_TURN * 5 / 8)
     {
         dir = 2;
     }
@@ -153,26 +149,24 @@ int8_t command_set_target_square(uint8_t id)
         dir = 3;
     }
 
-
-
     switch (id)
     {
         case forward:
             return navigate_forward(dir);
         case backward:
-            //going backward is the same as a half-turn and forward
-            return navigate_forward((dir+2) % 4);
+            // going backward is the same as a half-turn and forward
+            return navigate_forward((dir + 2) % 4);
         case fw_left:
-            return navigate_forward((dir+1) % 4);
+            return navigate_forward((dir + 1) % 4);
         case fw_right:
-            return navigate_forward((dir+3) % 4);
+            return navigate_forward((dir + 3) % 4);
         case turn_left:
-            navigationGoalHeading = ((dir+1) % 4) / 4 * FULL_TURN;
-            navigationGoalType = turn;
+            navigationGoalHeading = ((dir + 1) % 4) / 4 * FULL_TURN;
+            navigationGoalType    = turn;
             return 0;
         case turn_right:
-            navigationGoalHeading = ((dir+3) % 4) / 4 * FULL_TURN;
-            navigationGoalType = turn;
+            navigationGoalHeading = ((dir + 3) % 4) / 4 * FULL_TURN;
+            navigationGoalType    = turn;
             return 0;
         default:
             return -1;
@@ -182,28 +176,28 @@ int8_t command_set_target_square(uint8_t id)
 #include "../AVR_testing/test.h"
 Test_test(Test, uartCommandStart)
 {
-    enum NavigationGoal oldGoalType = navigationGoalType;
+    enum NavigationGoal oldGoalType       = navigationGoalType;
     enum NavigationMode oldNavigationMode = navigationMode;
-    struct data_packet data;
-    data.address = command;
+    struct data_packet  data;
+    data.address    = command;
     data.byte_count = 1;
-    data.bytes[0] = start;
+    data.bytes[0]   = start;
     Test_assertEquals(communication_unit_interrupt(&data), 0);
 
     Test_assertEquals(navigationGoalType, none);
     Test_assertEquals(navigationMode, autonomous);
 
     navigationGoalType = oldGoalType;
-    navigationMode = oldNavigationMode;
+    navigationMode     = oldNavigationMode;
 }
 Test_test(Test, uartCommand_turn_left)
 {
-    enum NavigationGoal oldGoalType = navigationGoalType;
-    enum NavigationMode oldNavigationMode = navigationMode;
-    uint16_t oldNavigationGoalHeading = navigationGoalHeading;
+    enum NavigationGoal oldGoalType              = navigationGoalType;
+    enum NavigationMode oldNavigationMode        = navigationMode;
+    uint16_t            oldNavigationGoalHeading = navigationGoalHeading;
 
     struct data_packet data;
-    data.address = command;
+    data.address    = command;
     data.byte_count = 1;
 
     data.bytes[0] = turn_left;
@@ -222,22 +216,22 @@ Test_test(Test, uartCommand_turn_left)
     Test_assertEquals(communication_unit_interrupt(&data), 0);
     Test_assertEquals(navigationGoalType, turn);
     Test_assertEquals(navigationMode, manual);
-    //Test_assertEquals(navigationGoalHeading, FULL_TURN/4);
+    // Test_assertEquals(navigationGoalHeading, FULL_TURN/4);
 
-    navigationGoalType = oldGoalType;
-    navigationMode = oldNavigationMode;
+    navigationGoalType    = oldGoalType;
+    navigationMode        = oldNavigationMode;
     navigationGoalHeading = oldNavigationGoalHeading;
 }
 
 Test_test(Test, uartCommand_fw_left)
 {
-    enum NavigationGoal oldGoalType = navigationGoalType;
-    enum NavigationMode oldNavigationMode = navigationMode;
-    uint8_t oldNavigationGoalX = navigationGoalX;
-    uint8_t oldNavigationGoalY = navigationGoalY;
+    enum NavigationGoal oldGoalType        = navigationGoalType;
+    enum NavigationMode oldNavigationMode  = navigationMode;
+    uint8_t             oldNavigationGoalX = navigationGoalX;
+    uint8_t             oldNavigationGoalY = navigationGoalY;
 
     struct data_packet data;
-    data.address = command;
+    data.address    = command;
     data.byte_count = 1;
 
     data.bytes[0] = fw_left;
@@ -251,8 +245,8 @@ Test_test(Test, uartCommand_fw_left)
     // Test actual move
     navigationMode = manual;
     currentHeading = 0;
-    currentPosX = grid_to_mm(24);
-    currentPosY = 0;
+    currentPosX    = grid_to_mm(24);
+    currentPosY    = 0;
 
     Test_assertEquals(communication_unit_interrupt(&data), 0);
     Test_assertEquals(navigationGoalType, move);
@@ -261,7 +255,7 @@ Test_test(Test, uartCommand_fw_left)
     Test_assertEquals(navigationGoalY, grid_to_mm(1));
 
     navigationGoalType = oldGoalType;
-    navigationMode = oldNavigationMode;
-    navigationGoalX = oldNavigationGoalX;
-    navigationGoalY = oldNavigationGoalY;
+    navigationMode     = oldNavigationMode;
+    navigationGoalX    = oldNavigationGoalX;
+    navigationGoalY    = oldNavigationGoalY;
 }
