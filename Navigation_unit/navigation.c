@@ -40,6 +40,18 @@ Changed so that the algorithm looks for the end point instead of the
 position of the robot. Same same but backwards.
 */
 
+uint16_t get_start_pos(int xy)
+{
+    if (xy == 0)
+    {
+        return startPosX;
+    }
+    else
+    {
+        return startPosY;
+    }
+}
+
 void save_start_pos()
 {
     startPosX = mm_to_grid(currentPosX);
@@ -93,6 +105,7 @@ bool left_opening()
         return !is_wall(dir - 3);
         break;
     default:
+        return -1;
         break;
     }
 }
@@ -116,6 +129,7 @@ bool right_opening()
         return !is_wall(dir - 1);
         break;
     default:
+        return -1;
         break;
     }
 }
@@ -126,8 +140,8 @@ bool is_wall(uint8_t dir)
     int x;
     int y;
 
-    x = get_robot_adjacent_cell(dir, 0);
-    y = get_robot_adjacent_cell(dir, 1);
+    x = get_robot_adjacent_coord(dir, 0);
+    y = get_robot_adjacent_coord(dir, 1);
     if (navigationMap[x][y] == 1)
     {
         return true;
@@ -186,7 +200,7 @@ void wall_follow()
         else
         {
             //wall in front of robot?
-            if (is_wall(get_heading))
+            if (is_wall(get_heading()))
             {
                 if (right_opening())
                 {
@@ -517,7 +531,7 @@ uint8_t get_robot_adjacent_coord(int dir, int xy)
     }
 } */
 
-//TESTS
+/* TESTS */
 
 Test_test(Test, test_unexplored_cells_exist)
 {
@@ -546,6 +560,34 @@ Test_test(Test, test_cells_exist)
     }
 }
 
+//write more specific tests. The robot starts in (24, 0)
 Test_test(Test, test_is_wall)
 {
+    /* for (int x = 0; x < 49; x++)
+    {
+        for (int y = 0; y < 25; y++)
+        {
+            navigationMap[x][y] = 1;
+        }
+    } */
+    navigationMap[25][0] = 1;
+    Test_assertEquals(is_wall(0), true);
+    Test_assertEquals(is_wall(1), false);
+    Test_assertEquals(is_wall(2), false);
+    Test_assertEquals(is_wall(3), false);
+    for (int x = 0; x < 49; x++)
+    {
+        for (int y = 0; y < 25; y++)
+        {
+            navigationMap[x][y] = 0;
+        }
+    }
 }
+
+/* Test_test(Test, test_left_opening)
+{
+}
+
+Test_test(Test, test_right_opening)
+{
+} */
