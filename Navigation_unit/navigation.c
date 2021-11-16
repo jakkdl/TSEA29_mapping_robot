@@ -20,7 +20,6 @@ uint8_t endPoint[COORD_SIZE];
 uint16_t startPosX;
 uint16_t startPosY;
 
-void wall_follow();
 void sample_search();
 uint8_t get_robot_adjacent_coord(int direction, int xy);
 uint8_t get_adjacent_cell(int direction, int xy, uint8_t *currentCell);
@@ -54,8 +53,8 @@ uint16_t get_start_pos(int xy)
 
 void save_start_pos()
 {
-    startPosX = mm_to_grid(currentPosX);
-    startPosY = mm_to_grid(currentPosY);
+    startPosX = MmToGrid(g_currentPosX);
+    startPosY = MmToGrid(g_currentPosY);
 }
 
 void init_map()
@@ -64,7 +63,7 @@ void init_map()
     {
         for (int y = 0; y < 25; y++)
         {
-            navigationMap[x][y] = 0;
+            g_navigationMap[x][y] = 0;
         }
     }
 }
@@ -75,7 +74,7 @@ bool unexplored_cells_exist()
     {
         for (int y = 0; y < 25; y++)
         {
-            if (navigationMap[x][y] == 0)
+            if (g_navigationMap[x][y] == 0)
             {
                 endPoint[0] = x;
                 endPoint[1] = y;
@@ -134,7 +133,7 @@ bool right_opening()
     }
 }
 
-//checks if cell at navigationMap[x][y] is a wall
+//checks if cell at g_navigationMap[x][y] is a wall
 bool is_wall(uint8_t dir)
 {
     int x;
@@ -142,7 +141,7 @@ bool is_wall(uint8_t dir)
 
     x = get_robot_adjacent_coord(dir, 0);
     y = get_robot_adjacent_coord(dir, 1);
-    if (navigationMap[x][y] == 1)
+    if (g_navigationMap[x][y] == 1)
     {
         return true;
     }
@@ -156,17 +155,17 @@ uint8_t get_heading()
 {
 
     // right
-    if (currentHeading < FULL_TURN / 8 || currentHeading > FULL_TURN * 7 / 8)
+    if (g_currentHeading < FULL_TURN / 8 || g_currentHeading > FULL_TURN * 7 / 8)
     {
         return 0;
     }
     // up
-    else if (currentHeading < FULL_TURN * 3 / 8)
+    else if (g_currentHeading < FULL_TURN * 3 / 8)
     {
         return 1;
     }
     // left
-    else if (currentHeading < FULL_TURN * 5 / 8)
+    else if (g_currentHeading < FULL_TURN * 5 / 8)
     {
         return 2;
     }
@@ -179,7 +178,7 @@ uint8_t get_heading()
 
 bool at_start_pos()
 {
-    if (mm_to_grid(currentPosX) != startPosX && mm_to_grid(currentPosY) != startPosY)
+    if (MmToGrid(g_currentPosX) != startPosX && MmToGrid(g_currentPosY) != startPosY)
     {
         return false;
     }
@@ -195,7 +194,7 @@ void wall_follow()
     {
         if (left_opening())
         {
-            command_set_target_square(fw_left);
+            command_set_target_square(FW_LEFT);
         }
         else
         {
@@ -204,20 +203,20 @@ void wall_follow()
             {
                 if (right_opening())
                 {
-                    command_set_target_square(fw_right);
+                    command_set_target_square(FW_RIGHT);
                 }
                 else
                 {
                     //Turn around 180 degrees (this was "reverse controls" earlier)
                     for (int i = 0; i < 2; i++)
                     {
-                        command_set_target_square(turn_right);
+                        command_set_target_square(TURN_AROUND);
                     }
                 }
             }
             else
             {
-                command_set_target_square(forward);
+                command_set_target_square(FORWARD);
             }
         }
 
@@ -236,8 +235,8 @@ void wall_follow()
     bool endPointInQueue = false;
     int queueIndex = 0;
 
-    queue[0][0] = mm_to_grid(currentPosX);
-    queue[0][1] = mm_to_grid(currentPosY);
+    queue[0][0] = MmToGrid(g_currentPosX);
+    queue[0][1] = MmToGrid(g_currentPosY);
     queue[0][2] = counter;
     counter++;
     queueSize++;
@@ -377,41 +376,41 @@ uint8_t get_robot_adjacent_coord(int dir, int xy)
     case 0:
         if (xy == 0)
         {
-            return mm_to_grid(currentPosX) + 1;
+            return MmToGrid(g_currentPosX) + 1;
         }
         else
         {
-            return mm_to_grid(currentPosY);
+            return MmToGrid(g_currentPosY);
         }
         break;
     case 1:
         if (xy == 0)
         {
-            return mm_to_grid(currentPosX);
+            return MmToGrid(g_currentPosX);
         }
         else
         {
-            return mm_to_grid(currentPosY) + 1;
+            return MmToGrid(g_currentPosY) + 1;
         }
         break;
     case 2:
         if (xy == 0)
         {
-            return mm_to_grid(currentPosX) - 1;
+            return MmToGrid(g_currentPosX) - 1;
         }
         else
         {
-            return mm_to_grid(currentPosY);
+            return MmToGrid(g_currentPosY);
         }
         break;
     case 3:
         if (xy == 0)
         {
-            return mm_to_grid(currentPosX);
+            return MmToGrid(g_currentPosX);
         }
         else
         {
-            return mm_to_grid(currentPosY) - 1;
+            return MmToGrid(g_currentPosY) - 1;
         }
         break;
     default:
@@ -544,18 +543,18 @@ Test_test(Test, test_cells_exist)
     {
         for (int y = 0; y < 25; y++)
         {
-            navigationMap[x][y] = 1;
+            g_navigationMap[x][y] = 1;
         }
     }
     Test_assertEquals(unexplored_cells_exist(), false);
-    navigationMap[0][1] = 0;
+    g_navigationMap[0][1] = 0;
     Test_assertEquals(unexplored_cells_exist(), true);
     //reset map
     for (int x = 0; x < 49; x++)
     {
         for (int y = 0; y < 25; y++)
         {
-            navigationMap[x][y] = 0;
+            g_navigationMap[x][y] = 0;
         }
     }
 }
@@ -567,10 +566,10 @@ Test_test(Test, test_is_wall)
     {
         for (int y = 0; y < 25; y++)
         {
-            navigationMap[x][y] = 1;
+            g_navigationMap[x][y] = 1;
         }
     } */
-    navigationMap[25][0] = 1;
+    g_navigationMap[25][0] = 1;
     Test_assertEquals(is_wall(0), true);
     Test_assertEquals(is_wall(1), false);
     Test_assertEquals(is_wall(2), false);
@@ -579,7 +578,7 @@ Test_test(Test, test_is_wall)
     {
         for (int y = 0; y < 25; y++)
         {
-            navigationMap[x][y] = 0;
+            g_navigationMap[x][y] = 0;
         }
     }
 }

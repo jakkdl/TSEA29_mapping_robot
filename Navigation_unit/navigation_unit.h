@@ -19,19 +19,6 @@ enum Direction
     DIR_BACKWARD
 };
 
-// Unsure how to represent this, currently broke it into
-enum NavigationGoal
-{
-    // no goal set
-    NONE,
-    // We only want to change our direction to NAVIGATION_GOAL_HEADING
-    // ignore NAVIGATION_GOAL_X & Y
-    TURN,
-    // We want to move to NAVIGATION_GOAL_X & Y, and might need to turn.
-    // ignore NAVIGATION_GOAL_HEADING
-    MOVE
-};
-
 #define FULL_TURN 65536 // 1 << 16
 
 // This broke with {}'s, unsure why /john
@@ -64,8 +51,8 @@ extern uint16_t g_currentPosX; // = grid_to_mm(24);
 extern uint16_t g_currentPosY; // = 0;
 
 // We can either use bool + unsigned
-extern enum Direction g_wheelDirLeft;    // = dir_forward;
-extern enum Direction g_wheelDirRight;   // = dir_forward;
+extern enum Direction g_wheelDirectionLeft;    // = dir_forward;
+extern enum Direction g_wheelDirectionRight;   // = dir_forward;
 extern uint8_t        g_wheelSpeedLeft;  // = 0;
 extern uint8_t        g_wheelSpeedRight; // = 0;
 
@@ -76,7 +63,7 @@ extern uint8_t        g_wheelSpeedRight; // = 0;
 // and/or what the navigation algorithm wanna use.
 
 // Current navigation goal
-extern bool                g_navigationSet;         // = false;
+extern bool                g_navigationGoalSet;     // = false;
 extern uint16_t            g_navigationGoalX;       // = 24;
 extern uint16_t            g_navigationGoalY;       // = 0;
 extern uint16_t            g_navigationGoalHeading; // = 0;

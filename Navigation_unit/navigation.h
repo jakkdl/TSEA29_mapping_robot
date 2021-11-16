@@ -6,4 +6,5 @@
 #define ROWS_ADJACENT 4
 #define COORD_SIZE 2
 
+void wall_follow();
 #endif

@@ -59,7 +59,8 @@ enum directionID
     FW_LEFT,
     FW_RIGHT,
     TURN_LEFT,
-    TURN_RIGHT
+    TURN_RIGHT,
+    TURN_AROUND
 };
 
 #endif // AVR_COMMON_ROBOT_H_

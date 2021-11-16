@@ -78,7 +78,7 @@ int8_t command_stop()
 {
     g_wheelSpeedLeft     = 0;
     g_wheelSpeedRight    = 0;
-    g_navigationGoalType = NONE;
+    g_navigationGoalSet  = false;
     g_navigationMode     = MANUAL;
     return 0;
 }
@@ -87,7 +87,7 @@ int8_t command_stop()
 // Set navigation to automatic
 int8_t command_start()
 {
-    g_navigationGoalType = NONE;
+    g_navigationGoalSet  = false;
     g_navigationMode     = AUTONOMOUS;
     return 0;
 }
@@ -115,7 +115,7 @@ int8_t navigate_forward(uint8_t dir)
         default:
             return -1;
     }
-    g_navigationGoalType = MOVE;
+    g_navigationGoalHeading = dir * FULL_TURN / 4;
     return 0;
 }
 
@@ -148,6 +148,7 @@ int8_t command_set_target_square(uint8_t id)
     {
         dir = 3;
     }
+    g_navigationGoalSet = true;
 
     switch (id)
     {
@@ -162,11 +163,12 @@ int8_t command_set_target_square(uint8_t id)
             return navigate_forward((dir + 3) % 4);
         case TURN_LEFT:
             g_navigationGoalHeading = ((dir + 1) % 4) / 4 * FULL_TURN;
-            g_navigationGoalType    = TURN;
             return 0;
         case TURN_RIGHT:
             g_navigationGoalHeading = ((dir + 3) % 4) / 4 * FULL_TURN;
-            g_navigationGoalType    = TURN;
+            return 0;
+        case TURN_AROUND:
+            g_navigationGoalHeading = ((dir + 2) % 4) / 4 * FULL_TURN;
             return 0;
         default:
             return -1;
@@ -176,7 +178,7 @@ int8_t command_set_target_square(uint8_t id)
 #include "../AVR_testing/test.h"
 Test_test(Test, uartCommandStart)
 {
-    enum NavigationGoal oldGoalType       = g_navigationGoalType;
+    bool oldGoalSet       = g_navigationGoalSet;
     enum NavigationMode oldNavigationMode = g_navigationMode;
     struct data_packet  data;
     data.address    = COMMAND;
@@ -184,15 +186,15 @@ Test_test(Test, uartCommandStart)
     data.bytes[0]   = START;
     Test_assertEquals(communication_unit_interrupt(&data), 0);
 
-    Test_assertEquals(g_navigationGoalType, NONE);
+    Test_assertEquals(g_navigationGoalSet, false);
     Test_assertEquals(g_navigationMode, AUTONOMOUS);
 
-    g_navigationGoalType = oldGoalType;
+    g_navigationGoalSet = oldGoalSet;
     g_navigationMode     = oldNavigationMode;
 }
 Test_test(Test, uartCommand_turn_left)
 {
-    enum NavigationGoal oldGoalType              = g_navigationGoalType;
+    bool oldGoalSet              = g_navigationGoalSet;
     enum NavigationMode oldNavigationMode        = g_navigationMode;
     uint16_t            oldNavigationGoalHeading = g_navigationGoalHeading;
 
@@ -205,7 +207,7 @@ Test_test(Test, uartCommand_turn_left)
     // Test it doesn't do anything in auto mode
     g_navigationMode = AUTONOMOUS;
     Test_assertEquals(communication_unit_interrupt(&data), -1);
-    Test_assertEquals(g_navigationGoalType, oldGoalType);
+    Test_assertEquals(g_navigationGoalSet, oldGoalSet);
     Test_assertEquals(g_navigationMode, AUTONOMOUS);
     Test_assertEquals(oldNavigationGoalHeading, g_navigationGoalHeading);
 
@@ -214,18 +216,18 @@ Test_test(Test, uartCommand_turn_left)
     g_currentHeading = 0;
 
     Test_assertEquals(communication_unit_interrupt(&data), 0);
-    Test_assertEquals(g_navigationGoalType, TURN);
+    Test_assertEquals(g_navigationGoalSet, true);
     Test_assertEquals(g_navigationMode, MANUAL);
     // Test_assertEquals(g_navigationGoalHeading, FULL_TURN/4);
 
-    g_navigationGoalType    = oldGoalType;
+    g_navigationGoalSet     = oldGoalSet;
     g_navigationMode        = oldNavigationMode;
     g_navigationGoalHeading = oldNavigationGoalHeading;
 }
 
 Test_test(Test, uartCommand_fw_left)
 {
-    enum NavigationGoal oldGoalType        = g_navigationGoalType;
+    bool oldGoalSet         = g_navigationGoalSet;
     enum NavigationMode oldNavigationMode  = g_navigationMode;
     uint8_t             oldNavigationGoalX = g_navigationGoalX;
     uint8_t             oldNavigationGoalY = g_navigationGoalY;
@@ -239,7 +241,7 @@ Test_test(Test, uartCommand_fw_left)
     // Test it doesn't do anything in auto mode
     g_navigationMode = AUTONOMOUS;
     Test_assertEquals(communication_unit_interrupt(&data), -1);
-    Test_assertEquals(g_navigationGoalType, oldGoalType);
+    Test_assertEquals(g_navigationGoalSet, oldGoalSet);
     Test_assertEquals(g_navigationMode, AUTONOMOUS);
 
     // Test actual move
@@ -249,12 +251,12 @@ Test_test(Test, uartCommand_fw_left)
     g_currentPosY    = 0;
 
     Test_assertEquals(communication_unit_interrupt(&data), 0);
-    Test_assertEquals(g_navigationGoalType, MOVE);
+    Test_assertEquals(g_navigationGoalSet, true);
     Test_assertEquals(g_navigationMode, MANUAL);
     Test_assertEquals(g_navigationGoalX, GridToMm(24));
     Test_assertEquals(g_navigationGoalY, GridToMm(1));
 
-    g_navigationGoalType = oldGoalType;
+    g_navigationGoalSet  = oldGoalSet;
     g_navigationMode     = oldNavigationMode;
     g_navigationGoalX    = oldNavigationGoalX;
     g_navigationGoalY    = oldNavigationGoalY;

@@ -6,7 +6,7 @@ CFLAGS	+= -g
 
 COMMON_FILES = AVR_common/robot.c
 TESTING_FILES = AVR_testing/*.c
-NAVIGATION_FILES = Navigation_unit/nav_sensor_loop.c Navigation_unit/navigation_unit.c Navigation_unit/nav_unit_com_interrupt_logic.c Navigation_unit/navigation.c
+NAVIGATION_FILES = Navigation_unit/nav_sensor_loop.c Navigation_unit/navigation_unit.c Navigation_unit/nav_unit_com_interrupt_logic.c Navigation_unit/navigation.c Navigation_unit/Pd.c
 NAVIGATION_MAIN = Navigation_unit/main.c
 
 

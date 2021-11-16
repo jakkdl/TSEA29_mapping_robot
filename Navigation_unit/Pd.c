@@ -1,6 +1,12 @@
+#include <stdint.h>
+#include <stdlib.h>
+
 #include "Pd.h"
 #include "navigation_unit.h"
-#include <stdint.h>
+
+void PDcontroller_Rest();
+void PDcontroller_Set_RefNode();
+
 PDcontroller pd;
 uint16_t referencePosX;
 uint16_t referencePosY;
@@ -28,14 +34,8 @@ void turnToHeading()
 }
 void PDcontroller_Update()
 {
-    if (g_navigationGoalType == TURN)
-    {
-        turnToHeading();
-        return
-    }
     // calculate what heading we should go in
-
-    if (abs(g_currentHeading - g_navigationGoalHeading) > VALUE)
+    if (abs(g_currentHeading - g_navigationGoalHeading) > FULL_TURN/128)
     {
         //turn on the spot
         return;
@@ -62,12 +62,12 @@ void PDcontroller_Update()
     /*
      * Kp*error proptional part of pd controller
      */
-    uint16_t proptional = pdkp * CTE;
+    uint16_t proptional = g_pdKp * CTE;
 
     /*
      * Kp*derivative error is the dervitave part of the pd controller
      */
-    uint16_t derivative = pdkd * ( CTE - pd.PrevCTE );
+    uint16_t derivative = g_pdKd * ( CTE - pd.PrevCTE );
 
     /*
      * U(out) = proptional part + derivative part

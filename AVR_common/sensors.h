@@ -21,7 +21,7 @@ struct sensor_data
 #define BYTES_TO_UINT16(data) (uint16_t)(data->bytes[1] << 4 | data->bytes[0])
 
 // used to pack a uint16_t value into two bytes
-#define UINT16_TO_BYTE_0(value) (value) & 0b1111
-#define UINT16_TO_BYTE_1(value) (value) >> 4
+#define Uint16ToByte0(value) (value) & 0b1111
+#define Uint16ToByte1(value) (value) >> 4
 
 #endif // AVR_COMMON_SENSORS_H_
