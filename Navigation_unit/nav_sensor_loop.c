@@ -85,19 +85,20 @@ int8_t nav_main(struct sensor_data* data)
     // TODO calculate heading and position
     // uses data, updates g_currentHeading, g_currentPosX and g_currentPosY
 
-    if (g_navigationGoalType != NONE)
+    if (g_navigationGoalSet)
     {
         // have we arrived at the navigation goal?
         if (arrived_at_goal())
         {
             // clear navigation goal
-            g_navigationGoalType = NONE;
-            // TODO stop moving
+            g_navigationGoalSet = false;
+            g_wheelSpeedLeft = 0;
+            g_wheelSpeedRight = 0;
         }
         else
         {
-            // TODO drive motors with pd towards the goal
-            __asm__("nop");
+            PDcontroller_Update();
+
             // TODO send debug values to com unit?
         }
     }
@@ -112,6 +113,7 @@ int8_t nav_main(struct sensor_data* data)
     if (g_navigationMode == AUTONOMOUS && g_navigationGoalType == NONE)
     {
         // run navigation algorithm, setting g_navigationGoal
+        PDcontroller_NewGoal()
         // sample_search()
     }
 
@@ -120,25 +122,9 @@ int8_t nav_main(struct sensor_data* data)
 
 bool arrived_at_goal(void)
 {
-    if (g_navigationGoalType == TURN)
-    {
-        if (abs(g_currentHeading - g_navigationGoalHeading) < TURN_SENSITIVITY)
-        {
-            return true;
-        }
-        return false;
-    }
-    if (g_navigationGoalType == MOVE)
-    {
-        if (abs(g_currentPosX - g_navigationGoalX) < POS_SENSITIVITY &&
-            abs(g_currentPosY - g_navigationGoalY) < POS_SENSITIVITY)
-        {
-            return true;
-        }
-        return false;
-    }
-    // if g_navigationGoalType == none
-    return true;
+    return (abs(g_currentHeading - g_navigationGoalHeading) < TURN_SENSITIVITY &&
+            abs(g_currentPosX    - g_navigationGoalX)       < POS_SENSITIVITY  &&
+            abs(g_currentPosY    - g_navigationGoalY)       < POS_SENSITIVITY);
 }
 
 /* #### UNIT TESTS #### */

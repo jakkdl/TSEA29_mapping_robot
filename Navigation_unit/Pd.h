@@ -12,7 +12,6 @@ typedef struct {
 
 } PDcontroller;
 
-void PDcontroller_Init();
 void PDcontroller_Update();
 void PDcontroller_Rest();
 int16_t PDcontroller_Out();

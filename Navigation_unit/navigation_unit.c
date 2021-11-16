@@ -2,6 +2,9 @@
 
 /* GLOBAL VARIABLES */
 
+// struct with sensor data
+// two instances
+
 // navigation mode manual/auto
 enum NavigationMode g_navigationMode = MANUAL;
 
@@ -38,7 +41,7 @@ uint8_t        g_wheelSpeedRight = 0;
 // and/or what the navigation algorithm wanna use.
 
 // Current navigation goal
-enum NavigationGoal g_navigationGoalType    = NONE;
+bool                g_navigationSet         = false;
 uint16_t            g_navigationGoalX       = 24;
 uint16_t            g_navigationGoalY       = 0;
 uint16_t            g_navigationGoalHeading = 0;
