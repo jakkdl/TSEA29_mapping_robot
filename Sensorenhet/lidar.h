@@ -4,8 +4,9 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
-void measure_lidar();
-void external_interrupt_init();
-void timer_init();
-void timer_stop();
+void MeasureLidar();
+void ExtInterruptInit();
+void TimerInit();
+void TimerStop();
+void MsTimerInit();
 #endif
