@@ -7,8 +7,10 @@
 #include "../AVR_common/robot.h"
 #include "navigation.h"
 
-int queueSize = 0; //for easy iterations through arrays
+//for easy iterations through arrays
+int queueSize = 0;
 int adjacentCellsSize = 0;
+int traversableCellsSize = 0;
 
 uint8_t queue[QUEUE_ROWS][COLS];
 uint8_t adjacentCells[ROWS_ADJACENT][COLS];
@@ -17,7 +19,7 @@ uint8_t endPoint[COORD_SIZE];
 uint16_t startPosX;
 uint16_t startPosY;
 
-int main(void);
+//int main(void);
 void wall_follow();
 void sample_search();
 uint8_t get_robot_adjacent_cell(int direction, int xy);
@@ -104,7 +106,7 @@ void wall_follow()
     {
         if (left_opening())
         {
-            //command_set_target_square(fw_left);
+            command_set_target_square(fw_left);
         }
         else
         {
@@ -112,20 +114,20 @@ void wall_follow()
             {
                 if (right_opening())
                 {
-                    //command_set_target_square(fw_right);
+                    command_set_target_square(fw_right);
                 }
                 else
                 {
                     //Turn around 180 degrees (this was "reverse controls" earlier)
                     for (int i = 0; i < 2; i++)
                     {
-                        //command_set_target_square(turn_right);
+                        command_set_target_square(turn_right);
                     }
                 }
             }
             else
             {
-                //command_set_target_square(forward);
+                command_set_target_square(forward);
             }
         }
     }
@@ -136,7 +138,7 @@ void wall_follow()
 }
 
 //Path finding algorithm that might not work as expected. Can probably be replaced easily if so.
-void sample_search()
+/* void sample_search()
 {
     int counter = 0;
     bool adjacentInQueue = false;
@@ -211,7 +213,7 @@ void sample_search()
         }
     }
     move_one_cell(queue);
-}
+} */
 
 //For sample search
 uint8_t get_adjacent_cell(int direction, int xy, uint8_t *currentCell)
@@ -327,18 +329,18 @@ uint8_t get_robot_adjacent_cell(int direction, int xy)
     }
 }
 
-bool cell_is_wall(uint8_t cell[COLS])
+/* bool cell_is_wall(uint8_t cell[COLS])
 {
-    /*     if(){
+    if(){
         false;
     }
     else{
         return true;
-    } */
+    } 
     return false;
-}
+} */
 
-void move_one_cell(uint8_t queue[QUEUE_ROWS][COLS])
+/* void move_one_cell(uint8_t queue[QUEUE_ROWS][COLS])
 {
     //Create array of the robot's adjacent cells
 
@@ -389,15 +391,15 @@ void move_one_cell(uint8_t queue[QUEUE_ROWS][COLS])
     //The grid's direction is stationary, but the robot is not.
     //How do we know which way the robot is facing and so in which direction it should go?
 
-    /*     turn_towards_cell();
+    turn_towards_cell();
     if (!wall_in_front)
     {
         go_to_cell(traversableCells[index], queue);
     }
     else
     {
-    } */
-}
+    } 
+} */
 
 void turn_towards_cell()
 {
@@ -452,7 +454,7 @@ void test(int rows, int cols, int queue[rows][cols])
     }
 }
 
-int main(void)
+/* int main(void)
 {
     for (int i = 0, kk = 0; i < QUEUE_ROWS; i++)
     {
@@ -467,4 +469,4 @@ int main(void)
     move_one_cell(queue);
 
     return 0;
-}
+} */
