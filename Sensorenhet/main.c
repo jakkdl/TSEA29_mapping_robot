@@ -7,32 +7,36 @@
 #include "lidar.h"
 #include "gyro.h"
 
-int LeftCount = 0;
-int RightCount = 0;
-int Angle = 0;
-int fault = 1;
-bool ReadingDone = true;
-bool SendData = false;
-bool ReadMLX = false;
+uint8_t OPENINGS = 40;
+uint8_t g_leftCount = 0;
+uint8_t g_rightCount = 0;
+bool g_readingDone = true;
+bool g_sentData = false;
 /*
  * TODO:
- * implement storage in memory
+ * implement storage in memory where all data is stored
  * implement communication with other devices
  * move around functions to correct positions
  * testing functionality:
- * Multiple ir sensors
+ * IR sensors
  * lidar sensor/s
  * odometer/s
  * MLX gyro
  */
-void start_reading()
+
+void StartReading()
 {
-	ReadingDone = false;
-	start_adc();
-	measure_lidar();
+	g_readingDone = false;
+	cli();
+	AdcInit();
+	sei();
+	StartAdc();
+	MeasureLidar();
+	while(!g_IRDone){}
+	StartMLX();
 }
 
-void pin_init()
+void PinInit()
 {
 	// define output pins
 	DDRB =  (1 << PORTB4) | (1 << PORTB6);
@@ -41,88 +45,85 @@ void pin_init()
 	PORTA = 0x00;
 	DDRC = (1 << PORTC4);
 	PORTC = 0x00;
-	DDRD = (1 << PORTD0) | (1 << PORTD7); // D7 for debugging purposes
+	DDRD = (1 << PORTD0);
 	PORTD = 0x00;
 }
 int main(void)
 {
-	pin_init();
-	adc_init();
-	timer_init();
+	PinInit();
+	TimerInit();
+	ExtInterruptInit();
+	MsTimerInit();
 	sei();
-	start_reading();
+	StartReading();
     while (1) 
     {
-		if(ReadingDone & SendData)
+		if(g_sentData)
 		{
-			// send data;
-			start_reading();	
+			StartReading();	
 		}
     }
 }
 
-int convert_odo(int val)
+void ConvertOdo()
 {
 	// converts odo count to mm traveled;
-	int res = 0;
-	int openings = 40;
-	res = round(val * 65 * M_PI / openings);
-	return res;
+	uint8_t res = 0;
+	res = round(g_leftCount * 65 * M_PI / OPENINGS);
+	g_leftCount = 0;
+	// store res
+	res = round(g_rightCount * 65 * M_PI / OPENINGS);
+	g_rightCount = 0;
+	// store res
 }
+
 ISR(ADC_vect)
 {
-	if (ReadMLX)
+	if (ADMUX & 0x46) // reading from MLX
 	{
 		cli();
-		int WantedAngle = 90; // placeholder should come from styrenhet
-		Angle += MLX_gyro();
+		g_angle += MLXGyroVal();
 		sei();
-		if ((Angle >= WantedAngle + fault) | (Angle <= WantedAngle - fault))
-		{
-			ReadMLX = false; // finished rotation
-		}
-		else
-		{
-			start_adc();
-		}
 	}
-	else
+	else // reading from IR
 	{
-	double ADCVoltage = 0;
-	uint8_t IRDistance = 0;
-	uint8_t ADCLowBit = ADCL;
-	uint16_t ADCRes = ADCH<<8 | ADCLowBit; // puts result of ADC in ADCRes
-	ADCVoltage = ADCRes * 5 / 1024;
-	IRDistance = convert_voltage(ADCVoltage);
-	// store value in correct place in memory
-	next_input_pin(); //update ADMUX
-	// update memory for next ad conversion
+		double ADCVoltage = 0;
+		uint8_t IRDistance = 0;
+		uint8_t ADCLowBit = ADCL;
+		uint16_t ADCRes = ADCH<<8 | ADCLowBit; // puts result of ADC in ADCRes
+		ADCVoltage = ADCRes * 5 / 1024;
+		cli();
+		IRDistance = ConvertVoltage(ADCVoltage);
+		sei();
+		// store value in correct place in memory
+		NextInputPin(); //update ADMUX
+		// update memory for next ad conversion
 	}
 }
 
 ISR(PCINT1_vect)
 {
 	uint16_t PWMTime = 0;
-	uint16_t LidarDistance = 0;
-	if ((PORTB & 0x20) & !(PORTB & 0x10)) // if PB5 is high but not PB4
+	uint16_t lidarDistance = 0;
+	if ((PORTB & 0x20) && !(PORTB & 0x10)) // if PB5 is high but not PB4
 	{
-		timer_init();
+		TimerInit();
 		while (PORTB & 0x20){}
-		timer_stop();
+		TimerStop();
 		cli();
 		PWMTime = TCNT1;
 		sei();
-		LidarDistance = PWMTime / 2;
+		lidarDistance = PWMTime / 2;
 	}
-	else if ((PORTB & 0x80) & !(PORTB & 0x40)) // if PB7 is high but not PB6 
+	else if ((PORTB & 0x80) && !(PORTB & 0x40)) // if PB7 is high but not PB6 
 	{
-		timer_init();
+		TimerInit();
 		while (PORTB & 0x80){}
-		timer_stop();
+		TimerStop();
 		cli();
 		PWMTime = TCNT1;
 		sei();
-		LidarDistance = PWMTime / 2;
+		lidarDistance = PWMTime / 2;
 	}
 	// save lidar distance
 }
@@ -130,10 +131,17 @@ ISR(PCINT2_vect)
 {
 	if(PORTC & 0x01)
 	{
-		LeftCount++;
+		g_leftCount++;
 	}
 	else
 	{
-		RightCount++;
+		g_rightCount++;
 	}
+}
+ISR(TIMER3_COMPA_vect)
+{
+	ConvertOdo();
+	// send data via UART every 50 ms + a fraction of a microsec
+	g_sentData = true;
+	TCNT3 = 0x0000; // reset timer
 }
