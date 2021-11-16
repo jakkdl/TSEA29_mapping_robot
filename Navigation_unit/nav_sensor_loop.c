@@ -82,7 +82,6 @@ int8_t handle_sensor_data(struct data_packet* data)
 // EXTRA: assumes we've checked for parity error
 int8_t nav_main(struct sensor_data* data)
 {
-
     // TODO calculate heading and position
     // uses data, updates currentHeading, currentPosX and currentPosY
 

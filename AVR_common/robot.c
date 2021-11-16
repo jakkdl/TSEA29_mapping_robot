@@ -1,5 +1,5 @@
-#include "robot.h"
 #include <stdint.h>
+#include "robot.h"
 
 const uint8_t ADR_DATA_PACKETS[] = {
     2, // LIDAR_FORWARD

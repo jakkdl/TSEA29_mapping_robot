@@ -1,7 +1,7 @@
 // Global data variables and constants used across the whole navigation unit
 
-#ifndef NAVIGATION_UNIT_H
-#define NAVIGATION_UNIT_H
+#ifndef NAVIGATION_UNIT_NAVIGATION_UNIT_H_
+#define NAVIGATION_UNIT_NAVIGATION_UNIT_H_
 #include <stdbool.h>
 
 #include "../AVR_common/robot.h"
@@ -84,4 +84,4 @@ extern uint16_t            navigationGoalHeading; // = 0;
 // Map
 extern uint8_t navigationMap[49][25];
 
-#endif
+#endif // NAVIGATION_UNIT_NAVIGATION_UNIT_H_

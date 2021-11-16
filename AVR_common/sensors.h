@@ -1,5 +1,5 @@
-#ifndef _SENSORS_H
-#define _SENSORS_H
+#ifndef AVR_COMMON_SENSORS_H_
+#define AVR_COMMON_SENSORS_H_
 
 struct sensor_data
 {
@@ -24,4 +24,4 @@ struct sensor_data
 #define UINT16_TO_BYTE_0(value) (value) & 0b1111
 #define UINT16_TO_BYTE_1(value) (value) >> 4
 
-#endif //_SENSORS_H
+#endif // AVR_COMMON_SENSORS_H_

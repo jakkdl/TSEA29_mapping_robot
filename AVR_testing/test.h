@@ -1,5 +1,5 @@
-#ifndef _TEST_H
-#define _TEST_H
+#ifndef AVR_TESTING_TEST_H_
+#define AVR_TESTING_TEST_H_
 
 #include <inttypes.h>
 
@@ -75,15 +75,9 @@ void Test_init(void);
 // expected and actual got evaluated twice with the if statement
 // I have no clue what it is for, so I removed it for now.
 #define Test_assertTrue(condition)                                             \
-    Test_assertTrueLog((condition), __LINE__); /*                              \
-    if (!(condition)) {                                                        \
-        return;                                                                \
-        }*/
+    Test_assertTrueLog((condition), __LINE__);
 
 #define Test_assertEquals(actual, expected)                                    \
-    Test_assertEqualLog((actual), (expected), __LINE__); /*                    \
-    if ((actual) != (expected)) {                                              \
-        return;                                                                \
-    }*/
+    Test_assertEqualLog((actual), (expected), __LINE__);
 
-#endif /* TEST_H */
+#endif //AVR_TESTING_TEST_H_

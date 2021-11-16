@@ -1,6 +1,6 @@
 // This file contains definitions and stuff that all units will need
-#ifndef ROBOT_H
-#define ROBOT_H
+#ifndef AVR_COMMON_ROBOT_H_
+#define AVR_COMMON_ROBOT_H_
 #include <stdint.h>
 
 enum Address
@@ -62,4 +62,4 @@ enum directionID
     turn_right
 };
 
-#endif
+#endif // AVR_COMMON_ROBOT_H_

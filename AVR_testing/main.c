@@ -1,6 +1,6 @@
-#include "test.h"
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
+#include "test.h"
 
 int main(void)
 {
