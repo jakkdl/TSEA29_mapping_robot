@@ -3,8 +3,10 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <math.h>
-void start_adc();
-void adc_init();
-void next_input_pin();
-uint8_t convert_voltage(double ADCVoltage);
+#include <stdbool.h>
+bool g_IRDone;
+void StartAdc();
+void AdcInit();
+void NextInputPin();
+uint8_t ConvertVoltage(double ADCVoltage);
 #endif
