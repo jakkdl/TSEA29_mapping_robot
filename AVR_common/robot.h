@@ -5,22 +5,22 @@
 
 enum Address
 {
-    lidar_forward,
-    lidar_backward,
-    ir_leftfront,
-    ir_leftback,
-    ir_rightfront,
-    ir_rightback,
-    odometer,
-    gyro,
-    position,
-    header,
-    map_update,
-    command,
-    debug,
-    pd_kp,
-    pd_kd,
-    parity_error
+    LIDAR_FORWARD,
+    LIDAR_BACKWARD,
+    IR_LEFTFRONT,
+    IR_LEFTBACK,
+    IR_RIGHTFRONT,
+    IR_RIGHTBACK,
+    ODOMETER,
+    GYRO,
+    POSITION,
+    HEADER,
+    MAP_UPDATE,
+    COMMAND,
+    DEBUG,
+    PD_KP,
+    PD_KD,
+    PARITY_ERROR
 };
 
 struct data_packet
@@ -52,14 +52,14 @@ extern const uint8_t ADR_DATA_PACKETS[];
 
 enum directionID
 {
-    stop,
-    start,
-    forward,
-    backward,
-    fw_left,
-    fw_right,
-    turn_left,
-    turn_right
+    STOP,
+    START,
+    FORWARD,
+    BACKWARD,
+    FW_LEFT,
+    FW_RIGHT,
+    TURN_LEFT,
+    TURN_RIGHT
 };
 
 #endif // AVR_COMMON_ROBOT_H_
