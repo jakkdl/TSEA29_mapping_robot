@@ -121,22 +121,9 @@ bool is_wall(uint8_t dir)
     int x;
     int y;
 
-<<<<<<< HEAD
-    x = get_robot_adjacent_coord(dir, 0);
-    y = get_robot_adjacent_coord(dir, 1);
-    if (g_navigationMap[x][y] == 1)
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-=======
     x = get_robot_adjacent_coord(dir % 4, 0);
     y = get_robot_adjacent_coord(dir % 4, 1);
-    return navigationMap[x][y] == 1;
->>>>>>> Axel
+    return g_navigationMap[x][y] == 1;
 }
 
 uint8_t get_heading()
