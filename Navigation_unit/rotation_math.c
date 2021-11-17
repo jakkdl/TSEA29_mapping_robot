@@ -1,20 +1,166 @@
 //TSEA29, initial author JL
-//rotation math, given in ~pseudocode
+//rotation math
 //
-// need to make decision on where 0 degrees is, which of left/right-turning is increasing/decreasing
-// angles, and where (0, 0) is.
+#include <math.h>
+#include "navigation_unit.h"
+#include "../AVR_common/sensors.h"
+#include "../AVR_testing/test.h"
 
-int AXLE_WIDTH = 200; // must be measured
-int MID_TO_WHEEL_CENTER = 141; //must be measured
-int WHEEL_CIRCUMFEENCE = 65;
-int COGS = 12; // should be checked
+int8_t AXLE_WIDTH = 200; // must be measured
+int8_t MID_TO_WHEEL_CENTER = 141; //must be measured
+int8_t WHEEL_CIRCUMFERENCE = 65;
+int8_t COGS = 12; // should be checked
 
+double heading_to_radian(uint16_t heading)
+{
+    //return ((double) (heading * 2)) / ((double) FULL_TURN) * M_PI;
+    return (double) heading / FULL_TURN * 2 * M_PI;
+}
+
+int8_t calculate_heading_and_position(struct sensor_data *data)
+{
+    // if needed we can check what direction we intended to turn in
+    // by checking wheelDirection for turning on the spot, and comparing ordos
+    // if driving straight, but looks like the gyro gives a signed value
+    // with positive clockwise
+    uint16_t previousHeading = g_currentHeading;
+    double headingRad;
+    int16_t distance;
+
+    // overflow handles modulo for us
+    g_currentHeading += data->gyro;
+
+
+    // only update position if driving straight
+    if (g_wheelDirectionLeft == g_wheelDirectionRight &&
+            (data->odometer_left > 0 || data->odometer_right > 0))
+    {
+        // if we turned while driving, we don't know when along the line
+        // we changed direction. So we take half the gyro change and assume
+        // a straight line.
+        headingRad = heading_to_radian(previousHeading + data->gyro/2);
+
+        // this can also be calibrated with wheel speed
+        distance = (data->odometer_left + data->odometer_right ) / 2;
+        if (g_wheelDirectionLeft == DIR_BACKWARD)
+        {
+            distance = -distance;
+        }
+
+        // We can likely use a look-up table here, but no use creating it
+        // before we've tested the gyro / figured out the precision/values
+        // out of it
+        g_currentPosX += cos(headingRad) * distance;
+        g_currentPosY += sin(headingRad) * distance;
+    }
+
+
+    // TODO use lidar & IR to calibrate heading and position
+    return 0;
+}
+
+#if __TEST__
+
+Test_test(Test, heading_to_radian)
+{
+    Test_assertFloatEquals(heading_to_radian(0), 0.0);
+    Test_assertFloatEquals(heading_to_radian(32768), M_PI);
+    Test_assertFloatEquals(heading_to_radian(16384), M_PI/2);
+    Test_assertFloatEquals(heading_to_radian(-16384), 6*M_PI/4);
+}
+
+Test_test(Test, calc_heading_and_pos)
+{
+    uint16_t oldCurrentPosX = g_currentPosX;
+    uint16_t oldCurrentPosY = g_currentPosY;
+    uint16_t oldHeading = g_currentHeading;
+    enum Direction oldWheelDirectionLeft = g_wheelDirectionLeft;
+    enum Direction oldWheelDirectionRight = g_wheelDirectionRight;
+
+    struct sensor_data data;
+    data.odometer_left = 0;
+    data.odometer_right = 0;
+    data.gyro = 0;
+
+    g_currentHeading = 0;
+    g_currentPosX = 0;
+    g_currentPosY = 0;
+    g_wheelDirectionLeft = DIR_FORWARD;
+    g_wheelDirectionRight = DIR_FORWARD;
+
+    Test_assertEquals(calculate_heading_and_position(&data), 0);
+    Test_assertEquals(g_currentPosX, 0);
+    Test_assertEquals(g_currentPosY, 0);
+    Test_assertEquals(g_currentHeading, 0);
+    Test_assertEquals(g_wheelDirectionLeft, DIR_FORWARD);
+    Test_assertEquals(g_wheelDirectionRight, DIR_FORWARD);
+
+    // turn one quarter to the left
+    data.gyro = 16384; // FULL_TURN / 4
+
+    Test_assertEquals(calculate_heading_and_position(&data), 0);
+    Test_assertEquals(g_currentPosX, 0);
+    Test_assertEquals(g_currentPosY, 0);
+    Test_assertEquals(g_currentHeading, 16384);
+
+
+    // then one eight to the right
+    data.gyro = -8192; // FULL_TURN / 8
+
+    Test_assertEquals(calculate_heading_and_position(&data), 0);
+    Test_assertEquals(g_currentPosX, 0);
+    Test_assertEquals(g_currentPosY, 0);
+    Test_assertEquals(g_currentHeading, 8192);
+
+    // now forward 100mm
+    data.gyro = 0;
+    data.odometer_left = 100;
+    data.odometer_right = 100;
+    Test_assertEquals(calculate_heading_and_position(&data), 0);
+    Test_assertEquals(g_currentPosX, 70);
+    Test_assertEquals(g_currentPosY, 70);
+    Test_assertEquals(g_currentHeading, 8192);
+
+    // half a turn to the right
+    // and forward 100mm
+    data.gyro = -32768;
+
+    // robot will average out the heading, and is the same as a 90 degree turn
+    // followed by movement, then another 90 degrees
+    Test_assertEquals(calculate_heading_and_position(&data), 0);
+    Test_assertEquals(g_currentPosX, 140);
+    Test_assertEquals(g_currentPosY, 0);
+    Test_assertEquals(g_currentHeading, 40960); // FULL_TURN * 5 / 8
+
+    // then reverse 100mm
+    // we're now standing at 5/8s of a turn
+    data.gyro = 0;
+    g_wheelDirectionLeft = DIR_BACKWARD;
+    g_wheelDirectionRight = DIR_BACKWARD;
+
+    Test_assertEquals(calculate_heading_and_position(&data), 0);
+    Test_assertEquals(g_currentPosX, 210);
+    Test_assertEquals(g_currentPosY, 70);
+    Test_assertEquals(g_currentHeading, 40960);
+
+    g_currentPosX = oldCurrentPosX;
+    g_currentPosY = oldCurrentPosY;
+    g_currentHeading = oldHeading;
+    g_wheelDirectionLeft = oldWheelDirectionLeft;
+    g_wheelDirectionRight = oldWheelDirectionRight;
+}
+#endif
+
+
+/***** Code I'll delete soon probs ******/
+
+/*** UNUSED: We will primarily use gyro for calculating new heading****/
 // ### Formula for new heading, given how much we rotated on the spot ###
 // old_heading [radians], measured clockwise from starting position.
 // direction==1 for turning to the right
 // direction==-1 for turning to the left
 // cog_steps [mm] from the ordometer
-int rotated_on_the_spot(float old_heading, int direction, int cog_steps)
+/*int rotated_on_the_spot(float old_heading, int direction, int cog_steps)
 {
 
     // from the formula of circle sector
@@ -22,19 +168,18 @@ int rotated_on_the_spot(float old_heading, int direction, int cog_steps)
     float new_heading = (old_heading + direction *
         (cog_steps * WHEEL_CIRCUMFERENCE / COGS) / MID_TO_WHEEL_CENTER);
     return new_heading;
-}
+}*/
 
+/*** This is a meme/WIP, and will never actually be used.***/
 // Formula for new heading and position, given that one wheel is stationary
 /// and the other has moved, so we're rotating around the stationary wheel
 //
-// This is a meme/WIP, and will never actually be used. But is indicative of what
-// might be needed for full tracking of heading&position given arbitrary wheel turns.
 //
 // old_heading [radians]
 // direction==1 if driving forward, -1 if reverse
 // turning_wheel==1 for left wheel, -1 for right wheel
 // old_pos_x, old_pos_y positions of the midpoint of the robot
-void one_wheel_rotation(float old_heading,
+/*void one_wheel_rotation(float old_heading,
         int direction,
         int turning_wheel,
         int old_pos_x,
@@ -68,13 +213,13 @@ void one_wheel_rotation(float old_heading,
     }
 
 
-}
+}*/
 
 // the number of ordometer steps that represent a full turn
 // the robot is 200x200, so the radius is ~100
-int MAGIC_ORDO = 2 * math.pi * 100 / WHEEL_CIRCUMFERENCE / COGS; //approximate theoretical value
+//int MAGIC_ORDO = 2 * math.pi * 100 / WHEEL_CIRCUMFERENCE / COGS; //approximate theoretical value
 
-
+/*
 void draw_laser_line(int left_ordo, int right_ordo, int pos_x, int pos_y, int distance)
 {
     // see laser_intersecting_pot_walls.jpg
@@ -156,12 +301,13 @@ void draw_laser_line(int left_ordo, int right_ordo, int pos_x, int pos_y, int di
     // This can be more or less ambitious, taking into account the width of the robot and stuff.
 
 }
-
+*/
 
 // Helper function for determining where a laser crosses a potential wall
 // Takes ordometer steps for left & right wheelpair, and returns a delta_x to be used
 // when drawing the imaginary "lines" of a laser as it crosses the floor.
 // currently unused
+/*
 float delta_x(int left_ordo, int right_ordo) {
     int res = 1;
     int stuff;
@@ -186,4 +332,4 @@ float delta_x(int left_ordo, int right_ordo) {
     // d_x = sin(v)
     return MAGIC_TABLE[stuff];
 
-}
+}*/

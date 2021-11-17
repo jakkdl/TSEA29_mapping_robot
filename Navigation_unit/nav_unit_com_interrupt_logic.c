@@ -174,7 +174,7 @@ int8_t command_set_target_square(uint8_t id)
             return -1;
     }
 }
-
+#if __TEST__
 #include "../AVR_testing/test.h"
 Test_test(Test, uartCommandStart)
 {
@@ -261,3 +261,4 @@ Test_test(Test, uartCommand_fw_left)
     g_navigationGoalX    = oldNavigationGoalX;
     g_navigationGoalY    = oldNavigationGoalY;
 }
+#endif

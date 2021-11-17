@@ -84,11 +84,11 @@ bool unexplored_cells_exist()
     }
     return false;
 }
-
+/*
 bool opening()
 {
 }
-
+*/
 bool left_opening()
 {
     uint8_t dir = get_heading();
