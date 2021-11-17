@@ -1,7 +1,7 @@
 GCC = avr-gcc
 
 CFLAGS	= -mmcu=atmega1284p
-CFLAGS	+= -O2 -Wall -Wextra
+CFLAGS	+= -Os -Wall -Wextra
 CFLAGS	+= -g
 
 COMMON_FILES = AVR_common/robot.c
