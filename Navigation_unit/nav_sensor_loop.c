@@ -4,7 +4,7 @@
 #include "../AVR_common/sensors.h"
 #include "../AVR_testing/test.h"
 #include "navigation_unit.h"
-#include "Pd.h"
+#include "pd.h"
 #include "navigation.h"
 #include "rotation_math.h"
 

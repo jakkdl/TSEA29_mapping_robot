@@ -5,7 +5,7 @@ CFLAGS	+= -Os -Wall -Wextra
 CFLAGS	+= -g
 
 COMMON_FILES = AVR_common/robot.c
-NAVIGATION_FILES = Navigation_unit/nav_sensor_loop.c Navigation_unit/navigation_unit.c Navigation_unit/nav_unit_com_interrupt_logic.c Navigation_unit/navigation.c Navigation_unit/Pd.c Navigation_unit/rotation_math.c
+NAVIGATION_FILES = Navigation_unit/nav_sensor_loop.c Navigation_unit/navigation_unit.c Navigation_unit/nav_unit_com_interrupt_logic.c Navigation_unit/navigation.c Navigation_unit/pd.c Navigation_unit/rotation_math.c
 NAVIGATION_MAIN = Navigation_unit/main.c
 
 # required to print floats, as per https://stackoverflow.com/a/26525329

@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "Pd.h"
+#include "pd.h"
 #include "navigation_unit.h"
 
 void PDcontroller_Rest();
