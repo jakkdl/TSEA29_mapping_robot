@@ -85,6 +85,10 @@ bool unexplored_cells_exist()
     return false;
 }
 
+bool opening()
+{
+}
+
 bool left_opening()
 {
     uint8_t dir = get_heading();
@@ -93,44 +97,22 @@ bool left_opening()
     {
     case 0:
         return !is_wall(dir + 1);
-        break;
     case 1:
         return !is_wall(dir + 1);
-        break;
     case 2:
         return !is_wall(dir + 1);
-        break;
     case 3:
         return !is_wall(dir - 3);
-        break;
     default:
         return -1;
-        break;
     }
 }
 
+//redundant
 bool right_opening()
 {
     uint8_t dir = get_heading();
-
-    switch (dir)
-    {
-    case 0:
-        return !is_wall(dir + 3);
-        break;
-    case 1:
-        return !is_wall(dir - 1);
-        break;
-    case 2:
-        return !is_wall(dir - 1);
-        break;
-    case 3:
-        return !is_wall(dir - 1);
-        break;
-    default:
-        return -1;
-        break;
-    }
+    return !is_wall(dir + 3);
 }
 
 //checks if cell at g_navigationMap[x][y] is a wall
@@ -139,6 +121,7 @@ bool is_wall(uint8_t dir)
     int x;
     int y;
 
+<<<<<<< HEAD
     x = get_robot_adjacent_coord(dir, 0);
     y = get_robot_adjacent_coord(dir, 1);
     if (g_navigationMap[x][y] == 1)
@@ -149,6 +132,11 @@ bool is_wall(uint8_t dir)
     {
         return false;
     }
+=======
+    x = get_robot_adjacent_coord(dir % 4, 0);
+    y = get_robot_adjacent_coord(dir % 4, 1);
+    return navigationMap[x][y] == 1;
+>>>>>>> Axel
 }
 
 uint8_t get_heading()
@@ -190,41 +178,38 @@ bool at_start_pos()
 
 void wall_follow()
 {
-    do
+    uint8_t dir = get_heading();
+
+    if (left_opening())
     {
-        if (left_opening())
+        command_set_target_square(FW_LEFT);
+    }
+    else
+    {
+        //wall in front of robot?
+        if (is_wall(get_heading()))
         {
-            command_set_target_square(FW_LEFT);
-        }
-        else
-        {
-            //wall in front of robot?
-            if (is_wall(get_heading()))
+            //previously right_opening()
+            if (!is_wall(dir + 3))
             {
-                if (right_opening())
-                {
-                    command_set_target_square(FW_RIGHT);
-                }
-                else
-                {
-                    //Turn around 180 degrees (this was "reverse controls" earlier)
-                    for (int i = 0; i < 2; i++)
-                    {
-                        command_set_target_square(TURN_AROUND);
-                    }
-                }
+                command_set_target_square(FW_RIGHT);
             }
             else
             {
-                command_set_target_square(FORWARD);
+                //Turn around 180 degrees (this was "reverse controls" earlier)
+                command_set_target_square(TURN_AROUND);
             }
         }
-
-        if (unexplored_cells_exist())
+        else
         {
-            //sample_search();
+            command_set_target_square(FORWARD);
         }
-    } while (!at_start_pos());
+    }
+
+    if (unexplored_cells_exist())
+    {
+        //sample_search();
+    }
 }
 
 //Path finding algorithm that might not work as expected. Can probably be replaced easily if so.
