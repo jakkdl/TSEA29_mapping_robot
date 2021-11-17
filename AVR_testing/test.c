@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "../AVR_common/uart.h"
 #include "test.h"
@@ -63,19 +64,25 @@ void Test_add(Test_TestHolder* test)
     m_Test_head = test;
 }
 
-void Test_assertTrueLog(uint8_t condition, uint16_t lineNumber)
+bool Test_assertTrueLog(uint8_t condition, uint16_t lineNumber)
 {
     // We have the active test
     if (!(condition))
     {
         m_Test_activeTest->testResult = FAILURE;
         m_Test_activeTest->line       = lineNumber;
-        m_Test_activeTest->actual     = 1;
-        m_Test_activeTest->expected   = 0;
+        snprintf(
+                m_Test_activeTest->message,
+                MSG_LEN,
+                "FAIL: %s @ %d\n    not true\n",
+                m_Test_activeTest->name,
+                lineNumber);
+        return false;
     }
+    return true;
 }
 
-void Test_assertEqualLog(uint16_t actual,
+bool Test_assertEqualLog(uint16_t actual,
                          uint16_t expected,
                          uint16_t lineNumber)
 {
@@ -83,9 +90,40 @@ void Test_assertEqualLog(uint16_t actual,
     {
         m_Test_activeTest->testResult = FAILURE;
         m_Test_activeTest->line       = lineNumber;
-        m_Test_activeTest->actual     = actual;
-        m_Test_activeTest->expected   = expected;
+        snprintf(
+                m_Test_activeTest->message,
+                MSG_LEN,
+                "FAIL: %s @ line %d\n    got %d expected %d\n",
+                m_Test_activeTest->name,
+                lineNumber,
+                actual,
+                expected
+                );
+        return false;
     }
+    return true;
+}
+
+bool Test_assertFloatEqualLog(double actual,
+                              double expected,
+                              uint16_t lineNumber)
+{
+    if (expected != actual)
+    {
+        m_Test_activeTest->testResult = FAILURE;
+        m_Test_activeTest->line       = lineNumber;
+        snprintf(
+                m_Test_activeTest->message,
+                MSG_LEN,
+                "FAIL: %s @ %d\n    got %f expected %f\n",
+                m_Test_activeTest->name,
+                lineNumber,
+                actual,
+                expected
+                );
+        return false;
+    }
+    return true;
 }
 
 // Run through all the tests
@@ -136,11 +174,7 @@ void Test_runall(void)
         }
         else
         {
-            printf("FAIL: %s @ %d\n    got %d expected %d\n",
-                   m_Test_activeTest->name,
-                   m_Test_activeTest->line,
-                   m_Test_activeTest->actual,
-                   m_Test_activeTest->expected);
+            printf(m_Test_activeTest->message);
             m_Test_result.failureCount++;
         }
 

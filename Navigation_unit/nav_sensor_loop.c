@@ -6,6 +6,7 @@
 #include "navigation_unit.h"
 #include "Pd.h"
 #include "navigation.h"
+#include "rotation_math.h"
 
 // robot will turn to a precision of at least 2.8 degrees
 #define TURN_SENSITIVITY FULL_TURN / 128
@@ -86,6 +87,10 @@ int8_t nav_main(struct sensor_data* data)
 {
     // TODO calculate heading and position
     // uses data, updates g_currentHeading, g_currentPosX and g_currentPosY
+    if (calculate_heading_and_position(data) == -1)
+    {
+        return -1;
+    }
 
     if (g_navigationGoalSet)
     {
@@ -134,6 +139,7 @@ bool arrived_at_goal(void)
 
 // test handle sensor data
 
+#if __TEST__
 Test_test(Test, handle_sensor_data_lidar_forward)
 {
     // save old values to restore later
@@ -286,4 +292,4 @@ Test_test(Test, arrived_at_goal_pos)
     g_currentPosX        = oldCurrentPosX;
     g_currentPosY        = oldCurrentPosY;
 }
-
+#endif
