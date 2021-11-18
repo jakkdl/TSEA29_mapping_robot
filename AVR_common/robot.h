@@ -63,4 +63,11 @@ enum directionID
     TURN_AROUND
 };
 
+enum CellState
+{
+    WALL,
+    EMPTY,
+    UNKNOWN
+};
+
 #endif // AVR_COMMON_ROBOT_H_
