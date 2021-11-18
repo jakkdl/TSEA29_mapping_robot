@@ -70,7 +70,6 @@ extern uint16_t            g_navigationGoalHeading; // = 0;
 
 // Map
 #define isWall(x, y) g_navigationMap[(x)][(y)] & 0x80
-#define makeWall(x, y) g_navigationMap
 extern int8_t g_navigationMap[49][25];
 
 #endif // NAVIGATION_UNIT_NAVIGATION_UNIT_H_
