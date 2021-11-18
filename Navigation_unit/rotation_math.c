@@ -175,8 +175,8 @@ int8_t draw_laser_line(uint8_t laser_x, uint8_t laser_y, uint8_t sensor_directio
         return -1;
     }
 
-    // in which quadrant are we pointing
-    uint8_t quadrant_heading = ((g_currentHeading >> 14) + sensor_direction) % 4;
+    // in which quadrant is the laser pointing
+    uint8_t quadrant_heading = ((g_currentHeading >> 14) + sensor_direction) ^ 3;
 
     // Depending on direction we're hitting different walls of the cell, and
     // that gives different coordinates for the cell
@@ -188,7 +188,7 @@ int8_t draw_laser_line(uint8_t laser_x, uint8_t laser_y, uint8_t sensor_directio
 
         // bit magic to check if we're in 2nd or 3rd quadrant
         // if so we're hitting the left side, and should subtract one
-        if (((quadrant_heading) ^ 0x3) % 3)
+        if (quadrant_heading == 1 || quadrant_heading == 2)
         {
             end_x_coord -= 1;
         }
@@ -282,11 +282,6 @@ int8_t draw_laser_line(uint8_t laser_x, uint8_t laser_y, uint8_t sensor_directio
     return 0;
 }
 
-inline uint8_t no_rounding(double in)
-{
-    return (uint8_t) in;
-}
-
 void laser_positive_x(uint16_t x, uint16_t y, uint16_t end_x, double delta_y)
 {
     uint8_t x_0 = ceil(x / 400);
@@ -326,15 +321,15 @@ void laser_loop_x(uint8_t max_steps,
         double delta_y)
 {
     uint8_t x = x_0;
-    uint8_t y;
     for (uint8_t steps = 0; steps < max_steps; ++steps)
     {
         x += delta_x;
-        y = floor((y_0 + steps * delta_y * 400) / 400);
-
-        mark_empty(x, y);
+        mark_empty(
+                x,
+                floor((y_0 + steps * delta_y * 400) / 400));
     }
 }
+
 void laser_loop_y(uint8_t max_steps,
         uint16_t x_0,
         uint8_t y_0,
@@ -346,27 +341,27 @@ void laser_loop_y(uint8_t max_steps,
     for (uint8_t steps = 0; steps < max_steps; ++steps)
     {
         y += delta_y;
-        x = floor((x_0 + steps * delta_x * 400) / 400);
-
-        mark_empty(x, y);
+        mark_empty(
+                x = floor((x_0 + steps * delta_x * 400) / 400),
+                y);
     }
 }
 
 void mark_empty(uint8_t x, uint8_t y)
 {
-    // mark as empty space
-    g_navigationMap[x][y] += 1;
-
-    // if it's 0 or -1, send update to com-unit
-    if ((g_navigationMap[x][y] & 0x7f) == 0)
+    if (g_navigationMap[x][y] == 0)
     {
-        if (g_navigationMap[x][y] == 0) {
-            send_map_update(x, y, UNKNOWN);
-        }
-        else
-        {
-            send_map_update(x, y, EMPTY);
-        }
+        g_navigationMap[x][y] = 1;
+        send_map_update(x, y, EMPTY);
+    }
+    else if (g_navigationMap[x][y] == -1)
+    {
+        g_navigationMap[x][y] = 0;
+        send_map_update(x, y, UNKNOWN);
+    }
+    else if (g_navigationMap[x][y] != INT8_MAX)
+    {
+        g_navigationMap[x][y] += 1;
     }
 }
 
