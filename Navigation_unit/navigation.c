@@ -35,7 +35,7 @@ bool at_start_pos();
 void save_start_pos();
 
 /*
-Changed so that the algorithm looks for the end point instead of the 
+Changed so that the algorithm looks for the end point instead of the
 position of the robot. Same same but backwards.
 */
 
@@ -57,24 +57,13 @@ void save_start_pos()
     startPosY = MmToGrid(g_currentPosY);
 }
 
-void init_map()
-{
-    for (int x = 0; x < 49; x++)
-    {
-        for (int y = 0; y < 25; y++)
-        {
-            g_navigationMap[x][y] = 0;
-        }
-    }
-}
-
 bool unexplored_cells_exist()
 {
     for (int x = 0; x < 49; x++)
     {
         for (int y = 0; y < 25; y++)
         {
-            if (g_navigationMap[x][y] == 0)
+            if (IsUnknown(x, y) == 0)
             {
                 endPoint[0] = x;
                 endPoint[1] = y;
@@ -123,7 +112,7 @@ bool is_wall(uint8_t dir)
 
     x = get_robot_adjacent_coord(dir % 4, 0);
     y = get_robot_adjacent_coord(dir % 4, 1);
-    return g_navigationMap[x][y] == 1;
+    return IsWall(x,y);
 }
 
 uint8_t get_heading()
@@ -398,7 +387,7 @@ uint8_t get_robot_adjacent_coord(int dir, int xy)
     }
     else{
         return true;
-    } 
+    }
     return false;
 } */
 
@@ -460,7 +449,7 @@ uint8_t get_robot_adjacent_coord(int dir, int xy)
     }
     else
     {
-    } 
+    }
 } */
 
 /* void turn_towards_cell()
@@ -515,11 +504,11 @@ Test_test(Test, test_cells_exist)
     {
         for (int y = 0; y < 25; y++)
         {
-            g_navigationMap[x][y] = 1;
+            MakeWall(x, y);
         }
     }
     Test_assertEquals(unexplored_cells_exist(), false);
-    g_navigationMap[0][1] = 0;
+    MakeUnknown(0, 1);
     Test_assertEquals(unexplored_cells_exist(), true);
     //reset map
     for (int x = 0; x < 49; x++)
@@ -541,7 +530,7 @@ Test_test(Test, test_is_wall)
             g_navigationMap[x][y] = 1;
         }
     } */
-    g_navigationMap[25][0] = 1;
+    MakeWall(25, 0);
     Test_assertEquals(is_wall(0), true);
     Test_assertEquals(is_wall(1), false);
     Test_assertEquals(is_wall(2), false);
