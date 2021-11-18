@@ -85,7 +85,6 @@ int8_t handle_sensor_data(struct data_packet* data)
 // EXTRA: assumes we've checked for parity error
 int8_t nav_main(struct sensor_data* data)
 {
-    // TODO calculate heading and position
     // uses data, updates g_currentHeading, g_currentPosX and g_currentPosY
     if (calculate_heading_and_position(data) == -1)
     {
@@ -114,7 +113,7 @@ int8_t nav_main(struct sensor_data* data)
 
     // run map update algorithm
     // which if there's updates, sends them to com-unit
-    __asm__("nop");
+    update_map(data);
 
     // Check if we should run nav algo
     if (g_navigationMode == AUTONOMOUS && !g_navigationGoalSet)
