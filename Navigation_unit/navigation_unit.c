@@ -47,4 +47,4 @@ uint16_t            g_navigationGoalY       = 0;
 uint16_t            g_navigationGoalHeading = 0;
 
 // Map
-uint8_t g_navigationMap[49][25];
+int8_t g_navigationMap[49][25];

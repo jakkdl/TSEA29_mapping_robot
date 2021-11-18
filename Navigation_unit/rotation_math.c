@@ -2,14 +2,72 @@
 //rotation math
 //
 #include <math.h>
+#include <stdlib.h>
 #include "navigation_unit.h"
 #include "../AVR_common/sensors.h"
+#include "../AVR_common/robot.h"
 #include "../AVR_testing/test.h"
+
+// if we hit right at the corner of a wall, we don't know which
+// coordinate it corresponds to. So we throw out all values too close
+// to the corners.
+#define CORNER_SENSITIVITY 30
+
+// map update throws out an update if a wall is too far from where it can be
+#define MAX_ERROR 50
 
 int8_t AXLE_WIDTH = 200; // must be measured
 int8_t MID_TO_WHEEL_CENTER = 141; //must be measured
 int8_t WHEEL_CIRCUMFERENCE = 65;
 int8_t COGS = 12; // should be checked
+
+double g_cosHeading;
+double g_sinHeading;
+
+const double COS_QUARTERS[] =
+{
+    1.0,
+    0,
+    -1.0,
+    0
+};
+const double SIN_QUARTERS[] =
+{
+    0,
+    1,
+    0,
+    -1
+};
+
+void laser_positive_x(uint16_t x, uint16_t y, uint16_t end_x, double delta_y);
+void laser_negative_x(uint16_t x, uint16_t y, uint16_t end_x, double delta_y);
+void laser_positive_y(uint16_t x, uint16_t y, uint16_t end_y, double delta_x);
+void laser_negative_y(uint16_t x, uint16_t y, uint16_t end_y, double delta_x);
+
+void laser_loop_x(uint8_t max_steps,
+        uint8_t x_0,
+        uint16_t y_0,
+        int8_t delta_x,
+        double delta_y);
+void laser_loop_y(uint8_t max_steps,
+        uint16_t x_0,
+        uint8_t y_0,
+        double delta_x,
+        int8_t delta_y);
+void mark_empty(uint8_t x, uint8_t y);
+
+int8_t draw_laser_line(uint8_t x, uint8_t y, uint8_t sensor_direction, uint16_t distance);
+
+void send_map_update(uint8_t x, uint8_t y, enum CellState state);
+// using the trigonometric addition formulas
+double laser_cos(uint8_t direction)
+{
+    return g_cosHeading*COS_QUARTERS[direction] + g_sinHeading*SIN_QUARTERS[direction];
+}
+double laser_sin(uint8_t direction)
+{
+    return g_sinHeading*COS_QUARTERS[direction] + g_cosHeading*SIN_QUARTERS[direction];
+}
 
 double heading_to_radian(uint16_t heading)
 {
@@ -54,9 +112,267 @@ int8_t calculate_heading_and_position(struct sensor_data *data)
         g_currentPosY += sin(headingRad) * distance;
     }
 
+    // cache cos & sin
+    headingRad = heading_to_radian(g_currentHeading);
+
+    g_cosHeading = cos(headingRad);
+    g_sinHeading = sin(headingRad);
+
 
     // TODO use lidar & IR to calibrate heading and position
     return 0;
+}
+
+int8_t update_map(struct sensor_data *data)
+{
+    draw_laser_line(
+            LaserPositionX(data, data->lidar_forward),
+            LaserPositionY(data, data->lidar_forward),
+            LaserDirection(data, data->lidar_forward),
+            data->lidar_forward
+            );
+    //lidar backward
+    //4*ir
+
+    // We can optionally also check if the robot is currently standing on top of
+    // a potential wall (or several), and mark those as empty.
+    // This can be more or less ambitious, taking into account the width of the robot and stuff.
+    return 0;
+}
+
+int8_t draw_laser_line(uint8_t laser_x, uint8_t laser_y, uint8_t sensor_direction, uint16_t distance)
+{
+    // see laser_intersecting_pot_walls.jpg
+    // where x_r,y_r is pos_x,pos_y
+    // x_s, y_s is laser_x, laser_y
+    // d is distance
+    // x_n , y_n is end_x, end_y
+
+    double cos = laser_cos(sensor_direction);
+    double sin = laser_cos(sensor_direction);
+
+    uint16_t start_x = g_currentPosX + cos*laser_x;
+    uint16_t start_y = g_currentPosY + sin*laser_y;
+
+    // Calculate X, Y for endpoint when laser hits wall -> end_x, end_y
+    // given the distance.
+    uint16_t end_x = start_x + cos*distance;
+    uint16_t end_y = start_y + sin*distance;
+
+    uint8_t end_x_coord = round(end_x/400);
+    uint8_t end_y_coord = round(end_y/400);
+
+    uint16_t x_dif = abs((int16_t)(end_x - end_x_coord*400));
+    uint16_t y_dif = abs((int16_t)(end_x - end_x_coord*400));
+
+    if (x_dif < CORNER_SENSITIVITY && y_dif < CORNER_SENSITIVITY)
+    {
+        return -1;
+    }
+
+    if (x_dif > MAX_ERROR && y_dif > MAX_ERROR)
+    {
+        return -1;
+    }
+
+    // in which quadrant are we pointing
+    uint8_t quadrant_heading = ((g_currentHeading >> 14) + sensor_direction) % 4;
+
+    // Depending on direction we're hitting different walls of the cell, and
+    // that gives different coordinates for the cell
+    if (x_dif < y_dif)
+    {
+        // we're hitting the left or right side of the wall
+        // to get the proper y coordinate we should round it down
+        end_y_coord = floor(end_y/400);
+
+        // bit magic to check if we're in 2nd or 3rd quadrant
+        // if so we're hitting the left side, and should subtract one
+        if (((quadrant_heading) ^ 0x3) % 3)
+        {
+            end_x_coord -= 1;
+        }
+
+    }
+    else
+    {
+        // top or bottom
+        end_x_coord = floor(end_x/400);
+
+        // if in the 3rd or 4th quadrant, we're hitting the top
+        // and should subtract one from the y coordinate.
+        if (quadrant_heading & 0x2)
+        {
+            end_y_coord -= 1;
+        }
+    }
+
+    // mark as wall
+    g_navigationMap[end_x_coord][end_y_coord] -= 1;
+
+    // if the cell state changed, send update to com-unit
+    if (g_navigationMap[end_x_coord][end_y_coord] == -1)
+    {
+        send_map_update(end_x_coord, end_y_coord, WALL);
+    }
+    else if (g_navigationMap[end_x_coord][end_y_coord] == 0)
+    {
+        send_map_update(end_x_coord, end_y_coord, UNKNOWN);
+    }
+
+
+
+    // TODO: throw out values that are incorrect due to the wall being
+    // too close (the measured voltage from IR, and therefore the distance, will be misleading).
+
+
+
+    /*** Calculate which cells the laser passed trough before hitting the wall ***/
+
+    // A line drawn across a square grid at an angle will intersect with points at
+    // (X_0, Y_0), (X_0+1, Y_1), (X_0+2, Y_2) and (X_0, Y_0), (X_1, Y_0+1), (X_2, Y_0+2)
+    // (where these will yield the same set of points for 45 degrees / tau/8 radians)
+    // We handle these separately
+
+    // calculate the first point where the laser crosses x%400 == 0
+    // TODO rounding up/down, and +/- depends on heading
+    //
+    switch (quadrant_heading)
+    {
+        case 0:
+            laser_positive_x(start_x, start_y, end_x, sin);
+            laser_positive_y(start_x, start_y, end_y, cos);
+            //y_0 = math.ceil(y / 400);
+            //x_0 = x + cos * (y / 400 - y_0);
+            //max_steps = round(end_y/400) - y_0;
+            //loop(max_steps, x_0, y_0, 1, sin, &no_rounding, &floor);
+            break;
+        case 1:
+            laser_negative_x(start_x, start_y, end_x, sin);
+            laser_positive_y(start_x, start_y, end_y, -cos);
+            break;
+        case 2:
+            laser_negative_x(start_x, start_y, end_x, -sin);
+            laser_negative_y(start_x, start_y, end_y, -cos);
+            //uint8_t x_0 = floor(x / 400);
+            //uint8_t y_0 = y + sin * (x / 400 - x_0);
+            break;
+        case 3:
+            laser_positive_x(start_x, start_y, end_x, -sin);
+            laser_negative_y(start_x, start_y, end_y, cos);
+            //uint8_t x_0 = ceil(x / 400);
+            //uint8_t y_0 = y + sin * (x_0 - x / 400);
+            break;
+        default:
+            return -1;
+    }
+    //loop(max_steps, x_0, y_0, delta_x, sin*delta_y, &no_rounding, &floor);
+    /*
+    //do the same for y%400 == 0
+    y_0 = math.ceil(laser_y / 400);
+    x_0 = laser_x + cos(heading) * (laser_y / 400) - y_0;
+    // number of potential walls the laser crosses before hitting the end wall
+    max_steps = end_y - y_0;
+
+    for (int steps = 0; steps < max_steps; ++steps)
+    {
+        int y = y_0 + steps;
+        int x = math.floor(x_0 + steps * sin(heading));
+    */
+    return 0;
+}
+
+inline uint8_t no_rounding(double in)
+{
+    return (uint8_t) in;
+}
+
+void laser_positive_x(uint16_t x, uint16_t y, uint16_t end_x, double delta_y)
+{
+    uint8_t x_0 = ceil(x / 400);
+    uint16_t y_0 = y + delta_y * ((double)x_0 - (double)x / 400);
+    uint8_t max_steps = round(end_x/400) - x_0;
+    laser_loop_x(max_steps, x_0, y_0, +1.0, delta_y);
+}
+
+void laser_negative_x(uint16_t x, uint16_t y, uint16_t end_x, double delta_y)
+{
+    uint8_t x_0 = floor(x / 400);
+    uint16_t y_0 = y + delta_y * (x_0 - x / 400);
+    uint8_t max_steps = x_0 - round(end_x/400);
+    laser_loop_x(max_steps, x_0, y_0, -1.0, delta_y);
+}
+
+void laser_positive_y(uint16_t x, uint16_t y, uint16_t end_y, double delta_x)
+{
+    uint8_t y_0 = ceil(y / 400);
+    uint16_t x_0 = x + delta_x * (y / 400 - y_0);
+    uint8_t max_steps = round(end_y/400) - y_0;
+    laser_loop_y(max_steps, x_0, y_0, delta_x, +1.0);
+}
+
+void laser_negative_y(uint16_t x, uint16_t y, uint16_t end_y, double delta_x)
+{
+    uint8_t y_0 = floor(y / 400);
+    uint16_t x_0 = x + delta_x * (y / 400 - y_0);
+    uint8_t max_steps = y_0 - round(end_y/400);
+    laser_loop_y(max_steps, x_0, y_0, delta_x, -1.0);
+}
+
+void laser_loop_x(uint8_t max_steps,
+        uint8_t x_0,
+        uint16_t y_0,
+        int8_t delta_x,
+        double delta_y)
+{
+    uint8_t x = x_0;
+    uint8_t y;
+    for (uint8_t steps = 0; steps < max_steps; ++steps)
+    {
+        x += delta_x;
+        y = floor((y_0 + steps * delta_y * 400) / 400);
+
+        mark_empty(x, y);
+    }
+}
+void laser_loop_y(uint8_t max_steps,
+        uint16_t x_0,
+        uint8_t y_0,
+        double delta_x,
+        int8_t delta_y)
+{
+    uint8_t x;
+    uint8_t y = y_0;
+    for (uint8_t steps = 0; steps < max_steps; ++steps)
+    {
+        y += delta_y;
+        x = floor((x_0 + steps * delta_x * 400) / 400);
+
+        mark_empty(x, y);
+    }
+}
+
+void mark_empty(uint8_t x, uint8_t y)
+{
+    // mark as empty space
+    g_navigationMap[x][y] += 1;
+
+    // if it's 0 or -1, send update to com-unit
+    if ((g_navigationMap[x][y] & 0x7f) == 0)
+    {
+        if (g_navigationMap[x][y] == 0) {
+            send_map_update(x, y, UNKNOWN);
+        }
+        else
+        {
+            send_map_update(x, y, EMPTY);
+        }
+    }
+}
+
+void send_map_update(uint8_t, uint8_t, enum CellState)
+{
+
 }
 
 #if __TEST__
@@ -219,89 +535,8 @@ Test_test(Test, calc_heading_and_pos)
 // the robot is 200x200, so the radius is ~100
 //int MAGIC_ORDO = 2 * math.pi * 100 / WHEEL_CIRCUMFERENCE / COGS; //approximate theoretical value
 
-/*
-void draw_laser_line(int left_ordo, int right_ordo, int pos_x, int pos_y, int distance)
-{
-    // see laser_intersecting_pot_walls.jpg
-    // where x_r,y_r is pos_x,pos_y
-    // x_s, y_s is laser_x, laser_y
-    // d is distance
-    // x_n , y_n is end_x, end_y
-
-    // Calculate heading (can likely be skipped, and instead just store/calculate
-    // cos(heading) and sin(heading) directly)
-    heading = heading(left_ordo, right_ordo);
-
-    // calculate the front laser's position
-    // depends on how directions/coordinates are defined
-    laser_x = pos_x + cos(heading)*laser_distance;
-    laser_y = pos_y + sin(heading)*laser_distance;
-
-    // Calculate X, Y for endpoint when laser hits wall -> end_x, end_y
-    // given the distance.
-    int end_x = (laser_x + cos(heading)*distance) / 400;
-    int end_y = (laser_y + sin(heading)*distance) / 400;
-    // Do error checking that this is where there can be a wall.
-    // Also we should try and throw out values that are incorrect due to the wall being
-    // too close (the measured voltage from IR, and therefore the distance, will be misleading).
-    // We can perhaps correct heading and/or position given this.
-    //
-    // Mark map[end_x][end_y] as a wall
-    map[end_x][end_y] -= 1;
 
 
-
-    // pos_x and pos_y are in mm coordinates, to translate to wall coordinates we divide
-    // by 400 since wall units are 400mm wide.
-
-
-    // A line drawn across a square grid at an angle will intersect with points at
-    // (X_0, Y_0), (X_0+1, Y_1), (X_0+2, Y_2) and (X_0, Y_0), (X_1, Y_0+1), (X_2, Y_0+2)
-    // where these will yield the same set of points for 45 degrees / tau/8 radians.
-    // We handle these separately
-
-    // calculate the first point where the laser crosses x%400 == 0
-    // TODO rounding up/down, and +/- depends on heading
-    int x_0 = math.ceil(laser_x / 400);
-    int y_0 = laser_y + sin(heading) * (laser_x / 400) - x_0;
-    // number of potential walls the laser crosses before hitting the end wall
-    int max_steps = end_x - x_0;
-
-    for (int steps = 0; steps < max_steps; ++steps)
-    {
-        int x = x_0 + steps;
-        int y = math.floor(y_0 + steps * sin(heading));
-
-        // mark as empty space
-        map[x][y] += 1;
-    }
-
-    //do the same for y%400 == 0
-    y_0 = math.ceil(laser_y / 400);
-    x_0 = laser_x + cos(heading) * (laser_y / 400) - y_0;
-    // number of potential walls the laser crosses before hitting the end wall
-    max_steps = end_y - y_0;
-
-    for (int steps = 0; steps < max_steps; ++steps)
-    {
-        int y = y_0 + steps;
-        int x = math.floor(x_0 + steps * sin(heading));
-
-        // mark as empty space
-        map[x][y] += 1;
-    }
-
-
-    // Then repeat this for all four lasers, with their position slightly different
-    // and pointing at different angles.
-
-
-    // We can optionally also check if the robot is currently standing on top of
-    // a potential wall (or several), and mark those as empty.
-    // This can be more or less ambitious, taking into account the width of the robot and stuff.
-
-}
-*/
 
 // Helper function for determining where a laser crosses a potential wall
 // Takes ordometer steps for left & right wheelpair, and returns a delta_x to be used
