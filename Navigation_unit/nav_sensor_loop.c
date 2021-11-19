@@ -4,6 +4,9 @@
 #include "../AVR_common/sensors.h"
 #include "../AVR_testing/test.h"
 #include "navigation_unit.h"
+#include "pd.h"
+#include "navigation.h"
+#include "rotation_math.h"
 
 // robot will turn to a precision of at least 2.8 degrees
 #define TURN_SENSITIVITY FULL_TURN / 128
@@ -22,7 +25,7 @@ int8_t handle_sensor_data(struct data_packet* data)
     // Check for parity error?
 
     // check packet count
-    if (data->address != debug)
+    if (data->address != DEBUG)
     {
         if (data->byte_count != ADR_DATA_PACKETS[data->address])
         {
@@ -37,29 +40,29 @@ int8_t handle_sensor_data(struct data_packet* data)
     sensor_count++;
     switch (data->address)
     {
-        case lidar_forward:
+        case LIDAR_FORWARD:
             next_sensor_data.lidar_forward = BYTES_TO_UINT16(data);
             break;
-        case lidar_backward:
+        case LIDAR_BACKWARD:
             next_sensor_data.lidar_backward = BYTES_TO_UINT16(data);
             break;
-        case ir_leftfront:
+        case IR_LEFTFRONT:
             next_sensor_data.ir_leftfront = BYTES_TO_UINT16(data);
             break;
-        case ir_leftback:
+        case IR_LEFTBACK:
             next_sensor_data.ir_leftback = BYTES_TO_UINT16(data);
             break;
-        case ir_rightfront:
+        case IR_RIGHTFRONT:
             next_sensor_data.ir_rightfront = BYTES_TO_UINT16(data);
             break;
-        case ir_rightback:
+        case IR_RIGHTBACK:
             next_sensor_data.ir_rightback = BYTES_TO_UINT16(data);
             break;
-        case odometer:
+        case ODOMETER:
             next_sensor_data.odometer_left  = data->bytes[0];
             next_sensor_data.odometer_right = data->bytes[1];
             break;
-        case gyro:
+        case GYRO:
             next_sensor_data.gyro = BYTES_TO_UINT16(data);
             break;
         default:
@@ -82,36 +85,42 @@ int8_t handle_sensor_data(struct data_packet* data)
 // EXTRA: assumes we've checked for parity error
 int8_t nav_main(struct sensor_data* data)
 {
-    // TODO calculate heading and position
-    // uses data, updates currentHeading, currentPosX and currentPosY
+    // uses data, updates g_currentHeading, g_currentPosX and g_currentPosY
+    if (calculate_heading_and_position(data) == -1)
+    {
+        return -1;
+    }
 
-    if (navigationGoalType != none)
+    if (g_navigationGoalSet)
     {
         // have we arrived at the navigation goal?
         if (arrived_at_goal())
         {
             // clear navigation goal
-            navigationGoalType = none;
-            // TODO stop moving
+            g_navigationGoalSet = false;
+            g_wheelSpeedLeft = 0;
+            g_wheelSpeedRight = 0;
         }
         else
         {
-            // TODO drive motors with pd towards the goal
-            __asm__("nop");
+            PDcontroller_Update();
+
             // TODO send debug values to com unit?
         }
     }
 
-    // TODO send currentHeading, currentPosX and currentPosY to com-unit
+    // TODO send g_currentHeading, g_currentPosX and g_currentPosY to com-unit
 
     // run map update algorithm
     // which if there's updates, sends them to com-unit
-    __asm__("nop");
+    update_map(data);
 
     // Check if we should run nav algo
-    if (navigationMode == autonomous && navigationGoalType == none)
+    if (g_navigationMode == AUTONOMOUS && !g_navigationGoalSet)
     {
-        // run navigation algorithm, setting navigationGoal
+        wall_follow();
+        // run navigation algorithm, setting g_navigationGoal
+        PDcontroller_NewGoal();
         // sample_search()
     }
 
@@ -120,30 +129,16 @@ int8_t nav_main(struct sensor_data* data)
 
 bool arrived_at_goal(void)
 {
-    if (navigationGoalType == turn)
-    {
-        if (abs(currentHeading - navigationGoalHeading) < TURN_SENSITIVITY)
-        {
-            return true;
-        }
-        return false;
-    }
-    if (navigationGoalType == move)
-    {
-        if (abs(currentPosX - navigationGoalX) < POS_SENSITIVITY &&
-            abs(currentPosY - navigationGoalY) < POS_SENSITIVITY)
-        {
-            return true;
-        }
-        return false;
-    }
-    // if navigationGoalType == none
-    return true;
+    return (abs(g_currentHeading - g_navigationGoalHeading) < TURN_SENSITIVITY &&
+            abs(g_currentPosX    - g_navigationGoalX)       < POS_SENSITIVITY  &&
+            abs(g_currentPosY    - g_navigationGoalY)       < POS_SENSITIVITY);
 }
 
 /* #### UNIT TESTS #### */
 
 // test handle sensor data
+
+#if __TEST__
 Test_test(Test, handle_sensor_data_lidar_forward)
 {
     // save old values to restore later
@@ -156,10 +151,10 @@ Test_test(Test, handle_sensor_data_lidar_forward)
 
     // construct parameter
     struct data_packet data;
-    data.address    = lidar_forward;
+    data.address    = LIDAR_FORWARD;
     data.byte_count = 2;
-    data.bytes[0]   = UINT16_TO_BYTE_0(2000);
-    data.bytes[1]   = UINT16_TO_BYTE_1(2000);
+    data.bytes[0]   = Uint16ToByte0(2000);
+    data.bytes[1]   = Uint16ToByte1(2000);
 
     // test
     Test_assertEquals(handle_sensor_data(&data), 0);
@@ -170,6 +165,7 @@ Test_test(Test, handle_sensor_data_lidar_forward)
     next_sensor_data = old_sensor_data;
     sensor_count     = old_sensor_count;
 }
+
 
 Test_test(Test, handle_sensor_data_odometer)
 {
@@ -184,7 +180,7 @@ Test_test(Test, handle_sensor_data_odometer)
 
     // construct parameter
     struct data_packet data;
-    data.address    = odometer;
+    data.address    = ODOMETER;
     data.byte_count = 2;
     data.bytes[0]   = 5;
     data.bytes[1]   = 6;
@@ -199,88 +195,100 @@ Test_test(Test, handle_sensor_data_odometer)
     sensor_count     = old_sensor_count;
 }
 
+
 Test_test(Test, arrived_at_goal_turn)
 {
-    enum NavigationGoal oldGoalType              = navigationGoalType;
-    uint16_t            oldNavigationGoalHeading = navigationGoalHeading;
-    uint16_t            oldCurrentHeading        = currentHeading;
+    bool                oldGoalSet               = g_navigationGoalSet;
+    uint16_t            oldNavigationGoalHeading = g_navigationGoalHeading;
+    uint16_t            oldCurrentHeading        = g_currentHeading;
+    uint16_t            oldNavigationGoalX       = g_navigationGoalX;
+    uint16_t            oldNavigationGoalY       = g_navigationGoalY;
 
-    navigationGoalType = turn;
+    g_navigationGoalSet = true;
+    g_navigationGoalX = g_currentPosX;
+    g_navigationGoalY = g_currentPosY;
 
-    navigationGoalHeading = FULL_TURN / 2;
-    currentHeading        = FULL_TURN / 2 + TURN_SENSITIVITY - 1;
+    g_navigationGoalHeading = FULL_TURN / 2;
+    g_currentHeading        = FULL_TURN / 2 + TURN_SENSITIVITY - 1;
     Test_assertTrue(arrived_at_goal());
 
-    currentHeading = FULL_TURN / 2 - TURN_SENSITIVITY + 1;
+    g_currentHeading = FULL_TURN / 2 - TURN_SENSITIVITY + 1;
     Test_assertTrue(arrived_at_goal());
 
-    navigationGoalHeading = 0;
-    currentHeading        = TURN_SENSITIVITY - 1;
+    g_navigationGoalHeading = 0;
+    g_currentHeading        = TURN_SENSITIVITY - 1;
     Test_assertTrue(arrived_at_goal());
 
-    navigationGoalHeading = 0;
-    currentHeading        = 1 - TURN_SENSITIVITY;
+    g_navigationGoalHeading = 0;
+    g_currentHeading        = 1 - TURN_SENSITIVITY;
     Test_assertTrue(arrived_at_goal());
 
     // test falsity
-    navigationGoalHeading = FULL_TURN / 2;
-    currentHeading        = FULL_TURN / 2 + TURN_SENSITIVITY;
+    g_navigationGoalHeading = FULL_TURN / 2;
+    g_currentHeading        = FULL_TURN / 2 + TURN_SENSITIVITY;
     Test_assertTrue(!arrived_at_goal());
 
-    currentHeading = FULL_TURN / 2 - TURN_SENSITIVITY;
+    g_currentHeading = FULL_TURN / 2 - TURN_SENSITIVITY;
     Test_assertTrue(!arrived_at_goal());
 
-    navigationGoalHeading = 0;
-    currentHeading        = TURN_SENSITIVITY;
+    g_navigationGoalHeading = 0;
+    g_currentHeading        = TURN_SENSITIVITY;
     Test_assertTrue(!arrived_at_goal());
 
-    navigationGoalHeading = 0;
-    currentHeading        = -TURN_SENSITIVITY;
+    g_navigationGoalHeading = 0;
+    g_currentHeading        = -TURN_SENSITIVITY;
     Test_assertTrue(!arrived_at_goal());
 
     // check that we didn't accidentally modify navgoaltype
-    Test_assertEquals(navigationGoalType, turn);
+    Test_assertEquals(g_navigationGoalSet, true);
 
     // restore old values
-    navigationGoalType    = oldGoalType;
-    navigationGoalHeading = oldNavigationGoalHeading;
-    currentHeading        = oldCurrentHeading;
+    g_navigationGoalSet    = oldGoalSet;
+    g_navigationGoalHeading = oldNavigationGoalHeading;
+    g_currentHeading        = oldCurrentHeading;
+    g_navigationGoalX = oldNavigationGoalX;
+    g_navigationGoalY = oldNavigationGoalY;
 }
+
 
 Test_test(Test, arrived_at_goal_pos)
 {
-    enum NavigationGoal oldGoalType        = navigationGoalType;
-    uint16_t            oldNavigationGoalX = navigationGoalX;
-    uint16_t            oldNavigationGoalY = navigationGoalY;
-    uint16_t            oldCurrentPosX     = currentPosX;
-    uint16_t            oldCurrentPosY     = currentPosY;
+    bool                oldGoalSet         = g_navigationGoalSet;
+    uint16_t            oldNavigationGoalX = g_navigationGoalX;
+    uint16_t            oldNavigationGoalY = g_navigationGoalY;
+    uint16_t            oldNavigationGoalHeading = g_navigationGoalHeading;
+    uint16_t            oldCurrentPosX     = g_currentPosX;
+    uint16_t            oldCurrentPosY     = g_currentPosY;
 
-    navigationGoalType = move;
+    g_navigationGoalSet = true;
+    g_navigationGoalHeading = g_currentHeading;
 
-    currentPosX     = grid_to_mm(27);
-    currentPosY     = grid_to_mm(5);
-    navigationGoalX = currentPosX + POS_SENSITIVITY - 1;
-    navigationGoalY = currentPosY + POS_SENSITIVITY - 1;
+    g_currentPosX     = GridToMm(27);
+    g_currentPosY     = GridToMm(5);
+    g_navigationGoalX = g_currentPosX + POS_SENSITIVITY - 1;
+    g_navigationGoalY = g_currentPosY + POS_SENSITIVITY - 1;
     Test_assertTrue(arrived_at_goal());
 
-    navigationGoalX = currentPosX + POS_SENSITIVITY - 1;
-    navigationGoalY = currentPosY + POS_SENSITIVITY;
+    g_navigationGoalX = g_currentPosX + POS_SENSITIVITY - 1;
+    g_navigationGoalY = g_currentPosY + POS_SENSITIVITY;
     Test_assertTrue(!arrived_at_goal());
 
-    navigationGoalX = currentPosX + POS_SENSITIVITY;
-    navigationGoalY = currentPosY + POS_SENSITIVITY - 1;
+    g_navigationGoalX = g_currentPosX + POS_SENSITIVITY;
+    g_navigationGoalY = g_currentPosY + POS_SENSITIVITY - 1;
     Test_assertTrue(!arrived_at_goal());
 
-    navigationGoalX = currentPosX + POS_SENSITIVITY;
-    navigationGoalY = currentPosY + POS_SENSITIVITY;
+    g_navigationGoalX = g_currentPosX + POS_SENSITIVITY;
+    g_navigationGoalY = g_currentPosY + POS_SENSITIVITY;
     Test_assertTrue(!arrived_at_goal());
 
     // check that we didn't accidentally modify navgoaltype
-    Test_assertEquals(navigationGoalType, move);
+    Test_assertEquals(g_navigationGoalSet, true);
 
-    navigationGoalType = oldGoalType;
-    navigationGoalX    = oldNavigationGoalX;
-    navigationGoalY    = oldNavigationGoalY;
-    currentPosX        = oldCurrentPosX;
-    currentPosY        = oldCurrentPosY;
+    g_navigationGoalSet  = oldGoalSet;
+    g_navigationGoalX    = oldNavigationGoalX;
+    g_navigationGoalY    = oldNavigationGoalY;
+    g_navigationGoalHeading = oldNavigationGoalHeading;
+    g_currentPosX        = oldCurrentPosX;
+    g_currentPosY        = oldCurrentPosY;
 }
+#endif

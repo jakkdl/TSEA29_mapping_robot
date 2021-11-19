@@ -5,12 +5,12 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include "pwm_timer.h"
-uint8_t g_leftSpeed = 0S;
+uint8_t g_leftSpeed = 0;
 uint8_t g_rightSpeed = 0;
 int main(void)
 {
     // set up uart interrupts
-	PinInitPWM();
+	//PinInitPWM();
 	sei();
     while(1)
 	{
