@@ -8,19 +8,19 @@ void MeasureLidar()
 	cli();
 	PORTB |= (1 << PORTB4);
 	sei();
-	PORTB &= ~(0x40); // pull PB6 low to start PWM reading from lidar B
-	_delay_ms(1);
+	PORTB &= ~(0x10); // pull PB6 low to start PWM reading from lidar B
+	_delay_ms(5);
 	cli();
-	PORTB |= (1 << PORTB6);
+	PORTB |= (1 << PORTB4);
 	sei();
 }
 
 void ExtInterruptInit()
 {
-	EICRA = (1<<ISC11) | (1 << ISC10) | (1 << ISC21); //enable interrupt on rising edge for B-pins and falling edge on C-pins
-	PCICR = (1 << PCIE1) | (1 << PCIE2); // enable interrupts for B and C pins
+	//EICRA = (1<<ISC11) | (1 << ISC10) | (1 << ISC21); //enable interrupt on rising edge for B-pins and falling edge on C-pins
 	PCMSK2 = (1 << PCINT16) | (1 << PCINT17); // enable interrupts on only PC0 and PC1
 	PCMSK1 = (1 << PCINT15) | (1 << PCINT13); // enable interrupts on only PB5 and PB7
+	PCICR = (1 << PCIE1) | (1 << PCIE2); // enable interrupts for B and C pins
 }
 
 void TimerInit()

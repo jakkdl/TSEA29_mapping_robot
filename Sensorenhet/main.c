@@ -10,11 +10,12 @@
 uint8_t OPENINGS = 40;
 uint8_t g_leftCount = 0;
 uint8_t g_rightCount = 0;
+uint16_t g_lidarDistance = 0; // distance in mm
 bool g_readingDone = true;
-bool g_sentData = false;
+bool g_sentData = true;
 /*
  * TODO:
- * implement storage in memory where all data is stored
+ * implement storage in memory where all data is stored for sending
  * implement communication with other devices
  * move around functions to correct positions
  * testing functionality:
@@ -27,25 +28,29 @@ bool g_sentData = false;
 void StartReading()
 {
 	g_readingDone = false;
-	cli();
-	AdcInit();
-	sei();
-	StartAdc();
+	//cli();
+	//AdcInit();
+	//sei();
+	//StartAdc();
 	MeasureLidar();
-	while(!g_IRDone){}
-	StartMLX();
+	//while(!g_IRDone){}
+	//StartMLX();
+	//g_readingDone = true;
 }
 
 void PinInit()
 {
 	// define output pins
-	DDRB =  (1 << PORTB4) | (1 << PORTB6);
-	PORTB = (1 << PORTB4) | (1 << PORTB6);
-	DDRA = (1 << PORTA4);
+	DDRB |= (1 << PORTB4) | (1 << PORTB6);
+	DDRB &= ~(1 << PORTB5);
+	DDRB &= ~(1 << PORTB7);
+	PORTB = 0x00;
+	PORTB |= (1 << PORTB4) | (1 << PORTB6);
+	DDRA |= (1 << PORTA4);
 	PORTA = 0x00;
-	DDRC = (1 << PORTC4);
+	DDRC |= (1 << PORTC4);
 	PORTC = 0x00;
-	DDRD = (1 << PORTD0);
+	DDRD |= (1 << PORTD0);
 	PORTD = 0x00;
 }
 int main(void)
@@ -53,12 +58,12 @@ int main(void)
 	PinInit();
 	TimerInit();
 	ExtInterruptInit();
-	MsTimerInit();
+	//MsTimerInit();
 	sei();
 	StartReading();
     while (1) 
     {
-		if(g_sentData)
+		if(true)
 		{
 			StartReading();	
 		}
@@ -103,37 +108,53 @@ ISR(ADC_vect)
 
 ISR(PCINT1_vect)
 {
+	cli();
 	uint16_t PWMTime = 0;
-	uint16_t lidarDistance = 0;
-	if ((PORTB & 0x20) && !(PORTB & 0x10)) // if PB5 is high but not PB4
+	uint16_t firstTime = 0;
+	// PWMsignal is 4ms
+	if ((PINB & (1 << PINB5)) && !(PINB & (1 << PINB6))) // if PB5 is high but not PB4
 	{
-		TimerInit();
-		while (PORTB & 0x20){}
-		TimerStop();
-		cli();
+		//read clock
+		firstTime = TCNT1;
+		while (PINB & (1 << PINB5)){}
+		//read clock
 		PWMTime = TCNT1;
-		sei();
-		lidarDistance = PWMTime / 2;
+		if(TIFR1 & 0x01)
+		{
+			PWMTime += (0xFFFF - firstTime);
+		}
+		else
+		{
+			PWMTime -= firstTime;
+		}
+		g_lidarDistance = PWMTime / 2;
 	}
-	else if ((PORTB & 0x80) && !(PORTB & 0x40)) // if PB7 is high but not PB6 
+	else if ((PINB & (1 << PINB7)) && !(PINB & (1 << PINB4))) // if PB7 is high but not PB4 read pwm time
 	{
-		TimerInit();
-		while (PORTB & 0x80){}
-		TimerStop();
-		cli();
+		firstTime = TCNT1;
+		while (PINB & (1 << PINB7)){}
+		//read clock
 		PWMTime = TCNT1;
-		sei();
-		lidarDistance = PWMTime / 2;
+		if(TIFR1 & 0x01)
+		{
+			PWMTime += (0xFFFF - firstTime);
+		}
+		else
+		{
+			PWMTime -= firstTime; // PWMTime is about 20-50 too big
+		}
+		g_lidarDistance = PWMTime / 2;
 	}
+	sei();
 	// save lidar distance
 }
 ISR(PCINT2_vect)
 {
-	if(PORTC & 0x01)
+	if(PINC & (1 << PINC0))
 	{
 		g_leftCount++;
 	}
-	else
+	else if (PINC & (1 << PINC1))
 	{
 		g_rightCount++;
 	}
