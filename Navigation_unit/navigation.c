@@ -1,43 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-
-#include "nav_unit_com_interrupt_logic.h"
-#include "navigation_unit.h"
-#include "../AVR_common/robot.h"
 #include "navigation.h"
-#include "../AVR_testing/test.h"
-
-//for easy iterations through arrays
-int queueSize = 0;
-int adjacentCellsSize = 0;
-int traversableCellsSize = 0;
-
-uint8_t queue[QUEUE_ROWS][COLS];
-uint8_t adjacentCells[ROWS_ADJACENT][COLS];
-uint8_t traversableCells[ROWS_ADJACENT][COLS];
-uint8_t endPoint[COORD_SIZE];
-uint16_t startPosX;
-uint16_t startPosY;
-
-void sample_search();
-uint8_t get_robot_adjacent_coord(int direction, int xy);
-uint8_t get_adjacent_cell(int direction, int xy, uint8_t *currentCell);
-bool cell_is_wall(uint8_t cell[COLS]); //Confusing function names at the moment. Will fix.
-bool is_wall(uint8_t dir);
-void move_one_cell(uint8_t queue[QUEUE_ROWS][COLS]);
-bool left_opening();
-bool right_opening();
-bool wall_in_front();
-bool is_wall(uint8_t dir);
-uint8_t get_heading();
-bool at_start_pos();
-void save_start_pos();
-
-/*
-Changed so that the algorithm looks for the end point instead of the
-position of the robot. Same same but backwards.
-*/
 
 uint16_t get_start_pos(int xy)
 {
@@ -45,10 +6,7 @@ uint16_t get_start_pos(int xy)
     {
         return startPosX;
     }
-    else
-    {
-        return startPosY;
-    }
+    return startPosY;
 }
 
 void save_start_pos()
@@ -63,7 +21,7 @@ bool unexplored_cells_exist()
     {
         for (int y = 0; y < 25; y++)
         {
-            if (IsUnknown(x, y) == 0)
+            if (IsUnknown(x, y))
             {
                 endPoint[0] = x;
                 endPoint[1] = y;
@@ -73,38 +31,8 @@ bool unexplored_cells_exist()
     }
     return false;
 }
-/*
-bool opening()
-{
-}
-*/
-bool left_opening()
-{
-    uint8_t dir = get_heading();
 
-    switch (dir)
-    {
-    case 0:
-        return !is_wall(dir + 1);
-    case 1:
-        return !is_wall(dir + 1);
-    case 2:
-        return !is_wall(dir + 1);
-    case 3:
-        return !is_wall(dir - 3);
-    default:
-        return -1;
-    }
-}
-
-//redundant
-bool right_opening()
-{
-    uint8_t dir = get_heading();
-    return !is_wall(dir + 3);
-}
-
-//checks if cell at g_navigationMap[x][y] is a wall
+// checks if cell at g_navigationMap[x][y] is a wall
 bool is_wall(uint8_t dir)
 {
     int x;
@@ -112,14 +40,15 @@ bool is_wall(uint8_t dir)
 
     x = get_robot_adjacent_coord(dir % 4, 0);
     y = get_robot_adjacent_coord(dir % 4, 1);
-    return IsWall(x,y);
+    return IsWall(x, y);
 }
 
 uint8_t get_heading()
 {
 
     // right
-    if (g_currentHeading < FULL_TURN / 8 || g_currentHeading > FULL_TURN * 7 / 8)
+    if (g_currentHeading < FULL_TURN / 8 ||
+        g_currentHeading > FULL_TURN * 7 / 8)
     {
         return 0;
     }
@@ -142,7 +71,8 @@ uint8_t get_heading()
 
 bool at_start_pos()
 {
-    if (MmToGrid(g_currentPosX) != startPosX && MmToGrid(g_currentPosY) != startPosY)
+    if (MmToGrid(g_currentPosX) != startPosX &&
+        MmToGrid(g_currentPosY) != startPosY)
     {
         return false;
     }
@@ -156,23 +86,23 @@ void wall_follow()
 {
     uint8_t dir = get_heading();
 
-    if (left_opening())
+    // left opening?
+    if (!is_wall(dir + 1))
     {
         command_set_target_square(FW_LEFT);
     }
     else
     {
-        //wall in front of robot?
+        // wall in front of robot?
         if (is_wall(get_heading()))
         {
-            //previously right_opening()
+            // right opening?
             if (!is_wall(dir + 3))
             {
                 command_set_target_square(FW_RIGHT);
             }
             else
             {
-                //Turn around 180 degrees (this was "reverse controls" earlier)
                 command_set_target_square(TURN_AROUND);
             }
         }
@@ -182,13 +112,18 @@ void wall_follow()
         }
     }
 
-    if (unexplored_cells_exist())
+    // wall follow complete
+    if (at_start_pos())
     {
-        //sample_search();
+        if (unexplored_cells_exist())
+        {
+            // sample_search();
+        }
     }
 }
 
-//Path finding algorithm that might not work as expected. Can probably be replaced easily if so.
+// Path finding algorithm that might not work as expected. Can probably be
+// replaced easily if so.
 /* void sample_search()
 {
     int counter = 0;
@@ -210,7 +145,8 @@ void wall_follow()
             {
                 if (j < 2)
                 {
-                    adjacentCells[direction][j] = get_adjacent_cell(direction, j, queue[queueIndex]);
+                    adjacentCells[direction][j] = get_adjacent_cell(direction,
+j, queue[queueIndex]);
                 }
                 else
                 {
@@ -266,117 +202,107 @@ void wall_follow()
     move_one_cell(queue);
 } */
 
-//For sample search
-uint8_t get_adjacent_cell(int direction, int xy, uint8_t *currentCell)
+// For sample search
+uint8_t get_adjacent_cell(int direction, int xy, uint8_t* currentCell)
 {
-    //each case returns the x & y coordinate for the adjacent cell separately.
-    //direction == 0: right cell
-    //direction == 1: upper cell
-    //direction == 2: left cell
-    //direction == 3: lower cell
+    // each case returns the x & y coordinate for the adjacent cell separately.
+    // direction == 0: right cell
+    // direction == 1: upper cell
+    // direction == 2: left cell
+    // direction == 3: lower cell
 
     switch (direction)
     {
-    case 0:
-        if (xy == 0)
-        {
-            return currentCell[0] + 1;
-        }
-        else
-        {
-            return currentCell[1];
-        }
-        break;
-    case 1:
-        if (xy == 0)
-        {
-            return currentCell[0];
-        }
-        else
-        {
-            return currentCell[1] + 1;
-        }
-        break;
-    case 2:
-        if (xy == 0)
-        {
-            return currentCell[0] - 1;
-        }
-        else
-        {
-            return currentCell[1];
-        }
-        break;
-    case 3:
-        if (xy == 0)
-        {
-            return currentCell[0];
-        }
-        else
-        {
-            return currentCell[1] - 1;
-        }
-        break;
-    default:
-        return 0;
-        break;
+        case 0:
+            if (xy == 0)
+            {
+                return currentCell[0] + 1;
+            }
+            else
+            {
+                return currentCell[1];
+            }
+        case 1:
+            if (xy == 0)
+            {
+                return currentCell[0];
+            }
+            else
+            {
+                return currentCell[1] + 1;
+            }
+        case 2:
+            if (xy == 0)
+            {
+                return currentCell[0] - 1;
+            }
+            else
+            {
+                return currentCell[1];
+            }
+        case 3:
+            if (xy == 0)
+            {
+                return currentCell[0];
+            }
+            else
+            {
+                return currentCell[1] - 1;
+            }
+        default:
+            return 0;
     }
 }
 
-//For robot
+// For robot
 uint8_t get_robot_adjacent_coord(int dir, int xy)
 {
-    //each case returns the x & y coordinate for the adjacent cell separately.
-    //direction == 0: right cell
-    //direction == 1: upper cell
-    //direction == 2: left cell
-    //direction == 3: lower cell
+    // each case returns the x & y coordinate for the adjacent cell separately.
+    // direction == 0: right cell
+    // direction == 1: upper cell
+    // direction == 2: left cell
+    // direction == 3: lower cell
 
     switch (dir)
     {
-    case 0:
-        if (xy == 0)
-        {
-            return MmToGrid(g_currentPosX) + 1;
-        }
-        else
-        {
-            return MmToGrid(g_currentPosY);
-        }
-        break;
-    case 1:
-        if (xy == 0)
-        {
-            return MmToGrid(g_currentPosX);
-        }
-        else
-        {
-            return MmToGrid(g_currentPosY) + 1;
-        }
-        break;
-    case 2:
-        if (xy == 0)
-        {
-            return MmToGrid(g_currentPosX) - 1;
-        }
-        else
-        {
-            return MmToGrid(g_currentPosY);
-        }
-        break;
-    case 3:
-        if (xy == 0)
-        {
-            return MmToGrid(g_currentPosX);
-        }
-        else
-        {
-            return MmToGrid(g_currentPosY) - 1;
-        }
-        break;
-    default:
-        return 0;
-        break;
+        case 0:
+            if (xy == 0)
+            {
+                return MmToGrid(g_currentPosX) + 1;
+            }
+            else
+            {
+                return MmToGrid(g_currentPosY);
+            }
+        case 1:
+            if (xy == 0)
+            {
+                return MmToGrid(g_currentPosX);
+            }
+            else
+            {
+                return MmToGrid(g_currentPosY) + 1;
+            }
+        case 2:
+            if (xy == 0)
+            {
+                return MmToGrid(g_currentPosX) - 1;
+            }
+            else
+            {
+                return MmToGrid(g_currentPosY);
+            }
+        case 3:
+            if (xy == 0)
+            {
+                return MmToGrid(g_currentPosX);
+            }
+            else
+            {
+                return MmToGrid(g_currentPosY) - 1;
+            }
+        default:
+            return 0;
     }
 }
 
@@ -401,7 +327,8 @@ uint8_t get_robot_adjacent_coord(int dir, int xy)
         {
             if (i < 2)
             {
-                adjacentCells[direction][i] = get_robot_adjacent_coord(direction, i);
+                adjacentCells[direction][i] =
+get_robot_adjacent_coord(direction, i);
             }
             else
             {
@@ -418,7 +345,8 @@ uint8_t get_robot_adjacent_coord(int dir, int xy)
     {
         for (int j = 0; j < queueSize; j++)
         {
-            if (adjacentCells[i][0] == queue[j][0] && adjacentCells[i][1] == queue[j][1])
+            if (adjacentCells[i][0] == queue[j][0] && adjacentCells[i][1] ==
+queue[j][1])
             {
                 traversableCells[i][0] = queue[j][0];
                 traversableCells[i][1] = queue[j][1];
@@ -440,7 +368,8 @@ uint8_t get_robot_adjacent_coord(int dir, int xy)
     }
 
     //The grid's direction is stationary, but the robot is not.
-    //How do we know which way the robot is facing and so in which direction it should go?
+    //How do we know which way the robot is facing and so in which direction it
+should go?
 
     turn_towards_cell();
     if (!wall_in_front)
@@ -510,7 +439,7 @@ Test_test(Test, test_cells_exist)
     Test_assertEquals(unexplored_cells_exist(), false);
     MakeUnknown(0, 1);
     Test_assertEquals(unexplored_cells_exist(), true);
-    //reset map
+    // reset map
     for (int x = 0; x < 49; x++)
     {
         for (int y = 0; y < 25; y++)
@@ -520,21 +449,17 @@ Test_test(Test, test_cells_exist)
     }
 }
 
-//write more specific tests. The robot starts in (24, 0)
-Test_test(Test, test_is_wall)
+// write more specific tests. The robot starts in (24, 0)
+Test_test(Test, test_walls_and_openings)
 {
-    /* for (int x = 0; x < 49; x++)
-    {
-        for (int y = 0; y < 25; y++)
-        {
-            g_navigationMap[x][y] = 1;
-        }
-    } */
     MakeWall(25, 0);
+    MakeWall(23, 0);
     Test_assertEquals(is_wall(0), true);
     Test_assertEquals(is_wall(1), false);
-    Test_assertEquals(is_wall(2), false);
+    Test_assertEquals(is_wall(2), true);
     Test_assertEquals(is_wall(3), false);
+
+    // reset map
     for (int x = 0; x < 49; x++)
     {
         for (int y = 0; y < 25; y++)
@@ -542,12 +467,38 @@ Test_test(Test, test_is_wall)
             g_navigationMap[x][y] = 0;
         }
     }
+    for (int x = 0; x < 49; x++)
+    {
+        for (int y = 0; y < 25; y++)
+        {
+            MakeWall(x, y);
+        }
+    }
+
+    // trying to inspect cell that is outside of map currently
+    MakeEmpty(23, 0);
+    MakeEmpty(24, 1);
+    MakeEmpty(25, 0);
+    Test_assertEquals(is_wall(0), false);
+    Test_assertEquals(is_wall(1), false);
+    Test_assertEquals(is_wall(2), false);
+    Test_assertEquals(!is_wall(3), false);
 }
 
-/* Test_test(Test, test_left_opening)
+Test_test(Test, test_coordinates)
 {
-}
+    Test_assertEquals(get_robot_adjacent_coord(0, 0), 25);
+    Test_assertEquals(get_robot_adjacent_coord(1, 0), 24);
+    Test_assertEquals(get_robot_adjacent_coord(2, 0), 23);
+    Test_assertEquals(get_robot_adjacent_coord(3, 0), 24);
 
-Test_test(Test, test_right_opening)
-{
-} */
+    Test_assertEquals(get_robot_adjacent_coord(0, 1), 0);
+    Test_assertEquals(get_robot_adjacent_coord(1, 1), 1);
+    Test_assertEquals(get_robot_adjacent_coord(2, 1), 0);
+    // huh?
+    Test_assertEquals(get_robot_adjacent_coord(3, 1), 255);
+
+    save_start_pos();
+    Test_assertEquals(get_start_pos(0), 24);
+    Test_assertEquals(get_start_pos(1), 0);
+}

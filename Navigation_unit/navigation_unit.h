@@ -51,10 +51,10 @@ extern uint16_t g_currentPosX; // = grid_to_mm(24);
 extern uint16_t g_currentPosY; // = 0;
 
 // We can either use bool + unsigned
-extern enum Direction g_wheelDirectionLeft;    // = dir_forward;
-extern enum Direction g_wheelDirectionRight;   // = dir_forward;
-extern uint8_t        g_wheelSpeedLeft;  // = 0;
-extern uint8_t        g_wheelSpeedRight; // = 0;
+extern enum Direction g_wheelDirectionLeft;  // = dir_forward;
+extern enum Direction g_wheelDirectionRight; // = dir_forward;
+extern uint8_t        g_wheelSpeedLeft;      // = 0;
+extern uint8_t        g_wheelSpeedRight;     // = 0;
 
 // or a signed value.
 // int8_t WHEEL_SPEED_LEFT = 0;
@@ -63,18 +63,22 @@ extern uint8_t        g_wheelSpeedRight; // = 0;
 // and/or what the navigation algorithm wanna use.
 
 // Current navigation goal
-extern bool                g_navigationGoalSet;     // = false;
-extern uint16_t            g_navigationGoalX;       // = 24;
-extern uint16_t            g_navigationGoalY;       // = 0;
-extern uint16_t            g_navigationGoalHeading; // = 0;
+extern bool     g_navigationGoalSet;     // = false;
+extern uint16_t g_navigationGoalX;       // = 24;
+extern uint16_t g_navigationGoalY;       // = 0;
+extern uint16_t g_navigationGoalHeading; // = 0;
 
 // Map
 #define IsWall(x, y) g_navigationMap[(x)][(y)] & 0x80
-#define IsUnknown(x, y) g_navigationMap[(x)][(y)] == 0
+#define IsUnknown(x, y) (g_navigationMap[(x)][(y)] == 0)
 #define IsEmpty(x, y) g_navigationMap[(x)][(y)] > 0
 
-#define MakeWall(x, y) if (g_navigationMap[(x)][(y)] != INT8_MIN) g_navigationmap[(x)][(y)] -= 1
-#define MakeEmpty(x, y) if (g_navigationMap[(x)][(y)] != INT8_MAX) g_navigationmap[(x)][(y)] += 1
+#define MakeWall(x, y)                                                         \
+    if (g_navigationMap[(x)][(y)] != INT8_MIN)                                 \
+    g_navigationMap[(x)][(y)] -= 1
+#define MakeEmpty(x, y)                                                        \
+    if (g_navigationMap[(x)][(y)] != INT8_MAX)                                 \
+    g_navigationMap[(x)][(y)] += 1
 #define MakeUnknown(x, y) g_navigationMap[(x)][(y)] = 0
 extern int8_t g_navigationMap[49][25];
 
