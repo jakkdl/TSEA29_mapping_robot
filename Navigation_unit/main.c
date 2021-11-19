@@ -1,6 +1,6 @@
 // Main function when running normally, i.e. not running unit tests
 // Will probably be pretty minimal
-#define F_CPU 8000000UL
+#define F_CPU 16000000UL
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
