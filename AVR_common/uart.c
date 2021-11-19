@@ -1,14 +1,14 @@
 #include <stdint.h>
 #include <xc.h>
 #include <avr/io.h>
+#include <avr/interrupt.h>
 #include "uart.h"
 #define UART_BAUD 207 //8MHz system clock
 
 
 
 /*
- *none of the below code has been tested as of yet need to be tested but has been complied and
- *ineeds to be tested and more implemetetions are needed
+ *TODO test the code save the data somewhere
  */
 
 void UART_Init(uint8_t interface)
@@ -66,27 +66,27 @@ void UART_Transmit(uint8_t interface, uint8_t data )
 }
 
 //add interrupts to the transmit part of the UART transmit also this part has not been tested
-void DATA_Transmit(uint8_t interface, dataPaket paket){
-        
-        /*transmits the header paket*/
-		unsigned char header = paket.header;
+void DATA_Transmit(uint8_t interface, data_packet paket){
+	
+		uint8_t header = (paket.address<<4) | (paket.byte_count<<1);
         UART_Transmit(interface, header);
-
-        /*transmists the rest of the data*/
+		
+        /*transmission of the data*/
         uint8_t i = 0;
-        while ( i < 8 ){
+        while ( i < paket.byte_count ){
             /* Wait for empty transmit buffer */
              while ( !( UCSR1A & (1<<UDRE1)) )
             ;
-            UART_Transmit( interface, paket.datapaket[i] );
+            UART_Transmit( interface, paket.bytes[i] );
             i = i + 1;
         }
 }
 
 uint8_t UART_Receive(uint8_t interface){
-
+	/* this part need to be uppdate to become and isr or intrup driven reciver atleast so we dont sample all the time */
     if (interface == 0)
     {
+		/* This part might not be need need to check*/
         /* Wait for data to be received */
         while ( !(UCSR0A & (1<<RXC0)) )
             ;
@@ -95,6 +95,7 @@ uint8_t UART_Receive(uint8_t interface){
     }
     else
     {
+		/* This part might not be need need to check*/
         /* Wait for data to be received */
         while ( !(UCSR1A & (1<<RXC1)) )
             ;
@@ -104,31 +105,37 @@ uint8_t UART_Receive(uint8_t interface){
 
 }
 
-
-//TODO add parity checkers and interrupts to this part also this has not been tested
-dataPaket DATA_Receive( uint8_t interface ){
-    dataPaket ReceivedPaket;
-    ReceivedPaket.header =  UART_Receive( interface);
-     /*transmits the rest of the data*/
-    uint8_t i = 0;
-    while ( i < 8){
-        /* Wait for data to be received */
-        while ( !(UCSR1A & (1<<RXC1)) )
-            ;
-        unsigned char currentRecivedPaket = UART_Receive( interface);
-        ReceivedPaket.datapaket[i] = currentRecivedPaket;
-    }
+data_packet DATA_Receive( uint8_t interface ){
+	data_packet ReceivedPaket; //creat an instance of a new paket to return once called by the ISR
+	
+	uint8_t header = UART_Receive( interface ); //receive the first byte that contain all the info we need for receive the rest
+	
+	ReceivedPaket.address = (header>>4) & 0xF;
+	ReceivedPaket.byte_count = (header>>2) & 0x7;
+	
+	/*receive the rest of the data*/
+	uint8_t i = 0;
+	while ( i < ReceivedPaket.byte_count){
+		/* Wait for data to be received */
+		/* do we wait 2x the time here or not? I asume the check always passes in the other function making that check redundant */
+		while ( !(UCSR1A & (1<<RXC1)) )
+		;
+		uint8_t currentRecivedPaket = UART_Receive( interface );
+		ReceivedPaket.bytes[i] = currentRecivedPaket;
+	}
 	return ReceivedPaket;
 }
 
-
-//I have no idea if this part will or works at all but something like this could be used check back when trying to compile in atmel
-void parityError( uint8_t interface, dataPaket paket ){
-    byteUnion headerbyte;
-	headerbyte.b = paket.header;
-    dataPaket erroPaket;
-    erroPaket.header = 0xF4; //correct bits need to be set here 
-    erroPaket.datapaket[0] = ( 3<<headerbyte.b7 ) | (2<<headerbyte.b6) | (1<<headerbyte.b5) | ( headerbyte.b4 );
-    DATA_Transmit(  interface , erroPaket );
+ISR( USART0_RX ){
+	cli(); //disable interrupts
+	data_packet Received;
+	Received = DATA_Receive(0); //This data needs to be saved some where?
+	sei(); //re enable interrupts
 }
 
+ISR( USART1_RX ){
+	cli(); //disable interrupts
+	data_packet Received;
+	Received = DATA_Receive(1); //This data needs to be saved some where?
+	sei(); //re enable interrupts
+}
