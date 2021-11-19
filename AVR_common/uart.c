@@ -126,14 +126,14 @@ data_packet DATA_Receive( uint8_t interface ){
 	return ReceivedPaket;
 }
 
-ISR( USART0_RX ){
+ISR( USART0_RX__vect ){
 	cli(); //disable interrupts
 	data_packet Received;
 	Received = DATA_Receive(0); //This data needs to be saved some where?
 	sei(); //re enable interrupts
 }
 
-ISR( USART1_RX ){
+ISR( USART1_RX__vect ){
 	cli(); //disable interrupts
 	data_packet Received;
 	Received = DATA_Receive(1); //This data needs to be saved some where?
