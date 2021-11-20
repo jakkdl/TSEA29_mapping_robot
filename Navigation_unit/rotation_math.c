@@ -16,10 +16,10 @@
 // map update throws out an update if a wall is too far from where it can be
 #define MAX_ERROR 50
 
-int8_t AXLE_WIDTH = 200; // must be measured
-int8_t MID_TO_WHEEL_CENTER = 141; //must be measured
-int8_t WHEEL_CIRCUMFERENCE = 65;
-int8_t COGS = 12; // should be checked
+#define AXLE_WIDTH 200; // must be measured
+#define MID_TO_WHEEL_CENTER 141; //must be measured
+#define WHEEL_CIRCUMFERENCE 65;
+#define COGS 12; // should be checked
 
 double g_cosHeading;
 double g_sinHeading;
