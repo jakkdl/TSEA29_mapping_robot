@@ -4,15 +4,15 @@ uint16_t get_start_pos(int xy)
 {
     if (xy == 0)
     {
-        return startPosX;
+        return g_startPosX;
     }
-    return startPosY;
+    return g_startPosY;
 }
 
 void save_start_pos()
 {
-    startPosX = MmToGrid(g_currentPosX);
-    startPosY = MmToGrid(g_currentPosY);
+    g_startPosX = MmToGrid(g_currentPosX);
+    g_startPosY = MmToGrid(g_currentPosY);
 }
 
 bool unexplored_cells_exist()
@@ -23,8 +23,8 @@ bool unexplored_cells_exist()
         {
             if (IsUnknown(x, y))
             {
-                endPoint[0] = x;
-                endPoint[1] = y;
+                g_endPoint[0] = x;
+                g_endPoint[1] = y;
                 return true;
             }
         }
@@ -71,8 +71,8 @@ uint8_t get_heading()
 
 bool at_start_pos()
 {
-    if (MmToGrid(g_currentPosX) != startPosX &&
-        MmToGrid(g_currentPosY) != startPosY)
+    if (MmToGrid(g_currentPosX) != g_startPosX &&
+        MmToGrid(g_currentPosY) != g_startPosY)
     {
         return false;
     }

@@ -18,16 +18,16 @@
 void wall_follow();
 
 // for easy iterations through arrays
-int queueSize            = 0;
-int adjacentCellsSize    = 0;
-int traversableCellsSize = 0;
+int g_queueSize            = 0;
+int g_adjacentCellsSize    = 0;
+int g_traversableCellsSize = 0;
 
-uint8_t  queue[QUEUE_ROWS][COLS];
-uint8_t  adjacentCells[ROWS_ADJACENT][COLS];
-uint8_t  traversableCells[ROWS_ADJACENT][COLS];
-uint8_t  endPoint[COORD_SIZE];
-uint16_t startPosX;
-uint16_t startPosY;
+uint8_t  g_queue[QUEUE_ROWS][COLS];
+uint8_t  g_adjacentCells[ROWS_ADJACENT][COLS];
+uint8_t  g_traversableCells[ROWS_ADJACENT][COLS];
+uint8_t  g_endPoint[COORD_SIZE];
+uint16_t g_startPosX;
+uint16_t g_startPosY;
 
 void    sample_search();
 uint8_t get_robot_adjacent_coord(int direction, int xy);

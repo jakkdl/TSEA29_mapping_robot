@@ -3,11 +3,11 @@ from tkinter import *
 
 class Constants:
 
-    FRAME_WIDTH = 1500
+    FRAME_WIDTH = 1445
     FRAME_HEIGHT = 1000
     DELAY = 100
-    CELL_SIZE = 19
-    PADDING = 15
+    CELL_SIZE = 20
+    PADDING = 20
 
 
 class Map(Canvas):
@@ -27,8 +27,8 @@ class Map(Canvas):
     def createObjects(self):
         for x in range(49):
             for y in range(25):
-                self.create_rectangle(x*Constants.CELL_SIZE+2, y*Constants.CELL_SIZE+2, (x+1)*Constants.CELL_SIZE,
-                                      (y+1)*Constants.CELL_SIZE, fill='grey39', width=0)
+                self.create_rectangle(x * Constants.CELL_SIZE + Constants.PADDING + 2, y * Constants.CELL_SIZE + Constants.PADDING + 2,
+                                      (x + 1)*Constants.CELL_SIZE + Constants.PADDING, (y + 1)*Constants.CELL_SIZE + Constants.PADDING, fill='grey39', width=0)
 
         self.create_rectangle(24*Constants.CELL_SIZE+2,
                               24*Constants.CELL_SIZE+2, 25*Constants.CELL_SIZE, 25*Constants.CELL_SIZE, fill='red', tags="robot")
