@@ -3,6 +3,7 @@
 
 #include "../AVR_common/robot.h"
 
+int8_t communication_unit_interrupt(struct data_packet* data);
 int8_t handle_command(enum directionID id);
 int8_t resend(uint8_t adress);
 int8_t set_pd_kd(uint8_t kd);

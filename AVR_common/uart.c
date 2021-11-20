@@ -1,11 +1,14 @@
 #include <stdint.h>
-#include <xc.h>
+//#include <xc.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include "uart.h"
 #define UART_BAUD 207 //8MHz system clock
 
-
+#if __NAVIGATION_UNIT__
+#include "../Navigation_unit/nav_sensor_loop.h"
+#include "../Navigation_unit/nav_unit_com_interrupt_logic.h"
+#endif
 
 /*
  *TODO test the code save the data somewhere
@@ -108,7 +111,7 @@ uint8_t UART_Receive(uint8_t interface){
 struct data_packet DATA_Receive( uint8_t interface )
 {
     //creat an instance of a new paket to return once called by the ISR
-    data_packet ReceivedPaket;
+    struct data_packet ReceivedPaket;
 
     //receive the first byte that contain all the info we need for receive the rest
     uint8_t header = UART_Receive( interface );
@@ -130,18 +133,22 @@ struct data_packet DATA_Receive( uint8_t interface )
     return ReceivedPaket;
 }
 
-ISR( USART0_RX__vect )
+ISR( USART0_RX_vect )
 {
     cli(); //disable interrupts
-    data_packet Received;
-    Received = DATA_Receive(0); //This data needs to be saved some where?
+    struct data_packet received = DATA_Receive(0);
     sei(); //re enable interrupts
+#if __NAVIGATION_UNIT__
+    handle_sensor_data(&received);
+#endif
 }
 
-ISR( USART1_RX__vect )
+ISR( USART1_RX_vect )
 {
     cli(); //disable interrupts
-    data_packet Received;
-    Received = DATA_Receive(1); //This data needs to be saved some where?
+    struct data_packet received = DATA_Receive(1);
     sei(); //re enable interrupts
+#if __NAVIGATION_UNIT__
+    communication_unit_interrupt(&received);
+#endif
 }
