@@ -69,13 +69,13 @@ extern uint16_t            g_navigationGoalY;       // = 0;
 extern uint16_t            g_navigationGoalHeading; // = 0;
 
 // Map
-#define IsWall(x, y) g_navigationMap[(x)][(y)] & 0x80
-#define IsUnknown(x, y) g_navigationMap[(x)][(y)] == 0
-#define IsEmpty(x, y) g_navigationMap[(x)][(y)] > 0
-
-#define MakeWall(x, y) if (g_navigationMap[(x)][(y)] != INT8_MIN) g_navigationmap[(x)][(y)] -= 1
-#define MakeEmpty(x, y) if (g_navigationMap[(x)][(y)] != INT8_MAX) g_navigationmap[(x)][(y)] += 1
-#define MakeUnknown(x, y) g_navigationMap[(x)][(y)] = 0
 extern int8_t g_navigationMap[49][25];
+#define IsWall(x, y) (g_navigationMap[(x)][(y)] & 0x80)
+#define IsUnknown(x, y) (g_navigationMap[(x)][(y)] == 0)
+#define IsEmpty(x, y) (g_navigationMap[(x)][(y)] > 0)
+
+#define MakeWall(x, y) if (g_navigationMap[(x)][(y)] != INT8_MIN) g_navigationMap[(x)][(y)] -= 1
+#define MakeEmpty(x, y) if (g_navigationMap[(x)][(y)] != INT8_MAX) g_navigationMap[(x)][(y)] += 1
+#define MakeUnknown(x, y) g_navigationMap[(x)][(y)] = 0
 
 #endif // NAVIGATION_UNIT_NAVIGATION_UNIT_H_

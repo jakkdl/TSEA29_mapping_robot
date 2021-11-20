@@ -66,7 +66,7 @@ void UART_Transmit(uint8_t interface, uint8_t data )
 }
 
 //add interrupts to the transmit part of the UART transmit also this part has not been tested
-void DATA_Transmit(uint8_t interface, data_packet paket){
+void DATA_Transmit(uint8_t interface, struct data_packet paket){
 	
 		uint8_t header = (paket.address<<4) | (paket.byte_count<<1);
         UART_Transmit(interface, header);
@@ -105,7 +105,7 @@ uint8_t UART_Receive(uint8_t interface){
 
 }
 
-data_packet DATA_Receive( uint8_t interface ){
+struct data_packet DATA_Receive( uint8_t interface ){
 	data_packet ReceivedPaket; //creat an instance of a new paket to return once called by the ISR
 	
 	uint8_t header = UART_Receive( interface ); //receive the first byte that contain all the info we need for receive the rest
