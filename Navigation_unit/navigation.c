@@ -1,5 +1,28 @@
 #include "navigation.h"
 
+int      queueSize            = 0;
+int      adjacentCellsSize    = 0;
+int      traversableCellsSize = 0;
+uint8_t  g_queue[QUEUE_ROWS][COLS];
+uint8_t  g_adjacentCells[ROWS_ADJACENT][COLS];
+uint8_t  g_traversableCells[ROWS_ADJACENT][COLS];
+uint8_t  g_endPoint[COORD_SIZE];
+uint16_t g_startPosX;
+uint16_t g_startPosY;
+
+uint8_t get_robot_adjacent_coord(int direction, int xy);
+uint8_t get_adjacent_cell(int direction, int xy, uint8_t* currentCell);
+bool    cell_is_wall(uint8_t cell[COLS]);
+bool    is_wall(uint8_t dir);
+void    move_one_cell(uint8_t queue[QUEUE_ROWS][COLS]);
+bool    left_opening();
+bool    right_opening();
+bool    wall_in_front();
+bool    is_wall(uint8_t dir);
+uint8_t get_heading();
+bool    at_start_pos();
+void    save_start_pos();
+
 uint16_t get_start_pos(int xy)
 {
     if (xy == 0)
