@@ -11,7 +11,13 @@ uint16_t g_startPosX;
 uint16_t g_startPosY;
 
 uint8_t get_robot_adjacent_coord(int direction, int xy);
-uint8_t get_adjacent_cell(int direction, int xy, uint8_t* currentCell);
+// uint8_t get_adjacent_cell(int direction, int xy, uint8_t* currentCell);
+
+void get_adjacent_cell(uint8_t  direction,
+                       uint8_t* x,
+                       uint8_t* y,
+                       uint8_t* currentCell);
+
 bool    cell_is_wall(uint8_t cell[COLS]);
 bool    is_wall(uint8_t dir);
 void    move_one_cell(uint8_t queue[QUEUE_ROWS][COLS]);
@@ -226,7 +232,10 @@ j, queue[queueIndex]);
 } */
 
 // For sample search
-uint8_t get_adjacent_cell(int direction, int xy, uint8_t* currentCell)
+/* void get_adjacent_cell(uint8_t  direction,
+                       uint8_t* x,
+                       uint8_t* y,
+                       uint8_t* currentCell)
 {
     // each case returns the x & y coordinate for the adjacent cell separately.
     // direction == 0: right cell
@@ -234,48 +243,48 @@ uint8_t get_adjacent_cell(int direction, int xy, uint8_t* currentCell)
     // direction == 2: left cell
     // direction == 3: lower cell
 
-    switch (direction)
-    {
-        case 0:
-            if (xy == 0)
-            {
-                return currentCell[0] + 1;
-            }
-            else
-            {
-                return currentCell[1];
-            }
-        case 1:
-            if (xy == 0)
-            {
-                return currentCell[0];
-            }
-            else
-            {
-                return currentCell[1] + 1;
-            }
-        case 2:
-            if (xy == 0)
-            {
-                return currentCell[0] - 1;
-            }
-            else
-            {
-                return currentCell[1];
-            }
-        case 3:
-            if (xy == 0)
-            {
-                return currentCell[0];
-            }
-            else
-            {
-                return currentCell[1] - 1;
-            }
-        default:
-            return 0;
-    }
-}
+        switch (direction)
+        {
+            case 0:
+                if (xy == 0)
+                {
+                    return currentCell[0] + 1;
+                }
+                else
+                {
+                    return currentCell[1];
+                }
+            case 1:
+                if (xy == 0)
+                {
+                    return currentCell[0];
+                }
+                else
+                {
+                    return currentCell[1] + 1;
+                }
+            case 2:
+                if (xy == 0)
+                {
+                    return currentCell[0] - 1;
+                }
+                else
+                {
+                    return currentCell[1];
+                }
+            case 3:
+                if (xy == 0)
+                {
+                    return currentCell[0];
+                }
+                else
+                {
+                    return currentCell[1] - 1;
+                }
+            default:
+                return 0;
+        }
+} */
 
 // For robot
 uint8_t get_robot_adjacent_coord(int dir, int xy)
@@ -467,7 +476,7 @@ Test_test(Test, test_cells_exist)
     {
         for (int y = 0; y < 25; y++)
         {
-            g_navigationMap[x][y] = 0;
+            MakeEmpty(x, y);
         }
     }
 }
@@ -480,19 +489,19 @@ Test_test(Test, test_walls_and_openings)
     Test_assertEquals(is_wall(0), true);
     Test_assertEquals(is_wall(1), false);
     Test_assertEquals(is_wall(2), true);
-    Test_assertEquals(is_wall(3), false);
+    Test_assertEquals(is_wall(3), true);
 
     // reset map
-    for (int x = 0; x < 49; x++)
+    for (int x = 0; x < MAP_X_MAX; x++)
     {
-        for (int y = 0; y < 25; y++)
+        for (int y = 0; y < MAP_Y_MAX; y++)
         {
-            g_navigationMap[x][y] = 0;
+            MakeEmpty(x, y);
         }
     }
-    for (int x = 0; x < 49; x++)
+    for (int x = 0; x < MAP_X_MAX; x++)
     {
-        for (int y = 0; y < 25; y++)
+        for (int y = 0; y < MAP_Y_MAX; y++)
         {
             MakeWall(x, y);
         }
@@ -505,7 +514,7 @@ Test_test(Test, test_walls_and_openings)
     Test_assertEquals(is_wall(0), false);
     Test_assertEquals(is_wall(1), false);
     Test_assertEquals(is_wall(2), false);
-    Test_assertEquals(!is_wall(3), false);
+    Test_assertEquals(is_wall(3), true);
 }
 
 Test_test(Test, test_coordinates)
@@ -524,4 +533,18 @@ Test_test(Test, test_coordinates)
     save_start_pos();
     Test_assertEquals(get_start_pos(0), 24);
     Test_assertEquals(get_start_pos(1), 0);
+}
+
+Test_test(Test, test_navigation_goals)
+{
+    Test_assertEquals(get_heading(), 0);
+    MakeWall(23, 0);
+    MakeWall(25, 0);
+    wall_follow();
+    Test_assertEquals(MmToGrid(g_navigationGoalX), 24);
+    Test_assertEquals(MmToGrid(g_navigationGoalY), 1);
+    MakeEmpty(23, 0);
+    MakeWall(24, 1);
+    wall_follow();
+    Test_assertEquals(g_navigationGoalHeading, FULL_TURN / 2);
 }
