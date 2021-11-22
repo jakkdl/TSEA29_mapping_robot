@@ -486,8 +486,9 @@ Test_test(Test, test_walls_and_openings)
 {
     MakeWall(25, 0);
     MakeWall(23, 0);
+    MakeWall(24, 1);
     Test_assertEquals(is_wall(0), true);
-    Test_assertEquals(is_wall(1), false);
+    Test_assertEquals(is_wall(1), true);
     Test_assertEquals(is_wall(2), true);
     Test_assertEquals(is_wall(3), true);
 
@@ -515,6 +516,13 @@ Test_test(Test, test_walls_and_openings)
     Test_assertEquals(is_wall(1), false);
     Test_assertEquals(is_wall(2), false);
     Test_assertEquals(is_wall(3), true);
+    for (int x = 0; x < 49; x++)
+    {
+        for (int y = 0; y < 25; y++)
+        {
+            MakeEmpty(x, y);
+        }
+    }
 }
 
 Test_test(Test, test_coordinates)
@@ -537,14 +545,14 @@ Test_test(Test, test_coordinates)
 
 Test_test(Test, test_navigation_goals)
 {
-    Test_assertEquals(get_heading(), 0);
-    MakeWall(23, 0);
     MakeWall(25, 0);
+    MakeWall(24, 1);
+    Test_assertEquals(is_wall(2), false);
+    Test_assertEquals(is_wall(1), true);
+
     wall_follow();
     Test_assertEquals(MmToGrid(g_navigationGoalX), 24);
-    Test_assertEquals(MmToGrid(g_navigationGoalY), 1);
-    MakeEmpty(23, 0);
-    MakeWall(24, 1);
-    wall_follow();
-    Test_assertEquals(g_navigationGoalHeading, FULL_TURN / 2);
+    Test_assertEquals(MmToGrid(g_navigationGoalY), 0);
+
+    // Test_assertEquals(g_navigationGoalHeading, FULL_TURN / 2);
 }
