@@ -485,29 +485,37 @@ Test_test(Test, mark_empty)
 
     g_navigationMap[0][0] = 0;
 }
-/*
-void check_map()
+
+bool check_map(void)
 {
+    bool result = true;
+    stdout = &mystdout;
     for (uint8_t x = 0; x < MAP_X_MAX; ++x)
     {
         for (uint8_t y = 0; y < MAP_Y_MAX; ++y)
         {
             if (g_navigationMap[x][y] != 0)
             {
-                printf("%d, %d", x, y);
-            //Test_assertEquals(
+                printf("(%d, %d) = %d\n", x, y, g_navigationMap[x][y]);
+                result = false;
+            }
         }
     }
+    return result;
 }
+
 Test_test(Test, laser_loop_x)
 {
+    Test_assertTrue(check_map());
     // 2 cells straight to the right
     laser_loop_x(2, 0, 0, +1.0, 0);
 
-    Test_assertEquals(g_navigationMap[0][0], 0);
     Test_assertEquals(g_navigationMap[1][0], 1);
     Test_assertEquals(g_navigationMap[2][0], 1);
-}*/
+    g_navigationMap[1][0] = 0;
+    g_navigationMap[2][0] = 0;
+    Test_assertTrue(check_map());
+}
 #endif
 
 

@@ -45,7 +45,6 @@ typedef struct Test_TestHolder
 } Test_TestHolder;
 
 
-int uart_putchar(char c, FILE* stream);
 extern FILE mystdout;
 
 // Initialise the test framework
