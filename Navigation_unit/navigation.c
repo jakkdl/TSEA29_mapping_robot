@@ -1,28 +1,41 @@
 #include "navigation.h"
 
-int queueSize            = 0;
-int adjacentCellsSize    = 0;
-int traversableCellsSize = 0;
-uint8_t  queue[QUEUE_ROWS][COLS];
-uint8_t  adjacentCells[ROWS_ADJACENT][COLS];
-uint8_t  traversableCells[ROWS_ADJACENT][COLS];
-uint8_t  endPoint[COORD_SIZE];
-uint16_t startPosX;
-uint16_t startPosY;
+int      queueSize            = 0;
+int      adjacentCellsSize    = 0;
+int      traversableCellsSize = 0;
+uint8_t  g_queue[QUEUE_ROWS][COLS];
+uint8_t  g_adjacentCells[ROWS_ADJACENT][COLS];
+uint8_t  g_traversableCells[ROWS_ADJACENT][COLS];
+uint8_t  g_endPoint[COORD_SIZE];
+uint16_t g_startPosX;
+uint16_t g_startPosY;
+
+uint8_t get_robot_adjacent_coord(int direction, int xy);
+uint8_t get_adjacent_cell(int direction, int xy, uint8_t* currentCell);
+bool    cell_is_wall(uint8_t cell[COLS]);
+bool    is_wall(uint8_t dir);
+void    move_one_cell(uint8_t queue[QUEUE_ROWS][COLS]);
+bool    left_opening();
+bool    right_opening();
+bool    wall_in_front();
+bool    is_wall(uint8_t dir);
+uint8_t get_heading();
+bool    at_start_pos();
+void    save_start_pos();
 
 uint16_t get_start_pos(int xy)
 {
     if (xy == 0)
     {
-        return startPosX;
+        return g_startPosX;
     }
-    return startPosY;
+    return g_startPosY;
 }
 
 void save_start_pos()
 {
-    startPosX = MmToGrid(g_currentPosX);
-    startPosY = MmToGrid(g_currentPosY);
+    g_startPosX = MmToGrid(g_currentPosX);
+    g_startPosY = MmToGrid(g_currentPosY);
 }
 
 bool unexplored_cells_exist()
@@ -33,8 +46,8 @@ bool unexplored_cells_exist()
         {
             if (IsUnknown(x, y))
             {
-                endPoint[0] = x;
-                endPoint[1] = y;
+                g_endPoint[0] = x;
+                g_endPoint[1] = y;
                 return true;
             }
         }
@@ -81,8 +94,8 @@ uint8_t get_heading()
 
 bool at_start_pos()
 {
-    if (MmToGrid(g_currentPosX) != startPosX &&
-        MmToGrid(g_currentPosY) != startPosY)
+    if (MmToGrid(g_currentPosX) != g_startPosX &&
+        MmToGrid(g_currentPosY) != g_startPosY)
     {
         return false;
     }
