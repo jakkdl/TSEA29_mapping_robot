@@ -207,17 +207,20 @@ int8_t draw_laser_line(uint8_t laser_x, uint8_t laser_y, uint8_t sensor_directio
         }
     }
 
-    // mark as wall
-    g_navigationMap[end_x_coord][end_y_coord] -= 1;
+    if (end_x_coord < MAP_X_MAX && end_y_coord < MAP_Y_MAX)
+    {
+        // mark as wall
+        g_navigationMap[end_x_coord][end_y_coord] -= 1;
 
-    // if the cell state changed, send update to com-unit
-    if (g_navigationMap[end_x_coord][end_y_coord] == -1)
-    {
-        send_map_update(end_x_coord, end_y_coord, WALL);
-    }
-    else if (g_navigationMap[end_x_coord][end_y_coord] == 0)
-    {
-        send_map_update(end_x_coord, end_y_coord, UNKNOWN);
+        // if the cell state changed, send update to com-unit
+        if (g_navigationMap[end_x_coord][end_y_coord] == -1)
+        {
+            send_map_update(end_x_coord, end_y_coord, WALL);
+        }
+        else if (g_navigationMap[end_x_coord][end_y_coord] == 0)
+        {
+            send_map_update(end_x_coord, end_y_coord, UNKNOWN);
+        }
     }
 
 
@@ -459,6 +462,59 @@ Test_test(Test, calc_heading_and_pos)
     g_currentHeading = oldHeading;
     g_wheelDirectionLeft = oldWheelDirectionLeft;
     g_wheelDirectionRight = oldWheelDirectionRight;
+}
+
+Test_test(Test, mark_empty)
+{
+    g_navigationMap[0][0] = -2;
+    mark_empty(0, 0);
+    Test_assertEquals(g_navigationMap[0][0], -1);
+
+    mark_empty(0, 0);
+    Test_assertEquals(g_navigationMap[0][0], 0);
+
+    mark_empty(0, 0);
+    Test_assertEquals(g_navigationMap[0][0], 1);
+
+    mark_empty(0, 0);
+    Test_assertEquals(g_navigationMap[0][0], 2);
+
+    g_navigationMap[0][0] = INT8_MAX;
+    mark_empty(0, 0);
+    Test_assertEquals(g_navigationMap[0][0], INT8_MAX);
+
+    g_navigationMap[0][0] = 0;
+}
+
+bool check_map(void)
+{
+    bool result = true;
+    stdout = &mystdout;
+    for (uint8_t x = 0; x < MAP_X_MAX; ++x)
+    {
+        for (uint8_t y = 0; y < MAP_Y_MAX; ++y)
+        {
+            if (g_navigationMap[x][y] != 0)
+            {
+                printf("(%d, %d) = %d\n", x, y, g_navigationMap[x][y]);
+                result = false;
+            }
+        }
+    }
+    return result;
+}
+
+Test_test(Test, laser_loop_x)
+{
+    Test_assertTrue(check_map());
+    // 2 cells straight to the right
+    laser_loop_x(2, 0, 0, +1.0, 0);
+
+    Test_assertEquals(g_navigationMap[1][0], 1);
+    Test_assertEquals(g_navigationMap[2][0], 1);
+    g_navigationMap[1][0] = 0;
+    g_navigationMap[2][0] = 0;
+    Test_assertTrue(check_map());
 }
 #endif
 

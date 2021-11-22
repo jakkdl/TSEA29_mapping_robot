@@ -7,6 +7,10 @@
 #include "../AVR_common/uart.h"
 #include "test.h"
 
+#if __NAVIGATION_UNIT__
+#include "../Navigation_unit/navigation_unit.h"
+#endif
+
 /*#ifndef F_CPU
 #define F_CPU 8000000
 #endif
@@ -26,6 +30,9 @@ typedef struct Test_ResultType
 
 Test_ResultType m_Test_result;
 
+int uart_putchar(char c, FILE* stream);
+FILE mystdout = FDEV_SETUP_STREAM(uart_putchar, NULL, _FDEV_SETUP_WRITE);
+
 // This crashes simavr, and I have no clue why, so we can't get
 /*
    const struct avr_mmcu_vcd_trace_t _mytrace[]  _MMCU_ = {
@@ -34,7 +41,7 @@ Test_ResultType m_Test_result;
    },
    };*/
 
-static int uart_putchar(char c, FILE* stream)
+int uart_putchar(char c, FILE* stream)
 {
     if (c == '\n')
         uart_putchar('\r', stream);
@@ -45,7 +52,7 @@ static int uart_putchar(char c, FILE* stream)
 }
 
 // define a FILE to be used by custom printf
-static FILE mystdout = FDEV_SETUP_STREAM(uart_putchar, NULL, _FDEV_SETUP_WRITE);
+//static FILE mystdout = FDEV_SETUP_STREAM(uart_putchar, NULL, _FDEV_SETUP_WRITE);
 // Initialise the test framework
 void Test_init(void)
 {
@@ -126,6 +133,27 @@ bool Test_assertFloatEqualLog(double actual,
     return true;
 }
 
+#if __NAVIGATION_UNIT__
+bool check_reset_map(void)
+{
+    bool result = true;
+    stdout = &mystdout;
+    for (uint8_t x = 0; x < MAP_X_MAX; ++x)
+    {
+        for (uint8_t y = 0; y < MAP_Y_MAX; ++y)
+        {
+            if (g_navigationMap[x][y] != 0)
+            {
+                printf("(%d, %d) = %d\n", x, y, g_navigationMap[x][y]);
+                result = false;
+                g_navigationMap[x][y] = 0;
+            }
+        }
+    }
+    return result;
+}
+#endif
+
 // Run through all the tests
 void Test_runall(void)
 {
@@ -177,6 +205,15 @@ void Test_runall(void)
             printf(m_Test_activeTest->message);
             m_Test_result.failureCount++;
         }
+
+#if __NAVIGATION_UNIT__
+        if (!check_reset_map())
+        {
+            printf("FAIL: \"%s\" left garbage in the map according to above\n",
+                    m_Test_activeTest->name);
+        }
+#endif
+
 
         __asm__("nop");
 
