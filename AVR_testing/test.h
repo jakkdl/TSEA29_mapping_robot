@@ -20,6 +20,7 @@ void MODULE##_test_##NAME(void)
 
 #include <inttypes.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 #define MSG_LEN 80
 // typedefs
@@ -44,6 +45,8 @@ typedef struct Test_TestHolder
 } Test_TestHolder;
 
 
+int uart_putchar(char c, FILE* stream);
+extern FILE mystdout;
 
 // Initialise the test framework
 void Test_add(Test_TestHolder* test);

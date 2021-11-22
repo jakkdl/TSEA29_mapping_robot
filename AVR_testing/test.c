@@ -26,6 +26,7 @@ typedef struct Test_ResultType
 
 Test_ResultType m_Test_result;
 
+FILE mystdout = FDEV_SETUP_STREAM(uart_putchar, NULL, _FDEV_SETUP_WRITE);
 // This crashes simavr, and I have no clue why, so we can't get
 /*
    const struct avr_mmcu_vcd_trace_t _mytrace[]  _MMCU_ = {
@@ -34,7 +35,7 @@ Test_ResultType m_Test_result;
    },
    };*/
 
-static int uart_putchar(char c, FILE* stream)
+int uart_putchar(char c, FILE* stream)
 {
     if (c == '\n')
         uart_putchar('\r', stream);
@@ -45,7 +46,7 @@ static int uart_putchar(char c, FILE* stream)
 }
 
 // define a FILE to be used by custom printf
-static FILE mystdout = FDEV_SETUP_STREAM(uart_putchar, NULL, _FDEV_SETUP_WRITE);
+//static FILE mystdout = FDEV_SETUP_STREAM(uart_putchar, NULL, _FDEV_SETUP_WRITE);
 // Initialise the test framework
 void Test_init(void)
 {
