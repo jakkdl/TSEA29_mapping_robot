@@ -3,7 +3,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include "uart.h"
-#define UART_BAUD 207 //8MHz system clock
+#define UART_BAUD 103 //16MHz system clock
 
 #if __NAVIGATION_UNIT__
 #include "../Navigation_unit/nav_sensor_loop.h"
