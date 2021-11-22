@@ -69,10 +69,13 @@ extern uint16_t g_navigationGoalY;       // = 0;
 extern uint16_t g_navigationGoalHeading; // = 0;
 
 // Map
-extern int8_t g_navigationMap[49][25];
-#define IsWall(x, y) (g_navigationMap[(x)][(y)] & 0x80)
-#define IsUnknown(x, y) (g_navigationMap[(x)][(y)] == 0)
-#define IsEmpty(x, y) (g_navigationMap[(x)][(y)] > 0)
+#define MAP_X_MAX 49
+#define MAP_Y_MAX 25
+extern int8_t g_navigationMap[MAP_X_MAX][MAP_Y_MAX];
+// out-of-bonds is treated as always wall
+#define IsWall(x, y) (x >= MAP_X_MAX || y >= MAP_Y_MAX || (g_navigationMap[(x)][(y)] & 0x80))
+#define IsUnknown(x, y) (x < MAP_X_MAX && y < MAP_Y_MAX && (g_navigationMap[(x)][(y)] == 0))
+#define IsEmpty(x, y) (x < MAP_X_MAX && y < MAP_Y_MAX && (g_navigationMap[(x)][(y)] > 0))
 
 #define MakeWall(x, y)                                                         \
     if (g_navigationMap[(x)][(y)] != INT8_MIN)                                 \
