@@ -368,7 +368,7 @@ void mark_empty(uint8_t x, uint8_t y)
     }
 }
 
-void send_map_update(uint8_t, uint8_t, enum CellState)
+void send_map_update(uint8_t x, uint8_t y, enum CellState state)
 {
 
 }
