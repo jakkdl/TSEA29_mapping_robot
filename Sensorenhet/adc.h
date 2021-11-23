@@ -8,5 +8,5 @@ bool g_IRDone;
 void StartAdc();
 void AdcInit();
 void NextInputPin();
-uint8_t ConvertVoltage(double ADCVoltage);
+uint16_t ConvertVoltage(double ADCVoltage);
 #endif
