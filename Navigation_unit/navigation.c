@@ -111,6 +111,16 @@ bool at_start_pos()
     }
 }
 
+// Position robot so that its left side faces a wall
+void init_wall_follow()
+{
+    uint8_t dir = get_heading();
+    if (!is_wall(dir + 1))
+    {
+        command_set_target_square(TURN_AROUND);
+    }
+}
+
 void wall_follow()
 {
     uint8_t dir = get_heading();
@@ -132,6 +142,7 @@ void wall_follow()
             }
             else
             {
+                printf("TURN AROUND\n");
                 command_set_target_square(TURN_AROUND);
             }
         }
@@ -476,7 +487,7 @@ Test_test(Test, test_cells_exist)
     {
         for (int y = 0; y < 25; y++)
         {
-            MakeEmpty(x, y);
+            MakeUnknown(x, y);
         }
     }
 }
@@ -497,7 +508,7 @@ Test_test(Test, test_walls_and_openings)
     {
         for (int y = 0; y < MAP_Y_MAX; y++)
         {
-            MakeEmpty(x, y);
+            MakeUnknown(x, y);
         }
     }
     for (int x = 0; x < MAP_X_MAX; x++)
@@ -516,31 +527,14 @@ Test_test(Test, test_walls_and_openings)
     Test_assertEquals(is_wall(1), false);
     Test_assertEquals(is_wall(2), false);
     Test_assertEquals(is_wall(3), true);
-    for (int x = 0; x < 49; x++)
+
+    for (int x = 0; x < MAP_X_MAX; x++)
     {
-        for (int y = 0; y < 25; y++)
+        for (int y = 0; y < MAP_Y_MAX; y++)
         {
-            MakeEmpty(x, y);
+            MakeUnknown(x, y);
         }
     }
-}
-
-Test_test(Test, test_coordinates)
-{
-    Test_assertEquals(get_robot_adjacent_coord(0, 0), 25);
-    Test_assertEquals(get_robot_adjacent_coord(1, 0), 24);
-    Test_assertEquals(get_robot_adjacent_coord(2, 0), 23);
-    Test_assertEquals(get_robot_adjacent_coord(3, 0), 24);
-
-    Test_assertEquals(get_robot_adjacent_coord(0, 1), 0);
-    Test_assertEquals(get_robot_adjacent_coord(1, 1), 1);
-    Test_assertEquals(get_robot_adjacent_coord(2, 1), 0);
-    // huh?
-    Test_assertEquals(get_robot_adjacent_coord(3, 1), 255);
-
-    save_start_pos();
-    Test_assertEquals(get_start_pos(0), 24);
-    Test_assertEquals(get_start_pos(1), 0);
 }
 
 Test_test(Test, test_navigation_goals)
@@ -550,9 +544,28 @@ Test_test(Test, test_navigation_goals)
     Test_assertEquals(is_wall(2), false);
     Test_assertEquals(is_wall(1), true);
 
-    wall_follow();
-    Test_assertEquals(MmToGrid(g_navigationGoalX), 24);
-    Test_assertEquals(MmToGrid(g_navigationGoalY), 0);
+    Test_assertEquals(!is_wall(get_heading() + 1), false);
+    Test_assertEquals(is_wall(get_heading()), true);
+    Test_assertEquals(!is_wall(get_heading() + 3), false);
 
-    // Test_assertEquals(g_navigationGoalHeading, FULL_TURN / 2);
+    wall_follow();
+    Test_assertEquals(g_navigationGoalHeading, FULL_TURN / 2);
+    MakeWall(23, 0);
+    MakeUnknown(25, 0);
+    wall_follow();
+    Test_assertEquals(g_navigationGoalHeading, 0);
+    MakeWall(25, 0);
+    MakeUnknown(24, 1);
+    wall_follow();
+    Test_assertEquals(g_navigationGoalHeading, FULL_TURN / 4);
+    for (int x = 0; x < MAP_X_MAX; x++)
+    {
+        for (int y = 0; y < MAP_Y_MAX; y++)
+        {
+            MakeUnknown(x, y);
+        }
+    }
+    Test_assertEquals(g_navigationGoalHeading, FULL_TURN / 4);
+    init_wall_follow();
+    Test_assertEquals(g_navigationGoalHeading, FULL_TURN / 2);
 }

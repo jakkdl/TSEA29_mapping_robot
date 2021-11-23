@@ -1,6 +1,7 @@
 #include "nav_unit_com_interrupt_logic.h"
 #include "../AVR_common/robot.h"
 #include "navigation_unit.h"
+#include <stdio.h>
 
 // assumes data is not corrupt, does not check parity
 int8_t communication_unit_interrupt(struct data_packet* data)
@@ -76,10 +77,10 @@ int8_t set_pd_kd(uint8_t kd)
 // set navigation to manual
 int8_t command_stop()
 {
-    g_wheelSpeedLeft     = 0;
-    g_wheelSpeedRight    = 0;
-    g_navigationGoalSet  = false;
-    g_navigationMode     = MANUAL;
+    g_wheelSpeedLeft    = 0;
+    g_wheelSpeedRight   = 0;
+    g_navigationGoalSet = false;
+    g_navigationMode    = MANUAL;
     return 0;
 }
 
@@ -87,8 +88,8 @@ int8_t command_stop()
 // Set navigation to automatic
 int8_t command_start()
 {
-    g_navigationGoalSet  = false;
-    g_navigationMode     = AUTONOMOUS;
+    g_navigationGoalSet = false;
+    g_navigationMode    = AUTONOMOUS;
     return 0;
 }
 
@@ -129,7 +130,8 @@ int8_t command_set_target_square(uint8_t id)
     uint8_t dir;
 
     // right
-    if (g_currentHeading < FULL_TURN / 8 || g_currentHeading > FULL_TURN * 7 / 8)
+    if (g_currentHeading < FULL_TURN / 8 ||
+        g_currentHeading > FULL_TURN * 7 / 8)
     {
         dir = 0;
     }
@@ -162,13 +164,13 @@ int8_t command_set_target_square(uint8_t id)
         case FW_RIGHT:
             return navigate_forward((dir + 3) % 4);
         case TURN_LEFT:
-            g_navigationGoalHeading = ((dir + 1) % 4) / 4 * FULL_TURN;
+            g_navigationGoalHeading = ((dir + 1) % 4) * FULL_TURN / 4;
             return 0;
         case TURN_RIGHT:
-            g_navigationGoalHeading = ((dir + 3) % 4) / 4 * FULL_TURN;
+            g_navigationGoalHeading = ((dir + 3) % 4) * FULL_TURN / 4;
             return 0;
         case TURN_AROUND:
-            g_navigationGoalHeading = ((dir + 2) % 4) / 4 * FULL_TURN;
+            g_navigationGoalHeading = ((dir + 2) % 4) * FULL_TURN / 4;
             return 0;
         default:
             return -1;
@@ -178,7 +180,7 @@ int8_t command_set_target_square(uint8_t id)
 #include "../AVR_testing/test.h"
 Test_test(Test, uartCommandStart)
 {
-    bool oldGoalSet       = g_navigationGoalSet;
+    bool                oldGoalSet        = g_navigationGoalSet;
     enum NavigationMode oldNavigationMode = g_navigationMode;
     struct data_packet  data;
     data.address    = COMMAND;
@@ -190,11 +192,11 @@ Test_test(Test, uartCommandStart)
     Test_assertEquals(g_navigationMode, AUTONOMOUS);
 
     g_navigationGoalSet = oldGoalSet;
-    g_navigationMode     = oldNavigationMode;
+    g_navigationMode    = oldNavigationMode;
 }
 Test_test(Test, uartCommand_turn_left)
 {
-    bool oldGoalSet              = g_navigationGoalSet;
+    bool                oldGoalSet               = g_navigationGoalSet;
     enum NavigationMode oldNavigationMode        = g_navigationMode;
     uint16_t            oldNavigationGoalHeading = g_navigationGoalHeading;
 
@@ -227,7 +229,7 @@ Test_test(Test, uartCommand_turn_left)
 
 Test_test(Test, uartCommand_fw_left)
 {
-    bool oldGoalSet         = g_navigationGoalSet;
+    bool                oldGoalSet         = g_navigationGoalSet;
     enum NavigationMode oldNavigationMode  = g_navigationMode;
     uint8_t             oldNavigationGoalX = g_navigationGoalX;
     uint8_t             oldNavigationGoalY = g_navigationGoalY;
@@ -256,9 +258,9 @@ Test_test(Test, uartCommand_fw_left)
     Test_assertEquals(g_navigationGoalX, GridToMm(24));
     Test_assertEquals(g_navigationGoalY, GridToMm(1));
 
-    g_navigationGoalSet  = oldGoalSet;
-    g_navigationMode     = oldNavigationMode;
-    g_navigationGoalX    = oldNavigationGoalX;
-    g_navigationGoalY    = oldNavigationGoalY;
+    g_navigationGoalSet = oldGoalSet;
+    g_navigationMode    = oldNavigationMode;
+    g_navigationGoalX   = oldNavigationGoalX;
+    g_navigationGoalY   = oldNavigationGoalY;
 }
 #endif

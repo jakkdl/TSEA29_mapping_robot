@@ -39,6 +39,7 @@ class Map(Canvas):
     def createMap(self):
 
         CELL_SIZE = 20
+        SPACING = 2
 
         for x in range(49):
             for y in range(25):
@@ -48,10 +49,10 @@ class Map(Canvas):
                 stringTuple = tuple(map(str, coord))
                 tag = stringTuple[0] + stringTuple[1]
 
-                self.create_rectangle(x * CELL_SIZE + 2, y * CELL_SIZE + 2,
+                self.create_rectangle(x * CELL_SIZE + SPACING, y * CELL_SIZE + SPACING,
                                       (x + 1)*CELL_SIZE, (y + 1)*CELL_SIZE, fill='gray', width=0, tags=tag)
 
-        self.create_rectangle(24 * CELL_SIZE + 2, 24 * CELL_SIZE + 2, 25 *
+        self.create_rectangle(24 * CELL_SIZE + SPACING, 24 * CELL_SIZE + SPACING, 25 *
                               CELL_SIZE, 25 * CELL_SIZE, fill='red', tags='robot')
 
     def moveRobot(self):
@@ -65,7 +66,21 @@ class Map(Canvas):
         self.after(Constants.DELAY, self.onTimer)
 
 
-class Console(Canvas):
+class Console(Frame):
+    def __init__(self, parent):
+        Frame.__init__(self, parent)
+        self.parent = parent
+        self.createConsole()
+
+    def createConsole(self):
+        canvas = Canvas(self, width=Constants.CELL_SIZE *
+                        49 - 10, height=290, bg='black')
+        canvas.create_text(Constants.PADDING, Constants.PADDING,
+                           text=">>>", fill='white', anchor=NW)
+        canvas.pack()
+
+
+""" class Console(Canvas):
     def __init__(self, parent):
         Canvas.__init__(self, parent, width=Constants.CELL_SIZE*49,
                         height=300)
@@ -74,7 +89,7 @@ class Console(Canvas):
 
     def createConsole(self):
         self.create_rectangle(0, 0, Constants.CELL_SIZE *
-                              49, 300, fill='gray', width=0)
+                              49, 300, fill='gray', width=0) """
 
 
 class Controls(Canvas):
@@ -82,10 +97,16 @@ class Controls(Canvas):
         Canvas.__init__(self, parent, width=300,
                         height=Constants.CELL_SIZE*25)
         self.parent = parent
-        self.createDirections()
+        self.createControls()
 
-    def createDirections(self):
+    def createControls(self):
         self.create_rectangle(0, 0, 300, 1000, fill='gray', width=0)
+
+        modeButton = Button(self, text="Mode",
+                            command=self.quit, anchor=CENTER)
+        modeButton.configure(width=10, activebackground="#33B5E5", relief=FLAT)
+        button1_window = self.create_window(
+            Constants.PADDING, 300, anchor=NW, window=modeButton)
 
 
 class Information(Canvas):
@@ -93,10 +114,16 @@ class Information(Canvas):
         Canvas.__init__(self, parent, width=300,
                         height=300)
         self.parent = parent
-        self.createDirections()
+        self.createInformation()
 
-    def createDirections(self):
+    def createInformation(self):
         self.create_rectangle(0, 0, 300, 300, fill='gray', width=0)
+        self.create_text(Constants.PADDING,
+                         Constants.PADDING, font=("Purisa", 20), text="Position: ", anchor=NW, tags="position_text")
+        self.create_text(Constants.PADDING,
+                         Constants.PADDING * 4, font=("Purisa", 20), text="Direction: ", anchor=NW, tags="heading_text")
+        self.create_text(Constants.PADDING, Constants.PADDING * 7,
+                         font=("Purisa", 20), text="Mode: ", anchor=NW, tags="mode_text")
 
 
 def main():
