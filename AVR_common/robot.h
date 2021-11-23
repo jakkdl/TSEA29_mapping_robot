@@ -17,7 +17,7 @@ enum Address
     HEADER,
     MAP_UPDATE,
     COMMAND,
-    DEBUG,
+    ADR_DEBUG,
     PD_KP,
     PD_KD,
     PARITY_ERROR
