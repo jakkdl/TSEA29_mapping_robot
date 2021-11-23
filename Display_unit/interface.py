@@ -70,26 +70,25 @@ class Console(Frame):
     def __init__(self, parent):
         Frame.__init__(self, parent)
         self.parent = parent
+        self.after(Constants.DELAY, self.onTimer)
         self.createConsole()
 
     def createConsole(self):
-        canvas = Canvas(self, width=Constants.CELL_SIZE *
-                        49 - 10, height=290, bg='black')
-        canvas.create_text(Constants.PADDING, Constants.PADDING,
-                           text=">>>", fill='white', anchor=NW)
-        canvas.pack()
+        consoleCanvas = Canvas(self, width=Constants.CELL_SIZE *
+                               49 - 10, height=290, bg='black')
+        consoleCanvas.create_text(Constants.PADDING, 270,
+                                  text=">>>", fill='white', anchor=NW, tags='console_cursor')
+        consoleCanvas.pack()
 
+    def updateConsole(self):
+        '''updates the console'''
+        cursor = self.find_withtag('console_cursor')
+        self.move(cursor, 20, 0)
 
-""" class Console(Canvas):
-    def __init__(self, parent):
-        Canvas.__init__(self, parent, width=Constants.CELL_SIZE*49,
-                        height=300)
-        self.parent = parent
-        self.createConsole()
-
-    def createConsole(self):
-        self.create_rectangle(0, 0, Constants.CELL_SIZE *
-                              49, 300, fill='gray', width=0) """
+    def onTimer(self):
+        '''creates a cycle each timer event'''
+        self.updateConsole()
+        self.after(Constants.DELAY, self.onTimer)
 
 
 class Controls(Canvas):
@@ -106,7 +105,7 @@ class Controls(Canvas):
                             command=self.quit, anchor=CENTER)
         modeButton.configure(width=10, activebackground="#33B5E5", relief=FLAT)
         button1_window = self.create_window(
-            Constants.PADDING, 300, anchor=NW, window=modeButton)
+            Constants.PADDING + 95, 450, anchor=NW, window=modeButton)
 
 
 class Information(Canvas):
