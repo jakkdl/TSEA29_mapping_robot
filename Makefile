@@ -14,6 +14,9 @@ ifdef OS
 	CFLAGS += -Wl,-Map="$(FILE_NAME).map" -Wl,--start-group -Wl,-lm  -Wl,--end-group -Wl,--gc-sections
 else
 	GCC = avr-gcc
+	OBJCOPY = avr-objcopy
+	OBJDUMP = avr-objdump
+	SIZE = avr-size
 endif
 
 COMMON_FILES = AVR_common/robot.c AVR_common/sensors.c AVR_common/uart.c
