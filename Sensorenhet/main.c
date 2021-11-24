@@ -8,7 +8,10 @@
 #include "lidar.h"
 #include "gyro.h"
 #include "../AVR_common/sensors.h"
+#include "../AVR_common/robot.h"
+#include "../AVR_common/uart.h"
 
+void SendData();
 uint8_t OPENINGS = 40;
 uint8_t g_leftCount = 0;
 uint8_t g_rightCount = 0;
@@ -62,7 +65,7 @@ void PinInit()
 	PORTA = 0x00;
 	DDRC |= (1 << PORTC4);
 	PORTC = 0x00;
-	DDRD |= (1 << PORTD0);
+	DDRD |= (1 << PORTD1);
 	PORTD = 0x00;
 }
 int main(void)
@@ -70,9 +73,11 @@ int main(void)
 	PinInit();
 	TimerInit();
 	ExtInterruptInit();
+	UART_Init(0);
 	//MsTimerInit();
 	sei();
 	StartReading();
+	SendData();
     while (1)
     {
 		if(true)
@@ -82,6 +87,15 @@ int main(void)
     }
 }
 
+void SendData()
+{
+	struct data_packet packet;
+	packet.address = IR_LEFTFRONT;
+	packet.byte_count = 2;
+	packet.bytes[0] = Uint16ToByte0(data.ir_leftfront);
+	packet.bytes[1] = Uint16ToByte1(data.ir_leftfront);
+	DATA_Transmit(0, packet);
+}
 void ConvertOdo()
 {
 	// converts odo count to mm traveled;

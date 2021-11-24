@@ -35,7 +35,7 @@ TEST_FILES = AVR_testing/*.c
 
 FILE_NAME = navigation
 
-all:	navigation sensor
+all:	navigation-atmel
 
 navigation-test:
 	$(GCC) $(COMMON_FILES) $(NAVIGATION_FILES) $(TEST_FILES) $(CFLAGS) $(TEST_FLAGS) $(NAVIGATION_FLAGS) -o $(FILE_NAME).elf
@@ -43,17 +43,17 @@ navigation-test:
 navigation:
 	$(GCC) $(COMMON_FILES) $(NAVIGATION_FILES) $(NAVIGATION_MAIN) $(CFLAGS) $(NAVIGATION_FLAGS) -o $(FILE_NAME).elf
 
-sensor:
-	$(GCC) $(COMMON_FILES) $(SENSOR_FILES) $(SENSOR_MAIN) $(CFLAGS) $(SENSOR_FLAGS) -o sensor.elf
+sensor_unit:
+	$(GCC) $(COMMON_FILES) $(SENSOR_FILES) $(SENSOR_MAIN) $(CFLAGS) $(SENSOR_FLAGS) -o sensor_unit.elf
 
-sensor-atmel: sensor
-	$(OBJCOPY) -O ihex -R .eeprom -R .fuse -R .lock -R .signature -R .user_signatures  "sensor.elf" "sensor.hex"
-	$(OBJCOPY) -j .eeprom  --set-section-flags=.eeprom=alloc,load --change-section-lma .eeprom=0  --no-change-warnings -O ihex "sensor.elf" "sensor.eep" || exit 0
-	$(OBJDUMP) -h -S "$sensor.elf" > "sensor.lss"
-	$(OBJCOPY) -O srec -R .eeprom -R .fuse -R .lock -R .signature -R .user_signatures "sensor.elf" "sensor.srec"
-	$(SIZE) "sensor.elf"
+sensor-atmel: sensor_unit
+	$(OBJCOPY) -O ihex -R .eeprom -R .fuse -R .lock -R .signature -R .user_signatures  "sensor_unit.elf" "sensor_unit.hex"
+	$(OBJCOPY) -j .eeprom  --set-section-flags=.eeprom=alloc,load --change-section-lma .eeprom=0  --no-change-warnings -O ihex "sensor_unit.elf" "sensor_unit.eep" || exit 0
+	$(OBJDUMP) -h -S "sensor_unit.elf" > "sensor_unit.lss"
+	$(OBJCOPY) -O srec -R .eeprom -R .fuse -R .lock -R .signature -R .user_signatures "sensor_unit.elf" "sensor_unit.srec"
+	$(SIZE) "sensor_unit.elf"
 
-navigation-atmel: navigation-test
+navigation-atmel: navigation
 	$(OBJCOPY) -O ihex -R .eeprom -R .fuse -R .lock -R .signature -R .user_signatures  "$(FILE_NAME).elf" "$(FILE_NAME).hex"
 	$(OBJCOPY) -j .eeprom  --set-section-flags=.eeprom=alloc,load --change-section-lma .eeprom=0  --no-change-warnings -O ihex "$(FILE_NAME).elf" "$(FILE_NAME).eep" || exit 0
 	$(OBJDUMP) -h -S "$(FILE_NAME).elf" > "$(FILE_NAME).lss"
