@@ -19,11 +19,11 @@ int main(void)
     UART_Init(0);
     UART_Init(1);
 	g_leftSpeed = 0x00;
-	
+
 	//timer init?
 	TCNT1 = 0x0000;
 	TCCR1B = (1 << CS11); // divide clock by 8 to get 2 tick every microsec
-	
+
 	PinInitPWM();
     sei();
 
