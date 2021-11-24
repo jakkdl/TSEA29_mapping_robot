@@ -81,7 +81,7 @@ bool Test_assertTrueLog(uint8_t condition, uint16_t lineNumber)
         snprintf(
                 m_Test_activeTest->message,
                 MSG_LEN,
-                "FAIL: %s @ %d\n    not true\n",
+                "FAIL: %s @ %u\n    not true\n",
                 m_Test_activeTest->name,
                 lineNumber);
         return false;
@@ -100,7 +100,7 @@ bool Test_assertEqualLog(uint16_t actual,
         snprintf(
                 m_Test_activeTest->message,
                 MSG_LEN,
-                "FAIL: %s @ line %d\n    got %d expected %d\n",
+                "FAIL: %s @ line %u\n    got %u expected %u\n",
                 m_Test_activeTest->name,
                 lineNumber,
                 actual,
@@ -122,7 +122,7 @@ bool Test_assertFloatEqualLog(double actual,
         snprintf(
                 m_Test_activeTest->message,
                 MSG_LEN,
-                "FAIL: %s @ %d\n    got %f expected %f\n",
+                "FAIL: %s @ %u\n    got %f expected %f\n",
                 m_Test_activeTest->name,
                 lineNumber,
                 actual,
@@ -144,7 +144,7 @@ bool check_reset_map(void)
         {
             if (g_navigationMap[x][y] != 0)
             {
-                printf("(%d, %d) = %d\n", x, y, g_navigationMap[x][y]);
+                printf("(%u, %u) = %d\n", x, y, g_navigationMap[x][y]);
                 result = false;
                 g_navigationMap[x][y] = 0;
             }
@@ -207,6 +207,20 @@ void Test_runall(void)
         }
 
 #if __NAVIGATION_UNIT__
+        Test_assertEqualLog(g_navigationMode, MANUAL, -1);
+        Test_assertEqualLog(g_pdKd, 0, -1);
+        Test_assertEqualLog(g_pdKp, 0, -1);
+        Test_assertEqualLog(g_currentHeading, FULL_TURN/4, -1);
+        Test_assertEqualLog(g_currentPosX, GridToMm(24), -1);
+        Test_assertEqualLog(g_currentPosY, 0, -1);
+        Test_assertEqualLog(g_wheelDirectionLeft, DIR_FORWARD, -1);
+        Test_assertEqualLog(g_wheelDirectionRight, DIR_FORWARD, -1);
+        Test_assertEqualLog(g_wheelSpeedLeft, 0, -1);
+        Test_assertEqualLog(g_wheelSpeedRight, 0, -1);
+        Test_assertEqualLog(g_navigationGoalSet, false, -1);
+        Test_assertEqualLog(g_navigationGoalX, 24, -1);
+        Test_assertEqualLog(g_navigationGoalY, 0, -1);
+        Test_assertEqualLog(g_navigationGoalHeading, 0, -1);
         if (!check_reset_map())
         {
             printf("FAIL: \"%s\" left garbage in the map according to above\n",
@@ -226,9 +240,9 @@ void Test_runall(void)
     /*UART_Init(0);
     UART_Transmit(0, m_Test_result.successCount);*/
 
-    printf("Total Tests: %d\n", m_Test_result.totalTests);
-    printf("Success Count: %d\n", m_Test_result.successCount);
-    printf("Fail Count: %d\n", m_Test_result.failureCount);
+    printf("Total Tests: %u\n", m_Test_result.totalTests);
+    printf("Success Count: %u\n", m_Test_result.successCount);
+    printf("Fail Count: %u\n", m_Test_result.failureCount);
 }
 
 // Examples
