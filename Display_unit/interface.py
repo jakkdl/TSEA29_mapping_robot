@@ -6,40 +6,20 @@ class Constants:
     FRAME_WIDTH = 1445
     FRAME_HEIGHT = 1000
     MAP_DELAY = 400
-    CONSOLE_DELAY = 800
+    CONSOLE_DELAY = 400
     ONE_STEP = 20
     CELL_SIZE = 20
     PADDING = 10
 
 
-class Window(Frame):
-
-    def __init__(self):
-        super().__init__(bg='grey39', padx=Constants.PADDING, pady=Constants.PADDING)
-        self.master.title('Gudrid Interface')
-        self.initInterface()
-        self.pack()
-
-    def initInterface(self):
-
-        cellMap = Map(self).grid(row=0, column=0)
-        console = Console(self).grid(row=1, column=0)
-        directions = Controls(self).grid(row=0, column=1)
-        information = Information(self).grid(row=1, column=1)
-
-
-class Map(Canvas):
+class Map(LabelFrame):
     def __init__(self, parent):
-        Canvas.__init__(self, parent, width=Constants.CELL_SIZE*49,
-                        height=Constants.CELL_SIZE*25)
+        LabelFrame.__init__(self, parent)
         self.parent = parent
         self.after(Constants.MAP_DELAY, self.onTimer)
-        self.createMap()
-
-    def createMap(self):
-
         CELL_SIZE = 20
         SPACING = 2
+        self.canvas = Canvas(self, width=CELL_SIZE * 49, height=CELL_SIZE * 25)
 
         for x in range(49):
             for y in range(25):
@@ -49,16 +29,17 @@ class Map(Canvas):
                 stringTuple = tuple(map(str, coord))
                 tag = stringTuple[0] + stringTuple[1]
 
-                self.create_rectangle(x * CELL_SIZE + SPACING, y * CELL_SIZE + SPACING,
-                                      (x + 1)*CELL_SIZE, (y + 1)*CELL_SIZE, fill='gray', width=0, tags=tag)
+                self.canvas.create_rectangle(x * CELL_SIZE + SPACING, y * CELL_SIZE + SPACING,
+                                             (x + 1)*CELL_SIZE, (y + 1)*CELL_SIZE, fill='gray', width=0, tags=tag)
 
-        self.create_rectangle(24 * CELL_SIZE + SPACING, 24 * CELL_SIZE + SPACING, 25 *
-                              CELL_SIZE, 25 * CELL_SIZE, fill='red', tags='robot')
+        self.canvas.create_rectangle(24 * CELL_SIZE + SPACING, 24 * CELL_SIZE + SPACING, 25 *
+                                     CELL_SIZE, 25 * CELL_SIZE, fill='red', tags='robot')
+        self.canvas.pack(side=LEFT)
 
     def moveRobot(self):
         '''animates the robot's movement'''
-        robot = self.find_withtag('robot')
-        self.move(robot, Constants.ONE_STEP, 0)
+        robot = self.canvas.find_withtag('robot')
+        self.canvas.move(robot, Constants.ONE_STEP, 0)
         #square = self.find_withtag('56')
         #self.itemconfig(square, fill='blue')
 
@@ -68,26 +49,37 @@ class Map(Canvas):
         self.after(Constants.MAP_DELAY, self.onTimer)
 
 
-class Console(Frame):
+class Console(LabelFrame):
     def __init__(self, parent):
-        Frame.__init__(self, parent)
+        LabelFrame.__init__(self, parent, bg='black')
         self.parent = parent
-        self.textOutput = ""
-        self.consoleCanvas = Canvas(self, width=Constants.CELL_SIZE *
-                                    49 - 10, height=290, bg='black')
         self.after(Constants.CONSOLE_DELAY, self.onTimer)
-        self.createConsole()
+        self.index = 0
+        self.canvas = Canvas(self, bg='black', width=970, height=306)
+        self.frame = Frame(self.canvas, bg='black')
+        self.scrollBar = Scrollbar(self)
+        self.createScrollableContainer()
 
-    def createConsole(self):
+    def updateScollRegion(self):
+        self.canvas.update_idletasks()
+        self.canvas.config(scrollregion=self.frame.bbox())
 
-        self.consoleCanvas.create_text(Constants.PADDING, 270,
-                                       text=">>>", fill='white', anchor=NW, tags='console_cursor')
-        self.consoleCanvas.pack()
+    def createScrollableContainer(self):
+        self.canvas.config(yscrollcommand=self.scrollBar.set,
+                           highlightthickness=0)
+        self.scrollBar.config(orient=VERTICAL, command=self.canvas.yview)
+
+        self.scrollBar.pack(fill=Y, side=RIGHT, expand=FALSE)
+        self.canvas.pack(fill=BOTH, side=LEFT, expand=TRUE)
+        self.canvas.create_window(0, 0, window=self.frame, anchor=NW)
 
     def updateConsole(self):
         '''updates the console'''
-        cursor = self.consoleCanvas.find_withtag('console_cursor')
-        self.consoleCanvas.itemconfig(cursor, text=">>>" + " SOME SENSORDATA")
+        self.index += 1
+        Label(self.frame, text="Print: "+str(self.index),
+              bg='black', fg='white').grid(row=self.index, sticky=W)
+        self.updateScollRegion()
+        self.canvas.yview_moveto(1)
 
     def onTimer(self):
         '''creates a cycle each timer event'''
@@ -95,43 +87,37 @@ class Console(Frame):
         self.after(Constants.CONSOLE_DELAY, self.onTimer)
 
 
-class Controls(Canvas):
+class Controls(LabelFrame):
     def __init__(self, parent):
-        Canvas.__init__(self, parent, width=300,
-                        height=Constants.CELL_SIZE*25)
+        LabelFrame.__init__(self, parent)
         self.parent = parent
-        self.createControls()
-
-    def createControls(self):
-        self.create_rectangle(0, 0, 300, 1000, fill='gray', width=0)
-
-        modeButton = Button(self, text="Mode",
-                            command=self.quit, anchor=CENTER)
-        modeButton.configure(width=10, activebackground="#33B5E5", relief=FLAT)
-        button1_window = self.create_window(
-            Constants.PADDING + 95, 450, anchor=NW, window=modeButton)
+        CELL_SIZE = 20
+        canvas = Canvas(self, bg='gray', width=420, height=CELL_SIZE * 25 - 1)
+        canvas.pack(side=LEFT)
 
 
-class Information(Canvas):
+class Information(LabelFrame):
     def __init__(self, parent):
-        Canvas.__init__(self, parent, width=300,
-                        height=300)
+        LabelFrame.__init__(self, parent)
         self.parent = parent
-        self.createInformation()
-
-    def createInformation(self):
-        self.create_rectangle(0, 0, 300, 300, fill='gray', width=0)
-        self.create_text(Constants.PADDING,
-                         Constants.PADDING, font=("Purisa", 20), text="Position: ", anchor=NW, tags="position_text")
-        self.create_text(Constants.PADDING,
-                         Constants.PADDING * 4, font=("Purisa", 20), text="Direction: ", anchor=NW, tags="heading_text")
-        self.create_text(Constants.PADDING, Constants.PADDING * 7,
-                         font=("Purisa", 20), text="Mode: ", anchor=NW, tags="mode_text")
+        canvas = Canvas(self, bg='gray', width=420, height=299)
+        canvas.create_text(Constants.PADDING,
+                           Constants.PADDING, font=("Purisa", 20), text="Position: ", anchor=NW, tags="position_text")
+        canvas.create_text(Constants.PADDING,
+                           Constants.PADDING * 4, font=("Purisa", 20), text="Direction: ", anchor=NW, tags="heading_text")
+        canvas.create_text(Constants.PADDING, Constants.PADDING * 7,
+                           font=("Purisa", 20), text="Mode: ", anchor=NW, tags="mode_text")
+        canvas.pack(side=LEFT)
 
 
 def main():
     root = Tk()
-    window = Window()
+    navMap = Map(root).grid(row=0, column=0, padx=5, pady=5)
+    console = Console(root).grid(row=1, column=0, padx=5, pady=5)
+    controls = Controls(root).grid(row=0, column=1, padx=5, pady=5)
+    information = Information(root).grid(row=1, column=1, padx=5, pady=5)
+    root.geometry("1445x1000")
+    root.title("Gudrid Interface")
     root.mainloop()
 
 
