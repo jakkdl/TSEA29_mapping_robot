@@ -1,5 +1,4 @@
 #include <stdint.h>
-//#include <xc.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include "uart.h"
@@ -49,6 +48,7 @@ void UART_Init(uint8_t interface)
 
 void UART_Transmit(uint8_t interface, uint8_t data )
 {
+	cli(); //disable interrupts
     if (interface == 0)
     {
         /* Wait for empty transmit buffer */
@@ -56,6 +56,8 @@ void UART_Transmit(uint8_t interface, uint8_t data )
             ;
         /* Put data into buffer, sends the data */
         UDR0 = data;
+		while( !(TXEN0) )
+		;
     }
     else
     {
@@ -64,8 +66,10 @@ void UART_Transmit(uint8_t interface, uint8_t data )
             ;
         /* Put data into buffer, sends the data */
         UDR1 = data;
+		while( !(TXEN1) )
+		;
     }
-
+	sei(); //re enable interrupts
 }
 
 //add interrupts to the transmit part of the UART transmit also this part has not been tested
@@ -132,7 +136,7 @@ struct data_packet DATA_Receive( uint8_t interface )
     }
     return ReceivedPaket;
 }
-
+/* this part has to be moved to separate c file atmel didnt like it 
 ISR( USART0_RX_vect )
 {
     cli(); //disable interrupts
@@ -152,3 +156,4 @@ ISR( USART1_RX_vect )
     communication_unit_interrupt(&received);
 #endif
 }
+*/
