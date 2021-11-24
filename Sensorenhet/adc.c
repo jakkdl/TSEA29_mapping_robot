@@ -18,7 +18,7 @@ void StartAdc()
 
 void NextInputPin()
 {
-	if (ADMUX == 0x43) // looped through all adc pins for IR sensors
+	if ((ADMUX & (1 << PORTB1)) && (ADMUX & (1 << PORTB0))) // looped through all adc pins for IR sensors
 	{
 		ADMUX = 0x40; // return to ADC0 to be converted completed one loop
 		g_IRDone = true;
@@ -30,15 +30,47 @@ void NextInputPin()
 	}
 }
 
-uint8_t ConvertVoltage(double ADCVoltage)
+uint16_t ConvertVoltage(double ADCVoltage)
 // converts the input voltage to closest cm only between 8-80 cm
 {
 	double res = 0;
-	res = 1/0.046053 * ADCVoltage;
-	uint8_t result = round(res);
-	if ((result < 8) | (result > 80)) // outside linearity
+	uint16_t result = 0;
+	if(ADCVoltage > 2.8)
+	{
+		return 0;
+	}
+	else if (ADCVoltage < 0.4)
 	{
 		return -1;
 	}
+	else if ((ADCVoltage <= 2.8) && (ADCVoltage > 2.3))
+	{
+		res = ADCVoltage*-4.44 + 20.22;
+	}
+	else if ((ADCVoltage <= 2.3) && (ADCVoltage > 1.62))
+	{
+		res = ADCVoltage*-7.69+27.69;
+	}
+	else if ((ADCVoltage <= 1.62) && (ADCVoltage > 1.09))
+	{
+		res = ADCVoltage*-17.49+43.56;
+	}
+	else if ((ADCVoltage <= 1.09) && (ADCVoltage > 0.73))
+	{
+		res = ADCVoltage*-41.67*69.58;
+	}
+	else if ((ADCVoltage <= 0.73) && (ADCVoltage > 0.52))
+	{
+		res = ADCVoltage*-86.47+102.74;
+	}
+	else if ((ADCVoltage <= 0.52) && (ADCVoltage >= 0.4))
+	{
+		res = ADCVoltage*-197.37+158.16;
+	}
+	else
+	{
+		return -1;
+	}
+	result = (uint16_t) round(res);
 	return result;
 }

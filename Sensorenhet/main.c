@@ -6,6 +6,7 @@
 #include "adc.h"
 #include "lidar.h"
 #include "gyro.h"
+#include <util/delay.h>
 
 uint8_t OPENINGS = 40;
 uint8_t g_leftCount = 0;
@@ -28,11 +29,19 @@ bool g_sentData = true;
 void StartReading()
 {
 	g_readingDone = false;
-	//cli();
-	//AdcInit();
-	//sei();
-	//StartAdc();
-	MeasureLidar();
+	cli();
+	AdcInit();
+	sei();
+	StartAdc();
+	_delay_ms(1);
+	NextInputPin();
+	_delay_ms(1);
+	NextInputPin();
+	_delay_ms(1);
+	NextInputPin();
+	_delay_ms(1);
+	NextInputPin();
+	//MeasureLidar();
 	//while(!g_IRDone){}
 	//StartMLX();
 	//g_readingDone = true;
@@ -84,7 +93,7 @@ void ConvertOdo()
 
 ISR(ADC_vect)
 {
-	if (ADMUX & 0x46) // reading from MLX
+	if ((ADMUX & (1 << PORTB3)) && (ADMUX & 1 << PORTB2)) // reading from MLX
 	{
 		cli();
 		g_angle += MLXGyroVal();
@@ -93,15 +102,16 @@ ISR(ADC_vect)
 	else // reading from IR
 	{
 		double ADCVoltage = 0;
-		uint8_t IRDistance = 0;
+		uint16_t IRDistance = 0;
 		uint8_t ADCLowBit = ADCL;
-		uint16_t ADCRes = ADCH<<8 | ADCLowBit; // puts result of ADC in ADCRes
-		ADCVoltage = ADCRes * 5 / 1024;
+		double ADCRes = ADCH<<8 | ADCLowBit; // puts result of ADC in ADCRes
+		ADCRes = ADCRes * 5;
+		ADCVoltage = ADCRes / 1024;
 		cli();
 		IRDistance = ConvertVoltage(ADCVoltage);
 		sei();
 		// store value in correct place in memory
-		NextInputPin(); //update ADMUX
+		//NextInputPin(); //update ADMUX
 		// update memory for next ad conversion
 	}
 }
