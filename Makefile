@@ -20,12 +20,10 @@ else
 endif
 
 COMMON_FILES = AVR_common/robot.c AVR_common/sensors.c AVR_common/uart.c
-NAVIGATION_FILES = Navigation_unit/nav_sensor_loop.c Navigation_unit/navigation_unit.c Navigation_unit/nav_unit_com_interrupt_logic.c Navigation_unit/navigation.c Navigation_unit/pd.c Navigation_unit/rotation_math.c
-NAVIGATION_MAIN = Navigation_unit/main.c
+NAVIGATION_FILES = Navigation_unit/nav_sensor_loop.c Navigation_unit/navigation_unit.c Navigation_unit/nav_unit_com_interrupt_logic.c Navigation_unit/navigation.c Navigation_unit/pd.c Navigation_unit/rotation_math.c Navigation_unit/main.c Navigation_unit/pwm_timer.c
 NAVIGATION_FLAGS = -D __NAVIGATION_UNIT__
 
-SENSOR_FILES = Sensorenhet/adc.c Sensorenhet/gyro.c Sensorenhet/lidar.c
-SENSOR_MAIN = Sensorenhet/main.c
+SENSOR_FILES = Sensorenhet/adc.c Sensorenhet/gyro.c Sensorenhet/lidar.c Sensorenhet/main.c
 SENSOR_FLAGS = -D __SENSOR_UNIT__
 
 
@@ -34,7 +32,7 @@ NAVIGATION_FILES_WALLFOLLOW = Navigation_unit/navigation_unit.c Navigation_unit/
 
 # required to print floats, as per https://stackoverflow.com/a/26525329
 TEST_FLAGS = -Wl,-u,vfprintf -lprintf_flt -lm -D __TEST__
-TEST_FILES = AVR_testing/*.c
+TEST_FILES = AVR_testing/test.c
 
 FILE_NAME = navigation
 
@@ -44,10 +42,10 @@ navigation-test:
 	$(GCC) $(COMMON_FILES) $(NAVIGATION_FILES) $(TEST_FILES) $(CFLAGS) $(TEST_FLAGS) $(NAVIGATION_FLAGS) -o $(FILE_NAME).elf
 
 navigation:
-	$(GCC) $(COMMON_FILES) $(NAVIGATION_FILES) $(NAVIGATION_MAIN) $(CFLAGS) $(NAVIGATION_FLAGS) -o $(FILE_NAME).elf
+	$(GCC) $(COMMON_FILES) $(NAVIGATION_FILES) $(CFLAGS) $(NAVIGATION_FLAGS) -o $(FILE_NAME).elf
 
 sensor_unit:
-	$(GCC) $(COMMON_FILES) $(SENSOR_FILES) $(SENSOR_MAIN) $(CFLAGS) $(SENSOR_FLAGS) -o sensor_unit.elf
+	$(GCC) $(COMMON_FILES) $(SENSOR_FILES) $(CFLAGS) $(SENSOR_FLAGS) -o sensor_unit.elf
 
 sensor-atmel: sensor_unit
 	$(OBJCOPY) -O ihex -R .eeprom -R .fuse -R .lock -R .signature -R .user_signatures  "sensor_unit.elf" "sensor_unit.hex"

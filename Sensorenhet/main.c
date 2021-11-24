@@ -83,6 +83,8 @@ int main(void)
 		if(true)
 		{
 			StartReading();
+			SendData();
+			_delay_ms(100);
 		}
     }
 }
