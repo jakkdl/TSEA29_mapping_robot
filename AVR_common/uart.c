@@ -24,7 +24,7 @@ void UART_Init(uint8_t interface)
         UBRR0L = (uint8_t)UART_BAUD;
 
         /* Enable receiver and transmitter */
-        UCSR0B = (1<<RXCIE0) |(1<<RXEN0)|(1<<TXEN0);
+        UCSR0B = (1<<RXCIE0) | (1<<TXCIE0) |(1<<RXEN0)|(1<<TXEN0);
 
         /* Set frame format: 8data, 1stop bit, 1 parity bit */
         UCSR0C =  (0<<USBS0) |(1<<UPM01) | (3<<UCSZ00);
@@ -38,10 +38,10 @@ void UART_Init(uint8_t interface)
         UBRR1L = (uint8_t)UART_BAUD;
 
         /* Enable receiver and transmitter */
-        UCSR1B = (1<<RXCIE1) | (1<<RXEN1)| (1<<TXEN1);
+        UCSR1B = (1<<RXCIE1) | (1<<TXCIE1) | (1<<RXEN1)| (1<<TXEN1);
 
         /* Set frame format: 8data, 1stop bit, 1 parity bit */
-		UCSR1C =  (0<<USBS1) |(1<<UPM11) | (3<<UCSZ10);
+		UCSR1C =  (0<<USBS1) | (1<<UPM11) | (3<<UCSZ10);
     }
     /* 0_0_1_1_0_1_1_0*/
 }
@@ -56,7 +56,7 @@ void UART_Transmit(uint8_t interface, uint8_t data )
             ;
         /* Put data into buffer, sends the data */
         UDR0 = data;
-		while( !(TXEN0) )
+		while( !(TXC0) )
 		;
     }
     else
@@ -66,7 +66,7 @@ void UART_Transmit(uint8_t interface, uint8_t data )
             ;
         /* Put data into buffer, sends the data */
         UDR1 = data;
-		while( !(TXEN1) )
+		while( !(TXC1) )
 		;
     }
 	sei(); //re enable interrupts
