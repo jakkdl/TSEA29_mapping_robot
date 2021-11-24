@@ -25,10 +25,10 @@ void UART_Init(uint8_t interface)
         UBRR0L = (uint8_t)UART_BAUD;
 
         /* Enable receiver and transmitter */
-        UCSR0B = (1<<RXEN0)|(1<<TXEN0);
+        UCSR0B = (1<<RXCIE0) |(1<<RXEN0)|(1<<TXEN0);
 
         /* Set frame format: 8data, 1stop bit, 1 parity bit */
-        UCSR0C = (3<<UCSZ00);
+        UCSR0C =  (0<<USBS0) |(1<<UPM01) | (3<<UCSZ00);
     }
     else
     {
@@ -39,10 +39,10 @@ void UART_Init(uint8_t interface)
         UBRR1L = (uint8_t)UART_BAUD;
 
         /* Enable receiver and transmitter */
-        UCSR1B = (1<<RXEN1)|(1<<TXEN1);
+        UCSR1B = (1<<RXCIE1) | (1<<RXEN1)| (1<<TXEN1);
 
         /* Set frame format: 8data, 1stop bit, 1 parity bit */
-        UCSR1C = (3<<UCSZ10);
+		UCSR1C =  (0<<USBS1) |(1<<UPM11) | (3<<UCSZ10);
     }
     /* 0_0_1_1_0_1_1_0*/
 }
