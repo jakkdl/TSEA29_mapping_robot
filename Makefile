@@ -11,7 +11,7 @@ ifdef OS
 	SIZE = "C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-size.exe"
 	CFLAGS += -B "C:\Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.3.300\gcc\dev\atmega1284p"
 	CFLAGS += -funsigned-char -funsigned-bitfields -DDEBUG  -I"C:\Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.3.300\include" -ffunction-sections -fdata-sections -fpack-struct -fshort-enums
-	CFLAGS += -Wl,-Map="$(FILE_NAME).map" -Wl,--start-group -Wl,-lm  -Wl,--end-group -Wl,--gc-sections
+	CFLAGS += -Wl,-Map="navigation_unit.map" -Wl,--start-group -Wl,-lm  -Wl,--end-group -Wl,--gc-sections
 else
 	GCC = avr-gcc
 	OBJCOPY = avr-objcopy
@@ -26,6 +26,8 @@ NAVIGATION_FLAGS = -D __NAVIGATION_UNIT__
 SENSOR_FILES = Sensorenhet/adc.c Sensorenhet/gyro.c Sensorenhet/lidar.c Sensorenhet/main.c
 SENSOR_FLAGS = -D __SENSOR_UNIT__
 
+COMMUNICATION_FILES = Com_unit/main.c
+COMMUNICATION_FLAGS = -D __COMMUNICATION_UNIT__
 
 COMMON_FILES_WALLFOLLOW = AVR_common/robot.c
 NAVIGATION_FILES_WALLFOLLOW = Navigation_unit/navigation_unit.c Navigation_unit/nav_unit_com_interrupt_logic.c Navigation_unit/navigation.c
@@ -39,15 +41,18 @@ FILE_NAME = navigation
 all:	navigation-atmel
 
 navigation-test:
-	$(GCC) $(COMMON_FILES) $(NAVIGATION_FILES) $(TEST_FILES) $(CFLAGS) $(TEST_FLAGS) $(NAVIGATION_FLAGS) -o $(FILE_NAME).elf
+	$(GCC) $(COMMON_FILES) $(NAVIGATION_FILES) $(TEST_FILES) $(CFLAGS) $(TEST_FLAGS) $(NAVIGATION_FLAGS) -o navigation_unit.elf
 
 navigation:
-	$(GCC) $(COMMON_FILES) $(NAVIGATION_FILES) $(CFLAGS) $(NAVIGATION_FLAGS) -o $(FILE_NAME).elf
+	$(GCC) $(COMMON_FILES) $(NAVIGATION_FILES) $(CFLAGS) $(NAVIGATION_FLAGS) -o navigation_unit.elf
 
-sensor_unit:
+sensor:
 	$(GCC) $(COMMON_FILES) $(SENSOR_FILES) $(CFLAGS) $(SENSOR_FLAGS) -o sensor_unit.elf
 
-sensor-atmel: sensor_unit
+communication:
+	$(GCC) $(COMMON_FILES) $(COMMUNICATION_FILES) $(CFLAGS) $(COMMUNICATION_FLAGS) -o communication_unit.elf
+
+sensor-atmel: sensor
 	$(OBJCOPY) -O ihex -R .eeprom -R .fuse -R .lock -R .signature -R .user_signatures  "sensor_unit.elf" "sensor_unit.hex"
 	$(OBJCOPY) -j .eeprom  --set-section-flags=.eeprom=alloc,load --change-section-lma .eeprom=0  --no-change-warnings -O ihex "sensor_unit.elf" "sensor_unit.eep" || exit 0
 	$(OBJDUMP) -h -S "sensor_unit.elf" > "sensor_unit.lss"
@@ -55,15 +60,24 @@ sensor-atmel: sensor_unit
 	$(SIZE) "sensor_unit.elf"
 
 navigation-atmel: navigation
-	$(OBJCOPY) -O ihex -R .eeprom -R .fuse -R .lock -R .signature -R .user_signatures  "$(FILE_NAME).elf" "$(FILE_NAME).hex"
-	$(OBJCOPY) -j .eeprom  --set-section-flags=.eeprom=alloc,load --change-section-lma .eeprom=0  --no-change-warnings -O ihex "$(FILE_NAME).elf" "$(FILE_NAME).eep" || exit 0
-	$(OBJDUMP) -h -S "$(FILE_NAME).elf" > "$(FILE_NAME).lss"
-	$(OBJCOPY) -O srec -R .eeprom -R .fuse -R .lock -R .signature -R .user_signatures "$(FILE_NAME).elf" "$(FILE_NAME).srec"
-	$(SIZE) "$(FILE_NAME).elf"
+	$(OBJCOPY) -O ihex -R .eeprom -R .fuse -R .lock -R .signature -R .user_signatures  "navigation_unit.elf" "navigation_unit.hex"
+	$(OBJCOPY) -j .eeprom  --set-section-flags=.eeprom=alloc,load --change-section-lma .eeprom=0  --no-change-warnings -O ihex "navigation_unit.elf" "navigation_unit.eep" || exit 0
+	$(OBJDUMP) -h -S "navigation_unit.elf" > "navigation_unit.lss"
+	$(OBJCOPY) -O srec -R .eeprom -R .fuse -R .lock -R .signature -R .user_signatures "navigation_unit.elf" "navigation_unit.srec"
+	$(SIZE) "navigation_unit.elf"
+
+communication-atmel: communication
+	$(OBJCOPY) -O ihex -R .eeprom -R .fuse -R .lock -R .signature -R .user_signatures  "communication_unit.elf" "communication_unit.hex"
+	$(OBJCOPY) -j .eeprom  --set-section-flags=.eeprom=alloc,load --change-section-lma .eeprom=0  --no-change-warnings -O ihex "communication_unit.elf" "communication_unit.eep" || exit 0
+	$(OBJDUMP) -h -S "communication_unit.elf" > "communication_unit.lss"
+	$(OBJCOPY) -O srec -R .eeprom -R .fuse -R .lock -R .signature -R .user_signatures "communication_unit.elf" "communication_unit.srec"
+	$(SIZE) "communication_unit.elf"
 
 navigation-test-wf:
 	$(GCC) $(COMMON_FILES_WALLFOLLOW) $(NAVIGATION_FILES_WALLFOLLOW) $(TEST_FILES) $(CFLAGS) $(TEST_FLAGS) -o navigation.elf
 
 clean:
 	#$(RM) navigation.elf
-	$(RM) "$(FILE_NAME).elf" "$(FILE_NAME).a" "$(FILE_NAME).hex" "$(FILE_NAME).lss" "$(FILE_NAME).eep" "$(FILE_NAME).map" "$(FILE_NAME).srec" "$(FILE_NAME).usersignatures"
+	$(RM) "navigation_unit.elf" "navigation_unit.a" "navigation_unit.hex" "navigation_unit.lss" "navigation_unit.eep" "navigation_unit.map" "navigation_unit.srec" "navigation_unit.usersignatures"
+	$(RM) "sensor_unit.elf" "sensor_unit.a" "sensor_unit.hex" "sensor_unit.lss" "sensor_unit.eep" "sensor_unit.map" "sensor_unit.srec" "sensor_unit.usersignatures"
+	$(RM) "communication_unit.elf" "communication_unit.a" "communication_unit.hex" "communication_unit.lss" "communication_unit.eep" "communication_unit.map" "communication_unit.srec" "communication_unit.usersignatures"

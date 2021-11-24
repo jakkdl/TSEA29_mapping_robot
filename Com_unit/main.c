@@ -7,7 +7,7 @@
 #include <stdbool.h>
 
 #include "../AVR_common/robot.h"
-#include "../AVR_common/uart.c"
+#include "../AVR_common/uart.h"
 
 bool packet;
 struct data_packet currentPaket;

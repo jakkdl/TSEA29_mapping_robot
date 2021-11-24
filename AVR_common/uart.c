@@ -73,18 +73,18 @@ void UART_Transmit(uint8_t interface, uint8_t data )
 }
 
 //add interrupts to the transmit part of the UART transmit also this part has not been tested
-void DATA_Transmit(uint8_t interface, struct data_packet paket)
+void DATA_Transmit(uint8_t interface, struct data_packet *paket)
 {
-    uint8_t header = (paket.address<<4) | (paket.byte_count<<1);
+    uint8_t header = (paket->address<<4) | (paket->byte_count<<1);
     UART_Transmit(interface, header);
 
     /*transmission of the data*/
     uint8_t i = 0;
-    while ( i < paket.byte_count ){
+    while ( i < paket->byte_count ){
         /* Wait for empty transmit buffer */
         while ( !( UCSR1A & (1<<UDRE1)) )
             ;
-        UART_Transmit( interface, paket.bytes[i] );
+        UART_Transmit( interface, paket->bytes[i] );
         i = i + 1;
     }
 }

@@ -365,7 +365,7 @@ void send_map_update(uint8_t x, uint8_t y, int8_t value)
     packet.bytes[1] = y;
     packet.bytes[2] = value;
 
-    DATA_Transmit(COM_UNIT_INTERFACE, packet);
+    DATA_Transmit(COM_UNIT_INTERFACE, &packet);
 }
 
 #if __TEST__

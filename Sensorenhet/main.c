@@ -96,7 +96,7 @@ void SendData()
 	packet.byte_count = 2;
 	packet.bytes[0] = Uint16ToByte0(data.ir_leftfront);
 	packet.bytes[1] = Uint16ToByte1(data.ir_leftfront);
-	DATA_Transmit(0, packet);
+	DATA_Transmit(0, &packet);
 }
 void ConvertOdo()
 {
