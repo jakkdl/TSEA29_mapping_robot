@@ -1,12 +1,12 @@
 from tkinter import *
-from typing import Collection
 
 
 class Constants:
 
     FRAME_WIDTH = 1445
     FRAME_HEIGHT = 1000
-    DELAY = 400
+    MAP_DELAY = 400
+    CONSOLE_DELAY = 800
     ONE_STEP = 20
     CELL_SIZE = 20
     PADDING = 10
@@ -33,7 +33,7 @@ class Map(Canvas):
         Canvas.__init__(self, parent, width=Constants.CELL_SIZE*49,
                         height=Constants.CELL_SIZE*25)
         self.parent = parent
-        self.after(Constants.DELAY, self.onTimer)
+        self.after(Constants.MAP_DELAY, self.onTimer)
         self.createMap()
 
     def createMap(self):
@@ -58,37 +58,41 @@ class Map(Canvas):
     def moveRobot(self):
         '''animates the robot's movement'''
         robot = self.find_withtag('robot')
-        self.move(robot, 20, 0)
+        self.move(robot, Constants.ONE_STEP, 0)
+        #square = self.find_withtag('56')
+        #self.itemconfig(square, fill='blue')
 
     def onTimer(self):
         '''creates a cycle each timer event'''
         self.moveRobot()
-        self.after(Constants.DELAY, self.onTimer)
+        self.after(Constants.MAP_DELAY, self.onTimer)
 
 
 class Console(Frame):
     def __init__(self, parent):
         Frame.__init__(self, parent)
         self.parent = parent
-        self.after(Constants.DELAY, self.onTimer)
+        self.textOutput = ""
+        self.consoleCanvas = Canvas(self, width=Constants.CELL_SIZE *
+                                    49 - 10, height=290, bg='black')
+        self.after(Constants.CONSOLE_DELAY, self.onTimer)
         self.createConsole()
 
     def createConsole(self):
-        consoleCanvas = Canvas(self, width=Constants.CELL_SIZE *
-                               49 - 10, height=290, bg='black')
-        consoleCanvas.create_text(Constants.PADDING, 270,
-                                  text=">>>", fill='white', anchor=NW, tags='console_cursor')
-        consoleCanvas.pack()
+
+        self.consoleCanvas.create_text(Constants.PADDING, 270,
+                                       text=">>>", fill='white', anchor=NW, tags='console_cursor')
+        self.consoleCanvas.pack()
 
     def updateConsole(self):
         '''updates the console'''
-        cursor = self.find_withtag('console_cursor')
-        self.move(cursor, 20, 0)
+        cursor = self.consoleCanvas.find_withtag('console_cursor')
+        self.consoleCanvas.itemconfig(cursor, text=">>>" + " SOME SENSORDATA")
 
     def onTimer(self):
         '''creates a cycle each timer event'''
         self.updateConsole()
-        self.after(Constants.DELAY, self.onTimer)
+        self.after(Constants.CONSOLE_DELAY, self.onTimer)
 
 
 class Controls(Canvas):
