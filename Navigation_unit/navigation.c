@@ -133,7 +133,7 @@ void wall_follow()
     else
     {
         // wall in front of robot?
-        if (is_wall(get_heading()))
+        if (is_wall(dir))
         {
             // right opening?
             if (!is_wall(dir + 3))
@@ -142,7 +142,6 @@ void wall_follow()
             }
             else
             {
-                printf("TURN AROUND\n");
                 command_set_target_square(TURN_AROUND);
             }
         }

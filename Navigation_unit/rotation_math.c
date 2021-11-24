@@ -3,6 +3,7 @@
 //
 #include "../AVR_common/robot.h"
 #include "../AVR_common/sensors.h"
+#include "../AVR_common/uart.h"
 #include "../AVR_testing/test.h"
 #include "navigation_unit.h"
 #include <math.h>
@@ -49,7 +50,7 @@ int8_t draw_laser_line(uint8_t  x,
                        uint8_t  sensor_direction,
                        uint16_t distance);
 
-void send_map_update(uint8_t x, uint8_t y, enum CellState state);
+void send_map_update(uint8_t x, uint8_t y, int8_t value);
 // using the trigonometric addition formulas
 double laser_cos(uint8_t direction)
 {
@@ -342,20 +343,30 @@ void mark_empty(uint8_t x, uint8_t y)
     if (g_navigationMap[x][y] == 0)
     {
         g_navigationMap[x][y] = 1;
-        send_map_update(x, y, EMPTY);
+        send_map_update(x, y, 1);
     }
     else if (g_navigationMap[x][y] == -1)
     {
         g_navigationMap[x][y] = 0;
-        send_map_update(x, y, UNKNOWN);
+        send_map_update(x, y, 0);
     }
     else if (g_navigationMap[x][y] != INT8_MAX)
     {
         g_navigationMap[x][y] += 1;
     }
 }
+#define COM_UNIT_INTERFACE 1
+void send_map_update(uint8_t x, uint8_t y, int8_t value)
+{
+    struct data_packet packet;
+    packet.address = MAP_UPDATE;
+    packet.byte_count = 3;
+    packet.bytes[0] = x;
+    packet.bytes[1] = y;
+    packet.bytes[2] = value;
 
-void send_map_update(uint8_t x, uint8_t y, enum CellState state) {}
+    DATA_Transmit(COM_UNIT_INTERFACE, packet);
+}
 
 #if __TEST__
 
@@ -479,7 +490,7 @@ bool check_map(void)
         {
             if (g_navigationMap[x][y] != 0)
             {
-                printf("(%d, %d) = %d\n", x, y, g_navigationMap[x][y]);
+                printf("(%u, %u) = %d\n", x, y, g_navigationMap[x][y]);
                 result = false;
             }
         }

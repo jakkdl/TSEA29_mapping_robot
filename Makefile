@@ -21,6 +21,11 @@ NAVIGATION_FILES = Navigation_unit/nav_sensor_loop.c Navigation_unit/navigation_
 NAVIGATION_MAIN = Navigation_unit/main.c
 NAVIGATION_FLAGS = -D __NAVIGATION_UNIT__
 
+SENSOR_FILES = Sensorenhet/adc.c Sensorenhet/gyro.c Sensorenhet/lidar.c
+SENSOR_MAIN = Sensorenhet/main.c
+SENSOR_FLAGS = -D __SENSOR_UNIT__
+
+
 COMMON_FILES_WALLFOLLOW = AVR_common/robot.c
 NAVIGATION_FILES_WALLFOLLOW = Navigation_unit/navigation_unit.c Navigation_unit/nav_unit_com_interrupt_logic.c Navigation_unit/navigation.c
 
@@ -30,13 +35,23 @@ TEST_FILES = AVR_testing/*.c
 
 FILE_NAME = navigation
 
-all:	navigation-atmel
+all:	navigation sensor
 
 navigation-test:
 	$(GCC) $(COMMON_FILES) $(NAVIGATION_FILES) $(TEST_FILES) $(CFLAGS) $(TEST_FLAGS) $(NAVIGATION_FLAGS) -o $(FILE_NAME).elf
 
 navigation:
 	$(GCC) $(COMMON_FILES) $(NAVIGATION_FILES) $(NAVIGATION_MAIN) $(CFLAGS) $(NAVIGATION_FLAGS) -o $(FILE_NAME).elf
+
+sensor:
+	$(GCC) $(COMMON_FILES) $(SENSOR_FILES) $(SENSOR_MAIN) $(CFLAGS) $(SENSOR_FLAGS) -o sensor.elf
+
+sensor-atmel: sensor
+	$(OBJCOPY) -O ihex -R .eeprom -R .fuse -R .lock -R .signature -R .user_signatures  "sensor.elf" "sensor.hex"
+	$(OBJCOPY) -j .eeprom  --set-section-flags=.eeprom=alloc,load --change-section-lma .eeprom=0  --no-change-warnings -O ihex "sensor.elf" "sensor.eep" || exit 0
+	$(OBJDUMP) -h -S "$sensor.elf" > "sensor.lss"
+	$(OBJCOPY) -O srec -R .eeprom -R .fuse -R .lock -R .signature -R .user_signatures "sensor.elf" "sensor.srec"
+	$(SIZE) "sensor.elf"
 
 navigation-atmel: navigation-test
 	$(OBJCOPY) -O ihex -R .eeprom -R .fuse -R .lock -R .signature -R .user_signatures  "$(FILE_NAME).elf" "$(FILE_NAME).hex"

@@ -3,9 +3,11 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <math.h>
+#include <util/delay.h>
 #include "adc.h"
 #include "lidar.h"
 #include "gyro.h"
+#include "../AVR_common/sensors.h"
 
 uint8_t OPENINGS = 40;
 uint8_t g_leftCount = 0;
@@ -13,6 +15,8 @@ uint8_t g_rightCount = 0;
 uint16_t g_lidarDistance = 0; // distance in mm
 bool g_readingDone = true;
 bool g_sentData = true;
+
+struct sensor_data data;
 /*
  * TODO:
  * implement storage in memory where all data is stored for sending
@@ -28,11 +32,19 @@ bool g_sentData = true;
 void StartReading()
 {
 	g_readingDone = false;
-	//cli();
-	//AdcInit();
-	//sei();
-	//StartAdc();
-	MeasureLidar();
+	cli();
+	AdcInit();
+	sei();
+	StartAdc();
+	_delay_ms(1);
+	NextInputPin();
+	_delay_ms(1);
+	NextInputPin();
+	_delay_ms(1);
+	NextInputPin();
+	_delay_ms(1);
+	NextInputPin();
+	//MeasureLidar();
 	//while(!g_IRDone){}
 	//StartMLX();
 	//g_readingDone = true;
@@ -61,11 +73,11 @@ int main(void)
 	//MsTimerInit();
 	sei();
 	StartReading();
-    while (1) 
+    while (1)
     {
 		if(true)
 		{
-			StartReading();	
+			StartReading();
 		}
     }
 }
@@ -73,18 +85,17 @@ int main(void)
 void ConvertOdo()
 {
 	// converts odo count to mm traveled;
-	uint8_t res = 0;
-	res = round(g_leftCount * 65 * M_PI / OPENINGS);
+	data.odometer_left = round(g_leftCount * 65 * M_PI / OPENINGS);
 	g_leftCount = 0;
 	// store res
-	res = round(g_rightCount * 65 * M_PI / OPENINGS);
+	data.odometer_right = round(g_rightCount * 65 * M_PI / OPENINGS);
 	g_rightCount = 0;
 	// store res
 }
 
 ISR(ADC_vect)
 {
-	if (ADMUX & 0x46) // reading from MLX
+	if ((ADMUX & (1 << PORTB3)) && (ADMUX & 1 << PORTB2)) // reading from MLX
 	{
 		cli();
 		g_angle += MLXGyroVal();
@@ -93,15 +104,17 @@ ISR(ADC_vect)
 	else // reading from IR
 	{
 		double ADCVoltage = 0;
-		uint8_t IRDistance = 0;
+		uint16_t IRDistance = 0;
 		uint8_t ADCLowBit = ADCL;
-		uint16_t ADCRes = ADCH<<8 | ADCLowBit; // puts result of ADC in ADCRes
-		ADCVoltage = ADCRes * 5 / 1024;
+		double ADCRes = ADCH<<8 | ADCLowBit; // puts result of ADC in ADCRes
+		ADCRes = ADCRes * 5;
+		ADCVoltage = ADCRes / 1024;
 		cli();
 		IRDistance = ConvertVoltage(ADCVoltage);
 		sei();
+                data.ir_leftfront = IRDistance;
 		// store value in correct place in memory
-		NextInputPin(); //update ADMUX
+		//NextInputPin(); //update ADMUX
 		// update memory for next ad conversion
 	}
 }

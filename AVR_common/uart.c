@@ -133,22 +133,22 @@ struct data_packet DATA_Receive( uint8_t interface )
     return ReceivedPaket;
 }
 
+#if __NAVIGATION_UNIT__
 ISR( USART0_RX_vect )
 {
     cli(); //disable interrupts
     struct data_packet received = DATA_Receive(0);
     sei(); //re enable interrupts
-#if __NAVIGATION_UNIT__
     handle_sensor_data(&received);
-#endif
 }
+#endif
 
+#if __NAVIGATION_UNIT__
 ISR( USART1_RX_vect )
 {
     cli(); //disable interrupts
     struct data_packet received = DATA_Receive(1);
     sei(); //re enable interrupts
-#if __NAVIGATION_UNIT__
     communication_unit_interrupt(&received);
-#endif
 }
+#endif

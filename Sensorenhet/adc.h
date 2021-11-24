@@ -4,9 +4,9 @@
 #include <avr/interrupt.h>
 #include <math.h>
 #include <stdbool.h>
-bool g_IRDone;
+extern bool g_IRDone;
 void StartAdc();
 void AdcInit();
 void NextInputPin();
-uint8_t ConvertVoltage(double ADCVoltage);
+uint16_t ConvertVoltage(double ADCVoltage);
 #endif

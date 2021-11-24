@@ -7,7 +7,7 @@
 int8_t communication_unit_interrupt(struct data_packet* data)
 {
     // verify valid data packet count
-    if (data->address != DEBUG)
+    if (data->address != ADR_DEBUG)
     {
         if (data->byte_count != ADR_DATA_PACKETS[data->address])
         {
@@ -131,17 +131,17 @@ int8_t command_set_target_square(uint8_t id)
 
     // right
     if (g_currentHeading < FULL_TURN / 8 ||
-        g_currentHeading > FULL_TURN * 7 / 8)
+        g_currentHeading > FULL_TURN / 8 * 7)
     {
         dir = 0;
     }
     // up
-    else if (g_currentHeading < FULL_TURN * 3 / 8)
+    else if (g_currentHeading < FULL_TURN / 8 * 3)
     {
         dir = 1;
     }
     // left
-    else if (g_currentHeading < FULL_TURN * 5 / 8)
+    else if (g_currentHeading < FULL_TURN / 8 * 5)
     {
         dir = 2;
     }
