@@ -4,7 +4,7 @@
 #include <avr/interrupt.h>
 #include <math.h>
 #include <stdbool.h>
-bool g_IRDone;
+extern bool g_IRDone;
 void StartAdc();
 void AdcInit();
 void NextInputPin();

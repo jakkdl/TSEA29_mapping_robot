@@ -3,10 +3,11 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <math.h>
+#include <util/delay.h>
 #include "adc.h"
 #include "lidar.h"
 #include "gyro.h"
-#include <util/delay.h>
+#include "../AVR_common/sensors.h"
 
 uint8_t OPENINGS = 40;
 uint8_t g_leftCount = 0;
@@ -14,6 +15,8 @@ uint8_t g_rightCount = 0;
 uint16_t g_lidarDistance = 0; // distance in mm
 bool g_readingDone = true;
 bool g_sentData = true;
+
+struct sensor_data data;
 /*
  * TODO:
  * implement storage in memory where all data is stored for sending
@@ -70,11 +73,11 @@ int main(void)
 	//MsTimerInit();
 	sei();
 	StartReading();
-    while (1) 
+    while (1)
     {
 		if(true)
 		{
-			StartReading();	
+			StartReading();
 		}
     }
 }
@@ -82,11 +85,10 @@ int main(void)
 void ConvertOdo()
 {
 	// converts odo count to mm traveled;
-	uint8_t res = 0;
-	res = round(g_leftCount * 65 * M_PI / OPENINGS);
+	data.odometer_left = round(g_leftCount * 65 * M_PI / OPENINGS);
 	g_leftCount = 0;
 	// store res
-	res = round(g_rightCount * 65 * M_PI / OPENINGS);
+	data.odometer_right = round(g_rightCount * 65 * M_PI / OPENINGS);
 	g_rightCount = 0;
 	// store res
 }
@@ -110,6 +112,7 @@ ISR(ADC_vect)
 		cli();
 		IRDistance = ConvertVoltage(ADCVoltage);
 		sei();
+                data.ir_leftfront = IRDistance;
 		// store value in correct place in memory
 		//NextInputPin(); //update ADMUX
 		// update memory for next ad conversion
