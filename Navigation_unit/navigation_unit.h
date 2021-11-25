@@ -6,7 +6,6 @@
 
 #include "../AVR_common/robot.h"
 
-// TODO make these Enums
 enum NavigationMode
 {
     MANUAL,
