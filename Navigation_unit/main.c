@@ -3,6 +3,7 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include "../AVR_common/uart.h"
+#include "../AVR_testing/test.h"
 #include "pwm_timer.h"
 #include "navigation_unit.h"
 
@@ -11,6 +12,9 @@ uint8_t g_rightSpeed = 0;
 
 int main(void)
 {
+#if __TEST__
+    Test_run();
+#endif
     // set up uart interrupts
     // DDRD |= (1 << PORTD1 | 1 << PORTD3);
     // PORTD = 0x00;
@@ -29,9 +33,6 @@ int main(void)
     PinInitPWM();
     sei();
 
-#if __TEST__
-    Test_run();
-#endif
     //g_wheelSpeedLeft = 0x30;
     //_delay_ms(1);
     g_wheelSpeedLeft = 0x0;

@@ -33,8 +33,6 @@ COMMUNICATION_FLAGS = -D __COMMUNICATION_UNIT__
 TEST_FLAGS = -Wl,-u,vfprintf -lprintf_flt -lm -D __TEST__
 TEST_FILES = AVR_testing/test.c
 
-FILE_NAME = navigation
-
 all:	navigation-atmel
 
 navigation-test:

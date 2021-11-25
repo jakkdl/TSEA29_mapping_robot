@@ -28,22 +28,19 @@ double g_sinHeading;
 const double COS_QUARTERS[] = { 1.0, 0, -1.0, 0 };
 const double SIN_QUARTERS[] = { 0, 1, 0, -1 };
 
-void laser_positive_x(uint16_t x, uint16_t y, uint16_t end_x, double delta_y);
-void laser_negative_x(uint16_t x, uint16_t y, uint16_t end_x, double delta_y);
-void laser_positive_y(uint16_t x, uint16_t y, uint16_t end_y, double delta_x);
-void laser_negative_y(uint16_t x, uint16_t y, uint16_t end_y, double delta_x);
+int8_t laser_positive_x(uint16_t x, uint16_t y, uint16_t end_x, double delta_y);
+int8_t laser_negative_x(uint16_t x, uint16_t y, uint16_t end_x, double delta_y);
+int8_t laser_positive_y(uint16_t x, uint16_t y, uint16_t end_y, double delta_x);
+int8_t laser_negative_y(uint16_t x, uint16_t y, uint16_t end_y, double delta_x);
 
-void laser_loop_x(uint8_t  max_steps,
-                  uint8_t  x_0,
-                  uint16_t y_0,
-                  int8_t   delta_x,
-                  double   delta_y);
-void laser_loop_y(uint8_t  max_steps,
-                  uint16_t x_0,
-                  uint8_t  y_0,
-                  double   delta_x,
-                  int8_t   delta_y);
-void mark_empty(uint8_t x, uint8_t y);
+int8_t laser_loop(uint8_t  max_steps,
+                  uint8_t  a_0,
+                  uint16_t b_0,
+                  int8_t   delta_a,
+                  double   delta_b,
+                  int8_t (*f)(uint8_t, uint8_t));
+int8_t mark_empty(uint8_t x, uint8_t y);
+int8_t mark_empty_rev(uint8_t y, uint8_t x);
 
 int8_t draw_laser_line(uint8_t  x,
                        uint8_t  y,
@@ -143,7 +140,14 @@ int8_t draw_laser_line(uint8_t  laser_x,
     // x_n , y_n is end_x, end_y
 
     double cos = laser_cos(sensor_direction);
-    double sin = laser_cos(sensor_direction);
+    double sin = laser_sin(sensor_direction);
+    double tan = 0.0;
+    double cot = 0.0;
+    if (cos != 0.0 && sin != 0.0)
+    {
+        tan = fabs(sin / cos);
+        cot = fabs(cos / sin);
+    }
 
     uint16_t start_x = g_currentPosX + cos * laser_x;
     uint16_t start_y = g_currentPosY + sin * laser_y;
@@ -235,26 +239,38 @@ int8_t draw_laser_line(uint8_t  laser_x,
     switch (quadrant_heading)
     {
         case 0:
-            laser_positive_x(start_x, start_y, end_x, sin);
-            laser_positive_y(start_x, start_y, end_y, cos);
+            if (!laser_positive_x(start_x, start_y, end_x, tan) ||
+                    !laser_positive_y(start_x, start_y, end_y, cot))
+            {
+                return -1;
+            }
             // y_0 = math.ceil(y / 400);
             // x_0 = x + cos * (y / 400 - y_0);
             // max_steps = round(end_y/400) - y_0;
             // loop(max_steps, x_0, y_0, 1, sin, &no_rounding, &floor);
             break;
         case 1:
-            laser_negative_x(start_x, start_y, end_x, sin);
-            laser_positive_y(start_x, start_y, end_y, -cos);
+            if (!laser_negative_x(start_x, start_y, end_x, tan) ||
+                    !laser_positive_y(start_x, start_y, end_y, -cot))
+            {
+                return -1;
+            }
             break;
         case 2:
-            laser_negative_x(start_x, start_y, end_x, -sin);
-            laser_negative_y(start_x, start_y, end_y, -cos);
+            if (!laser_negative_x(start_x, start_y, end_x, -tan) ||
+                    laser_negative_y(start_x, start_y, end_y, -cot))
+            {
+                return -1;
+            }
             // uint8_t x_0 = floor(x / 400);
             // uint8_t y_0 = y + sin * (x / 400 - x_0);
             break;
         case 3:
-            laser_positive_x(start_x, start_y, end_x, -sin);
-            laser_negative_y(start_x, start_y, end_y, cos);
+            if (!laser_positive_x(start_x, start_y, end_x, -tan) ||
+                    laser_negative_y(start_x, start_y, end_y, cot))
+            {
+                return -1;
+            }
             // uint8_t x_0 = ceil(x / 400);
             // uint8_t y_0 = y + sin * (x_0 - x / 400);
             break;
@@ -277,69 +293,70 @@ int8_t draw_laser_line(uint8_t  laser_x,
     return 0;
 }
 
-void laser_positive_x(uint16_t x, uint16_t y, uint16_t end_x, double delta_y)
+int8_t laser_positive_x(uint16_t x, uint16_t y, uint16_t end_x, double delta_y)
 {
     uint8_t  x_0       = ceil(x / 400);
     uint16_t y_0       = y + delta_y * ((double)x_0 - (double)x / 400);
     uint8_t  max_steps = round(end_x / 400) - x_0;
-    laser_loop_x(max_steps, x_0, y_0, +1.0, delta_y);
+    return laser_loop(max_steps, x_0, y_0, +1.0, delta_y, mark_empty);
 }
 
-void laser_negative_x(uint16_t x, uint16_t y, uint16_t end_x, double delta_y)
+int8_t laser_negative_x(uint16_t x, uint16_t y, uint16_t end_x, double delta_y)
 {
     uint8_t  x_0       = floor(x / 400);
     uint16_t y_0       = y + delta_y * (x_0 - x / 400);
     uint8_t  max_steps = x_0 - round(end_x / 400);
-    laser_loop_x(max_steps, x_0, y_0, -1.0, delta_y);
+    return laser_loop(max_steps, x_0, y_0, -1.0, delta_y, mark_empty);
 }
 
-void laser_positive_y(uint16_t x, uint16_t y, uint16_t end_y, double delta_x)
+int8_t laser_positive_y(uint16_t x, uint16_t y, uint16_t end_y, double delta_x)
 {
     uint8_t  y_0       = ceil(y / 400);
     uint16_t x_0       = x + delta_x * (y / 400 - y_0);
     uint8_t  max_steps = round(end_y / 400) - y_0;
-    laser_loop_y(max_steps, x_0, y_0, delta_x, +1.0);
+    return laser_loop(max_steps, y_0, x_0, +1.0, delta_x, mark_empty_rev);
 }
 
-void laser_negative_y(uint16_t x, uint16_t y, uint16_t end_y, double delta_x)
+int8_t laser_negative_y(uint16_t x, uint16_t y, uint16_t end_y, double delta_x)
 {
     uint8_t  y_0       = floor(y / 400);
     uint16_t x_0       = x + delta_x * (y / 400 - y_0);
     uint8_t  max_steps = y_0 - round(end_y / 400);
-    laser_loop_y(max_steps, x_0, y_0, delta_x, -1.0);
+    return laser_loop(max_steps, y_0, x_0, -1.0, delta_x, mark_empty_rev);
 }
 
-void laser_loop_x(uint8_t  max_steps,
-                  uint8_t  x_0,
-                  uint16_t y_0,
-                  int8_t   delta_x,
-                  double   delta_y)
+int8_t laser_loop(uint8_t  max_steps,
+                  uint8_t  a,
+                  uint16_t b_0,
+                  int8_t   delta_a,
+                  double   delta_b,
+                  int8_t (*f)(uint8_t, uint8_t))
 {
-    uint8_t x = x_0;
+    int8_t res = 0;
+    double raw_b;
     for (uint8_t steps = 0; steps < max_steps; ++steps)
     {
-        x += delta_x;
-        mark_empty(x, floor((y_0 + steps * delta_y * 400) / 400));
+        raw_b = (b_0 + steps * delta_b * 400);
+        if (abs(raw_b - round(raw_b / 400)*400) > CORNER_SENSITIVITY)
+        {
+            res += (*f)(a, floor(raw_b / 400));
+        }
+        a += delta_a;
     }
+    return res;
 }
 
-void laser_loop_y(uint8_t  max_steps,
-                  uint16_t x_0,
-                  uint8_t  y_0,
-                  double   delta_x,
-                  int8_t   delta_y)
+int8_t mark_empty_rev(uint8_t y, uint8_t x)
 {
-    uint8_t x;
-    uint8_t y = y_0;
-    for (uint8_t steps = 0; steps < max_steps; ++steps)
+    return mark_empty(x, y);
+}
+
+int8_t mark_empty(uint8_t x, uint8_t y)
+{
+    if (x >= MAP_X_MAX || y >= MAP_Y_MAX)
     {
-        y += delta_y;
-        mark_empty(x = floor((x_0 + steps * delta_x * 400) / 400), y);
+        return -1;
     }
-}
-
-void mark_empty(uint8_t x, uint8_t y)
-{
     if (g_navigationMap[x][y] == 0)
     {
         g_navigationMap[x][y] = 1;
@@ -354,7 +371,13 @@ void mark_empty(uint8_t x, uint8_t y)
     {
         g_navigationMap[x][y] += 1;
     }
+    else
+    {
+        return -1;
+    }
+    return 0;
 }
+
 #define COM_UNIT_INTERFACE 1
 void send_map_update(uint8_t x, uint8_t y, int8_t value)
 {
@@ -461,55 +484,154 @@ Test_test(Test, calc_heading_and_pos)
 Test_test(Test, mark_empty)
 {
     g_navigationMap[0][0] = -2;
-    mark_empty(0, 0);
+    Test_assertEquals(mark_empty(0, 0), 0);
     Test_assertEquals(g_navigationMap[0][0], -1);
 
-    mark_empty(0, 0);
+    Test_assertEquals(mark_empty(0, 0), 0);
     Test_assertEquals(g_navigationMap[0][0], 0);
 
-    mark_empty(0, 0);
+    Test_assertEquals(mark_empty(0, 0), 0);
     Test_assertEquals(g_navigationMap[0][0], 1);
 
-    mark_empty(0, 0);
+    Test_assertEquals(mark_empty(0, 0), 0);
     Test_assertEquals(g_navigationMap[0][0], 2);
 
     g_navigationMap[0][0] = INT8_MAX;
-    mark_empty(0, 0);
+    Test_assertEquals(mark_empty(0, 0), -1);
     Test_assertEquals(g_navigationMap[0][0], INT8_MAX);
 
     g_navigationMap[0][0] = 0;
 }
 
-bool check_map(void)
+Test_test(Test, laser_loop_1)
 {
-    bool result = true;
-    stdout      = &mystdout;
-    for (uint8_t x = 0; x < MAP_X_MAX; ++x)
-    {
-        for (uint8_t y = 0; y < MAP_Y_MAX; ++y)
-        {
-            if (g_navigationMap[x][y] != 0)
-            {
-                printf("(%u, %u) = %d\n", x, y, g_navigationMap[x][y]);
-                result = false;
-            }
-        }
-    }
-    return result;
-}
-
-Test_test(Test, laser_loop_x)
-{
-    Test_assertTrue(check_map());
     // 2 cells straight to the right
-    laser_loop_x(2, 0, 0, +1.0, 0);
+    Test_assertEquals(laser_loop(2, 1, 200, +1.0, 0, mark_empty), 0);
 
     Test_assertEquals(g_navigationMap[1][0], 1);
     Test_assertEquals(g_navigationMap[2][0], 1);
     g_navigationMap[1][0] = 0;
     g_navigationMap[2][0] = 0;
-    Test_assertTrue(check_map());
 }
+
+Test_test(Test, laser_loop_2)
+{
+    // 2 cells straight to the left
+    Test_assertEquals(laser_loop(2, 2, 200, -1.0, 0, mark_empty), 0);
+
+    Test_assertEquals(g_navigationMap[2][0], 1);
+    Test_assertEquals(g_navigationMap[1][0], 1);
+    g_navigationMap[1][0] = 0;
+    g_navigationMap[2][0] = 0;
+}
+
+Test_test(Test, laser_loop_3)
+{
+    // 3 cells straight to the right into the wall
+    Test_assertEquals(laser_loop(3, MAP_X_MAX-3, 200,
+                +1.0, 0, mark_empty), 0);
+
+    Test_assertEquals(g_navigationMap[MAP_X_MAX-1][0], 1);
+    Test_assertEquals(g_navigationMap[MAP_X_MAX-2][0], 1);
+    Test_assertEquals(g_navigationMap[MAP_X_MAX-3][0], 1);
+    g_navigationMap[MAP_X_MAX-1][0] = 0;
+    g_navigationMap[MAP_X_MAX-2][0] = 0;
+    g_navigationMap[MAP_X_MAX-3][0] = 0;
+}
+
+Test_test(Test, laser_loop_4)
+{
+    // 4 cells straight to the left into the wall
+    Test_assertEquals(laser_loop(4, 3, 200, -1.0, 0, mark_empty), 0);
+
+    Test_assertEquals(g_navigationMap[3][0], 1);
+    Test_assertEquals(g_navigationMap[2][0], 1);
+    Test_assertEquals(g_navigationMap[1][0], 1);
+    Test_assertEquals(g_navigationMap[0][0], 1);
+
+    g_navigationMap[0][0] = 0;
+    g_navigationMap[1][0] = 0;
+    g_navigationMap[2][0] = 0;
+    g_navigationMap[3][0] = 0;
+}
+
+Test_test(Test, laser_loop_5)
+{
+    // 1/8 turn laser, hitting corners so nothing should be updated
+    Test_assertEquals(laser_loop(10, 1, 400, 1, 1.0, mark_empty), 0);
+}
+
+Test_test(Test, laser_loop_6)
+{
+    // 1/8 turn laser, starting in (200,0) and hitting the first x-wall
+    // at (400, 200).
+    Test_assertEquals(laser_loop(5, 1, 200, 1, 1.0, mark_empty), 0);
+
+    Test_assertEquals(g_navigationMap[1][0], 1);
+    Test_assertEquals(g_navigationMap[2][1], 1);
+    Test_assertEquals(g_navigationMap[3][2], 1);
+    Test_assertEquals(g_navigationMap[4][3], 1);
+    Test_assertEquals(g_navigationMap[5][4], 1);
+
+    g_navigationMap[1][0] = 0;
+    g_navigationMap[2][1] = 0;
+    g_navigationMap[3][2] = 0;
+    g_navigationMap[4][3] = 0;
+    g_navigationMap[5][4] = 0;
+}
+
+Test_test(Test, laser_loop_7)
+{
+    // 5/16 laser, starting in (,0) and hitting the first x-wall
+    // at (400, 200).
+    Test_assertEquals(laser_loop(4, 4, 200, -1, 2.4142135, mark_empty), 0);
+
+    Test_assertEquals(g_navigationMap[4][0], 1);
+    Test_assertEquals(g_navigationMap[3][2], 1);
+    Test_assertEquals(g_navigationMap[2][5], 1);
+    Test_assertEquals(g_navigationMap[1][7], 1);
+
+    g_navigationMap[4][0] = 0;
+    g_navigationMap[3][2] = 0;
+    g_navigationMap[2][5] = 0;
+    g_navigationMap[1][7] = 0;
+}
+
+Test_test(Test, laser_loop_8)
+{
+    // 11/16 laser, hitting the first wall at (1600,3400)
+    Test_assertEquals(laser_loop(4, 4, 8*400+200, -1, -2.41421356, mark_empty), 0);
+
+    Test_assertEquals(g_navigationMap[4][8], 1);
+    Test_assertEquals(g_navigationMap[3][6], 1);
+    Test_assertEquals(g_navigationMap[2][3], 1);
+    Test_assertEquals(g_navigationMap[1][1], 1);
+
+    g_navigationMap[4][8] = 0;
+    g_navigationMap[3][6] = 0;
+    g_navigationMap[2][3] = 0;
+    g_navigationMap[1][1] = 0;
+}
+
+Test_test(Test, laser_loop_9)
+{
+    // 25/32 laser, hitting the first wall at (1600,3400)
+    Test_assertEquals(laser_loop(4, 8, (MAP_Y_MAX-1)*400+200, 1,
+                -5.02733949, mark_empty), 0);
+
+    Test_assertEquals(g_navigationMap[8][24], 1);
+    Test_assertEquals(g_navigationMap[9][19], 1);
+    Test_assertEquals(g_navigationMap[10][14], 1);
+    Test_assertEquals(g_navigationMap[11][9], 1);
+
+    g_navigationMap[8][24] = 0;
+    g_navigationMap[9][19] = 0;
+    g_navigationMap[10][14] = 0;
+    g_navigationMap[11][9] = 0;
+}
+
+
+
 #endif
 
 /***** Code I'll delete soon probs ******/
