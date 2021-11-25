@@ -29,9 +29,6 @@ SENSOR_FLAGS = -D __SENSOR_UNIT__
 COMMUNICATION_FILES = Com_unit/main.c
 COMMUNICATION_FLAGS = -D __COMMUNICATION_UNIT__
 
-COMMON_FILES_WALLFOLLOW = AVR_common/robot.c
-NAVIGATION_FILES_WALLFOLLOW = Navigation_unit/navigation_unit.c Navigation_unit/nav_unit_com_interrupt_logic.c Navigation_unit/navigation.c
-
 # required to print floats, as per https://stackoverflow.com/a/26525329
 TEST_FLAGS = -Wl,-u,vfprintf -lprintf_flt -lm -D __TEST__
 TEST_FILES = AVR_testing/test.c
@@ -73,11 +70,5 @@ communication-atmel: communication
 	$(OBJCOPY) -O srec -R .eeprom -R .fuse -R .lock -R .signature -R .user_signatures "communication_unit.elf" "communication_unit.srec"
 	$(SIZE) "communication_unit.elf"
 
-navigation-test-wf:
-	$(GCC) $(COMMON_FILES_WALLFOLLOW) $(NAVIGATION_FILES_WALLFOLLOW) $(TEST_FILES) $(CFLAGS) $(TEST_FLAGS) -o navigation.elf
-
 clean:
-	#$(RM) navigation.elf
-	$(RM) "navigation_unit.elf" "navigation_unit.a" "navigation_unit.hex" "navigation_unit.lss" "navigation_unit.eep" "navigation_unit.map" "navigation_unit.srec" "navigation_unit.usersignatures"
-	$(RM) "sensor_unit.elf" "sensor_unit.a" "sensor_unit.hex" "sensor_unit.lss" "sensor_unit.eep" "sensor_unit.map" "sensor_unit.srec" "sensor_unit.usersignatures"
-	$(RM) "communication_unit.elf" "communication_unit.a" "communication_unit.hex" "communication_unit.lss" "communication_unit.eep" "communication_unit.map" "communication_unit.srec" "communication_unit.usersignatures"
+	-$(RM) *.elf *.a *.hex *.lss *.eep *.map *.srec *.usersignatures
