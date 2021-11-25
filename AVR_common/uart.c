@@ -48,7 +48,6 @@ void UART_Init(uint8_t interface)
 
 void UART_Transmit(uint8_t interface, uint8_t data )
 {
-	cli(); //disable interrupts
     if (interface == 0)
     {
         /* Wait for empty transmit buffer */
@@ -56,7 +55,7 @@ void UART_Transmit(uint8_t interface, uint8_t data )
             ;
         /* Put data into buffer, sends the data */
         UDR0 = data;
-		while( !(TXC0) )
+		while( !( UCSR0A & (1 << TXC0) ))
 		;
     }
     else
@@ -66,15 +65,15 @@ void UART_Transmit(uint8_t interface, uint8_t data )
             ;
         /* Put data into buffer, sends the data */
         UDR1 = data;
-		while( !(TXC1) )
+		while( !( UCSR1A & (1 << TXC1) ))
 		;
     }
-	sei(); //re enable interrupts
 }
 
 //add interrupts to the transmit part of the UART transmit also this part has not been tested
 void DATA_Transmit(uint8_t interface, struct data_packet *paket)
 {
+	cli(); //disable interrupts
     uint8_t header = (paket->address<<4) | (paket->byte_count<<1);
     UART_Transmit(interface, header);
 
@@ -82,11 +81,20 @@ void DATA_Transmit(uint8_t interface, struct data_packet *paket)
     uint8_t i = 0;
     while ( i < paket->byte_count ){
         /* Wait for empty transmit buffer */
-        while ( !( UCSR1A & (1<<UDRE1)) )
-            ;
+		if( interface == 0){
+			while( !( UCSR0A & (1 << TXC0) ))
+			;
+		}
+		else
+		{
+			while( !( UCSR1A & (1 << TXC1) ))
+			;
+		}
+		
         UART_Transmit( interface, paket->bytes[i] );
         i = i + 1;
     }
+	sei(); //re enable interrupts
 }
 
 uint8_t UART_Receive(uint8_t interface){
@@ -128,11 +136,19 @@ struct data_packet DATA_Receive( uint8_t interface )
     while ( i < ReceivedPaket.byte_count){
         /* Wait for data to be received */
         /* do we wait 2x the time here or not? I asume the check always passes
-         * in the other function making that check redundant */
-        while ( !(UCSR1A & (1<<RXC1)) )
-            ;
+         * in the other function making that check redundant */	
+        
         uint8_t currentRecivedPaket = UART_Receive( interface );
         ReceivedPaket.bytes[i] = currentRecivedPaket;
+		if ( interface == 0){
+			while ( !(UCSR0A & (1<<RXC0)) )
+			;
+		}
+		else
+		{
+			while ( !(UCSR1A & (1<<RXC1)) )
+			;
+		}
     }
     return ReceivedPaket;
 }
