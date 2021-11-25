@@ -7,11 +7,11 @@
 #include "adc.h"
 #include "lidar.h"
 #include "gyro.h"
-#include "../AVR_common/sensors.h"
-#include "../AVR_common/robot.h"
-#include "../AVR_common/uart.h"
+//#include "../AVR_common/sensors.h"
+//#include "../AVR_common/robot.h"
+//#include "../AVR_common/uart.h"
 
-void SendData();
+//void SendData();
 uint8_t OPENINGS = 40;
 uint8_t g_leftCount = 0;
 uint8_t g_rightCount = 0;
@@ -19,14 +19,13 @@ uint16_t g_lidarDistance = 0; // distance in mm
 bool g_readingDone = true;
 bool g_sentData = true;
 
-struct sensor_data data;
+//struct sensor_data data;
 /*
  * TODO:
  * implement storage in memory where all data is stored for sending
  * implement communication with other devices
  * move around functions to correct positions
  * testing functionality:
- * IR sensors
  * lidar sensor/s
  * odometer/s
  * MLX gyro
@@ -35,7 +34,7 @@ struct sensor_data data;
 void StartReading()
 {
 	g_readingDone = false;
-	cli();
+	/*cli();
 	AdcInit();
 	sei();
 	StartAdc();
@@ -46,8 +45,8 @@ void StartReading()
 	_delay_ms(1);
 	NextInputPin();
 	_delay_ms(1);
-	NextInputPin();
-	//MeasureLidar();
+	NextInputPin();*/
+	MeasureLidar();
 	//while(!g_IRDone){}
 	//StartMLX();
 	//g_readingDone = true;
@@ -73,23 +72,23 @@ int main(void)
 	PinInit();
 	TimerInit();
 	ExtInterruptInit();
-	UART_Init(0);
-	//MsTimerInit();
+	//UART_Init(0);
+	MsTimerInit();
 	sei();
 	StartReading();
-	SendData();
+	//SendData();
     while (1)
     {
 		if(true)
 		{
 			StartReading();
-			SendData();
+			//SendData();
 			_delay_ms(100);
 		}
     }
 }
 
-void SendData()
+/*void SendData()
 {
 	struct data_packet packet;
 	packet.address = IR_LEFTFRONT;
@@ -97,14 +96,14 @@ void SendData()
 	packet.bytes[0] = Uint16ToByte0(data.ir_leftfront);
 	packet.bytes[1] = Uint16ToByte1(data.ir_leftfront);
 	DATA_Transmit(0, &packet);
-}
+}*/
 void ConvertOdo()
 {
 	// converts odo count to mm traveled;
-	data.odometer_left = round(g_leftCount * 65 * M_PI / OPENINGS);
+	//data.odometer_left = round(g_leftCount * 65 * M_PI / OPENINGS);
 	g_leftCount = 0;
 	// store res
-	data.odometer_right = round(g_rightCount * 65 * M_PI / OPENINGS);
+	//data.odometer_right = round(g_rightCount * 65 * M_PI / OPENINGS);
 	g_rightCount = 0;
 	// store res
 }
@@ -128,7 +127,13 @@ ISR(ADC_vect)
 		cli();
 		IRDistance = ConvertVoltage(ADCVoltage);
 		sei();
-                data.ir_leftfront = IRDistance;
+		/*
+		 * ADMUX 0x40 = IR LF
+		 * ADMUX 0x41 = IR LB
+		 * ADMUX 0x42 = IR RF
+		 * ADMUX 0x43 = IR RB
+		 */
+		//data.ir_leftfront = IRDistance;
 		// store value in correct place in memory
 		//NextInputPin(); //update ADMUX
 		// update memory for next ad conversion
@@ -137,7 +142,7 @@ ISR(ADC_vect)
 
 ISR(PCINT1_vect)
 {
-	cli();
+	// works decently but sometimes wrong val (very)
 	uint16_t PWMTime = 0;
 	uint16_t firstTime = 0;
 	// PWMsignal is 4ms
@@ -145,10 +150,32 @@ ISR(PCINT1_vect)
 	{
 		//read clock
 		firstTime = TCNT1;
-		while (PINB & (1 << PINB5)){}
+		while (PINB & (1 << PINB5))
+		;
 		//read clock
 		PWMTime = TCNT1;
-		if(TIFR1 & 0x01)
+		PORTB |= (1 << PORTB6);
+		if(PWMTime < firstTime)
+		{
+			PWMTime += (0xFFFF - firstTime);
+		}
+		else
+		{
+			PWMTime -= firstTime;
+		}
+		g_lidarDistance = PWMTime / 2; 
+		g_lidarDistance -= 30; // back
+	}
+	else if ((PINB & (1 << PINB7)) && !(PINB & (1 << PINB4))) // if PB7 is high but not PB4 read pwm time
+	{
+		firstTime = TCNT1;
+		while (PINB & (1 << PINB7))
+		;
+		//read clock
+		PWMTime = TCNT1;
+		PORTB |= (1 << PINB4);
+		uint16_t temp = PWMTime;
+		if(PWMTime < firstTime)
 		{
 			PWMTime += (0xFFFF - firstTime);
 		}
@@ -157,24 +184,8 @@ ISR(PCINT1_vect)
 			PWMTime -= firstTime;
 		}
 		g_lidarDistance = PWMTime / 2;
+		g_lidarDistance -= 30;	// front
 	}
-	else if ((PINB & (1 << PINB7)) && !(PINB & (1 << PINB4))) // if PB7 is high but not PB4 read pwm time
-	{
-		firstTime = TCNT1;
-		while (PINB & (1 << PINB7)){}
-		//read clock
-		PWMTime = TCNT1;
-		if(TIFR1 & 0x01)
-		{
-			PWMTime += (0xFFFF - firstTime);
-		}
-		else
-		{
-			PWMTime -= firstTime; // PWMTime is about 20-50 too big
-		}
-		g_lidarDistance = PWMTime / 2;
-	}
-	sei();
 	// save lidar distance
 }
 ISR(PCINT2_vect)
