@@ -1,3 +1,5 @@
+
+
 #include <stdint.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -15,6 +17,7 @@
 
 void UART_Init(uint8_t interface)
 {
+	/*this function set the correct bits in the various regs current baud is 9600 at clock at 16Mhz */
     if (interface == 0)
     {
         /* Set baud rate see page 174 in avr documentation*/
@@ -48,6 +51,7 @@ void UART_Init(uint8_t interface)
 
 void UART_Transmit(uint8_t interface, uint8_t data )
 {
+	/*this funktion is the basic uart send funktion that puts data in the UDRn atmega does the rest*/
     if (interface == 0)
     {
         /* Wait for empty transmit buffer */
@@ -70,9 +74,12 @@ void UART_Transmit(uint8_t interface, uint8_t data )
     }
 }
 
+
 //add interrupts to the transmit part of the UART transmit also this part has not been tested
 void DATA_Transmit(uint8_t interface, struct data_packet *paket)
 {
+	/*This funktion sends a struct byte by byte*/
+	
 	cli(); //disable interrupts
     uint8_t header = (paket->address<<4) | (paket->byte_count<<1);
     UART_Transmit(interface, header);
@@ -97,8 +104,9 @@ void DATA_Transmit(uint8_t interface, struct data_packet *paket)
 	sei(); //re enable interrupts
 }
 
-uint8_t UART_Receive(uint8_t interface){
-    /* this part need to be uppdate to become and isr or intrup driven reciver atleast so we dont sample all the time */
+uint8_t UART_Receive(uint8_t interface)
+{
+    /* This funktion is the basic reciver funktion who returns UDRn data to caller */
     if (interface == 0)
     {
         /* This part might not be need need to check*/
@@ -122,24 +130,36 @@ uint8_t UART_Receive(uint8_t interface){
 
 struct data_packet DATA_Receive( uint8_t interface )
 {
+	/*this funktion recives struct byte by byte*/
+	
     //creat an instance of a new paket to return once called by the ISR
     struct data_packet ReceivedPaket;
 
     //receive the first byte that contain all the info we need for receive the rest
-    uint8_t header = UART_Receive( interface );
+    uint8_t temp = UART_Receive( interface );
+	
+	/*this part reverse the bit order so we get back correct info after serial tx*/
+	uint8_t header = ( (temp>>4) & 0xF0) | ( ( temp << 4 ) & 0x0F );
 
-    ReceivedPaket.address = (header>>4) & 0xF;
-    ReceivedPaket.byte_count = (header>>2) & 0x7;
+    ReceivedPaket.address = ( ( header >> 4 ) & 0x0F );
+    ReceivedPaket.byte_count = ( ( header >> 2 ) & 0x07 );
 
     /*receive the rest of the data*/
     uint8_t i = 0;
-    while ( i < ReceivedPaket.byte_count){
+	
+	//for loop implemetion as to not get stuck in case of miss math of packets
+    for( i = 0; i < ReceivedPaket.byte_count; ++i)
+	{
         /* Wait for data to be received */
         /* do we wait 2x the time here or not? I asume the check always passes
          * in the other function making that check redundant */	
         
-        uint8_t currentRecivedPaket = UART_Receive( interface );
-        ReceivedPaket.bytes[i] = currentRecivedPaket;
+		//this part reverse the bit order so we get back correct info after serial tx
+		uint8_t temp = UART_Receive( interface );
+        uint8_t CurrentRecivedPaket = ( (temp>>4) & 0xF0) | ( ( temp << 4 ) & 0x0F );
+		
+		//set no correct byte to a byte in the struct
+        ReceivedPaket.bytes[i] = CurrentRecivedPaket;
 		if ( interface == 0){
 			while ( !(UCSR0A & (1<<RXC0)) )
 			;
@@ -150,6 +170,7 @@ struct data_packet DATA_Receive( uint8_t interface )
 			;
 		}
     }
+	//return the now hopefully correct struct
     return ReceivedPaket;
 }
 
