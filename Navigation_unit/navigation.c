@@ -503,20 +503,9 @@ Test_test(Test, test_walls_and_openings)
     Test_assertEquals(is_wall(3), true);
 
     // reset map
-    for (int x = 0; x < MAP_X_MAX; x++)
-    {
-        for (int y = 0; y < MAP_Y_MAX; y++)
-        {
-            MakeUnknown(x, y);
-        }
-    }
-    for (int x = 0; x < MAP_X_MAX; x++)
-    {
-        for (int y = 0; y < MAP_Y_MAX; y++)
-        {
-            MakeWall(x, y);
-        }
-    }
+    MakeUnknown(25, 0);
+    MakeUnknown(23, 0);
+    MakeUnknown(24, 1);
 
     // trying to inspect cell that is outside of map currently
     MakeEmpty(23, 0);
@@ -527,19 +516,22 @@ Test_test(Test, test_walls_and_openings)
     Test_assertEquals(is_wall(2), false);
     Test_assertEquals(is_wall(3), true);
 
-    for (int x = 0; x < MAP_X_MAX; x++)
-    {
-        for (int y = 0; y < MAP_Y_MAX; y++)
-        {
-            MakeUnknown(x, y);
-        }
-    }
+    MakeUnknown(23, 0);
+    MakeUnknown(24, 1);
+    MakeUnknown(25, 0);
 }
 
 Test_test(Test, test_navigation_goals)
 {
+    uint16_t oldHeading = g_currentHeading;
+    bool                oldGoalSet         = g_navigationGoalSet;
+    uint8_t             oldNavigationGoalX = g_navigationGoalX;
+    uint8_t             oldNavigationGoalY = g_navigationGoalY;
+    uint8_t             oldNavigationGoalHeading = g_navigationGoalHeading;
+
     MakeWall(25, 0);
     MakeWall(24, 1);
+    g_currentHeading = 0;
     Test_assertEquals(is_wall(2), false);
     Test_assertEquals(is_wall(1), true);
 
@@ -557,14 +549,17 @@ Test_test(Test, test_navigation_goals)
     MakeUnknown(24, 1);
     wall_follow();
     Test_assertEquals(g_navigationGoalHeading, FULL_TURN / 4);
-    for (int x = 0; x < MAP_X_MAX; x++)
-    {
-        for (int y = 0; y < MAP_Y_MAX; y++)
-        {
-            MakeUnknown(x, y);
-        }
-    }
+
+    MakeUnknown(25, 0);
+    MakeUnknown(23, 0);
+
     Test_assertEquals(g_navigationGoalHeading, FULL_TURN / 4);
     init_wall_follow();
     Test_assertEquals(g_navigationGoalHeading, FULL_TURN / 2);
+
+    g_navigationGoalSet = oldGoalSet;
+    g_currentHeading = oldHeading;
+    g_navigationGoalX   = oldNavigationGoalX;
+    g_navigationGoalY   = oldNavigationGoalY;
+    g_navigationGoalHeading = oldNavigationGoalHeading;
 }

@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Atmel Studio Solution File, Format Version 11.00
+VisualStudioVersion = 14.0.23107.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "sensor_unit", "sensor_unit.cproj", "{78241F31-61EC-4570-AEA4-D79EDD66E4F5}"
+EndProject
+Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "navigation_unit", "navigation_unit.cproj", "{5A81646D-901B-4AC5-9C2C-7BC56F07C8CB}"
+EndProject
+Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "communication_unit", "communication_unit.cproj", "{AC6F7098-4FB8-42C7-89FD-CB8801626AD3}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|AVR = Debug|AVR
+		Release|AVR = Release|AVR
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{78241F31-61EC-4570-AEA4-D79EDD66E4F5}.Debug|AVR.ActiveCfg = Debug|AVR
+		{78241F31-61EC-4570-AEA4-D79EDD66E4F5}.Debug|AVR.Build.0 = Debug|AVR
+		{78241F31-61EC-4570-AEA4-D79EDD66E4F5}.Release|AVR.ActiveCfg = Release|AVR
+		{78241F31-61EC-4570-AEA4-D79EDD66E4F5}.Release|AVR.Build.0 = Release|AVR
+		{5A81646D-901B-4AC5-9C2C-7BC56F07C8CB}.Debug|AVR.ActiveCfg = Debug|AVR
+		{5A81646D-901B-4AC5-9C2C-7BC56F07C8CB}.Debug|AVR.Build.0 = Debug|AVR
+		{5A81646D-901B-4AC5-9C2C-7BC56F07C8CB}.Release|AVR.ActiveCfg = Release|AVR
+		{5A81646D-901B-4AC5-9C2C-7BC56F07C8CB}.Release|AVR.Build.0 = Release|AVR
+		{AC6F7098-4FB8-42C7-89FD-CB8801626AD3}.Debug|AVR.ActiveCfg = Debug|AVR
+		{AC6F7098-4FB8-42C7-89FD-CB8801626AD3}.Debug|AVR.Build.0 = Debug|AVR
+		{AC6F7098-4FB8-42C7-89FD-CB8801626AD3}.Release|AVR.ActiveCfg = Release|AVR
+		{AC6F7098-4FB8-42C7-89FD-CB8801626AD3}.Release|AVR.Build.0 = Release|AVR
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

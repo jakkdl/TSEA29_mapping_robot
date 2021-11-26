@@ -154,6 +154,21 @@ bool check_reset_map(void)
 }
 #endif
 
+
+#define test_reset_global(var, value) \
+        if (var != value) \
+        { \
+            if (m_Test_activeTest->testResult == SUCCESS) \
+            { \
+                printf("FAIL: %s after test\n    " #var " not reset to " #value "\n", \
+                        m_Test_activeTest->name); \
+                m_Test_result.successCount--; \
+                m_Test_result.failureCount++; \
+                m_Test_activeTest->testResult = FAILURE; \
+            } \
+            var = value; \
+        }
+
 // Run through all the tests
 void Test_runall(void)
 {
@@ -205,29 +220,34 @@ void Test_runall(void)
             printf(m_Test_activeTest->message);
             m_Test_result.failureCount++;
         }
-
+        //printf("%s\n", m_Test_activeTest->name);
 #if __NAVIGATION_UNIT__
-        Test_assertEqualLog(g_navigationMode, MANUAL, -1);
-        Test_assertEqualLog(g_pdKd, 0, -1);
-        Test_assertEqualLog(g_pdKp, 0, -1);
-        Test_assertEqualLog(g_currentHeading, FULL_TURN/4, -1);
-        Test_assertEqualLog(g_currentPosX, GridToMm(24), -1);
-        Test_assertEqualLog(g_currentPosY, 0, -1);
-        Test_assertEqualLog(g_wheelDirectionLeft, DIR_FORWARD, -1);
-        Test_assertEqualLog(g_wheelDirectionRight, DIR_FORWARD, -1);
-        Test_assertEqualLog(g_wheelSpeedLeft, 0, -1);
-        Test_assertEqualLog(g_wheelSpeedRight, 0, -1);
-        Test_assertEqualLog(g_navigationGoalSet, false, -1);
-        Test_assertEqualLog(g_navigationGoalX, 24, -1);
-        Test_assertEqualLog(g_navigationGoalY, 0, -1);
-        Test_assertEqualLog(g_navigationGoalHeading, 0, -1);
-        if (!check_reset_map())
+        if (m_Test_activeTest->testResult == SUCCESS)
         {
-            printf("FAIL: \"%s\" left garbage in the map according to above\n",
-                    m_Test_activeTest->name);
+            test_reset_global(g_navigationMode, MANUAL)
+            test_reset_global(g_pdKd, 0)
+            test_reset_global(g_pdKp, 0)
+            test_reset_global(g_currentHeading, FULL_TURN/4)
+            test_reset_global(g_currentPosX, GridToMm(24))
+            test_reset_global(g_currentPosY, 0)
+            test_reset_global(g_wheelDirectionLeft, DIR_FORWARD)
+            test_reset_global(g_wheelDirectionRight, DIR_FORWARD)
+            test_reset_global(g_wheelSpeedLeft, 0)
+            test_reset_global(g_wheelSpeedRight, 0)
+            test_reset_global(g_navigationGoalSet, false)
+            test_reset_global(g_navigationGoalX, 24)
+            test_reset_global(g_navigationGoalY, 0)
+            test_reset_global(g_navigationGoalHeading, 0)
+            if (!check_reset_map() && m_Test_activeTest->testResult == SUCCESS)
+            {
+                printf("FAIL: \"%s\" left garbage in the map according to above\n",
+                        m_Test_activeTest->name);
+                m_Test_result.successCount--;
+                m_Test_result.failureCount++;
+                m_Test_activeTest->testResult = FAILURE;
+            }
         }
 #endif
-
 
         __asm__("nop");
 

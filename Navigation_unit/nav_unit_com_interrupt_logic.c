@@ -199,6 +199,7 @@ Test_test(Test, uartCommand_turn_left)
     bool                oldGoalSet               = g_navigationGoalSet;
     enum NavigationMode oldNavigationMode        = g_navigationMode;
     uint16_t            oldNavigationGoalHeading = g_navigationGoalHeading;
+    uint16_t oldHeading = g_currentHeading;
 
     struct data_packet data;
     data.address    = COMMAND;
@@ -225,6 +226,7 @@ Test_test(Test, uartCommand_turn_left)
     g_navigationGoalSet     = oldGoalSet;
     g_navigationMode        = oldNavigationMode;
     g_navigationGoalHeading = oldNavigationGoalHeading;
+    g_currentHeading = oldHeading;
 }
 
 Test_test(Test, uartCommand_fw_left)
@@ -233,6 +235,8 @@ Test_test(Test, uartCommand_fw_left)
     enum NavigationMode oldNavigationMode  = g_navigationMode;
     uint8_t             oldNavigationGoalX = g_navigationGoalX;
     uint8_t             oldNavigationGoalY = g_navigationGoalY;
+    uint8_t             oldNavigationGoalHeading = g_navigationGoalHeading;
+    uint16_t oldHeading = g_currentHeading;
 
     struct data_packet data;
     data.address    = COMMAND;
@@ -262,5 +266,7 @@ Test_test(Test, uartCommand_fw_left)
     g_navigationMode    = oldNavigationMode;
     g_navigationGoalX   = oldNavigationGoalX;
     g_navigationGoalY   = oldNavigationGoalY;
+    g_currentHeading = oldHeading;
+    g_navigationGoalHeading = oldNavigationGoalHeading;
 }
 #endif

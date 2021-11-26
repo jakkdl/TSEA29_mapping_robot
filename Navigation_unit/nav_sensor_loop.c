@@ -22,8 +22,6 @@ bool   arrived_at_goal(void);
 
 int8_t handle_sensor_data(struct data_packet* data)
 {
-    // Check for parity error?
-
     // check packet count
     if (data->address != ADR_DEBUG)
     {
