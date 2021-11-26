@@ -1,6 +1,7 @@
 from tkinter import *
-from ctypes import *
-
+import serial
+# port=""
+#bluetooth = serial.Serial(port, xxxx)
 """ 
 Get g_navigationMap -> Redraw the map
 Get currentPosX and currentPosY -> Redraw the robot + output in information section
@@ -8,19 +9,25 @@ Get direction -> Outpu in information section
 Get sensordata -> Output in console
 """
 
+"""
+INSTRUCTIONS:
+
+Use arrow keys to send movement input. Press space to pause autoscrolling in the console.
+"""
+
 
 class Constants:
 
     FRAME_WIDTH = 1445
     FRAME_HEIGHT = 1000
-    MAP_DELAY = 400
-    CONSOLE_DELAY = 400
+    DELAY = 400
     ONE_STEP = 20
     CELL_SIZE = 20
     PADDING = 10
     ROBOT_X = 24
     ROBOT_Y = 24
     AUTO_SCROLL = True
+    AUTONOMOUS = True
 
     # MAP will be replaced with the internal map representation for the robot (g_navigationMap)
     MAP = [[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -80,9 +87,9 @@ class Map(LabelFrame):
     def __init__(self, parent):
         LabelFrame.__init__(self, parent)
         self.parent = parent
-        self.after(Constants.MAP_DELAY, self.onTimer)
+        self.after(Constants.DELAY, self.onTimer)
         CELL_SIZE = 20
-        SPACING = 2
+        SPACING = 4
         self.canvas = Canvas(self, width=CELL_SIZE * 49, height=CELL_SIZE * 25)
 
         for x in range(49):
@@ -124,7 +131,7 @@ class Map(LabelFrame):
     def onTimer(self):
         '''creates a cycle each timer event'''
         self.moveRobot()
-        self.after(Constants.MAP_DELAY, self.onTimer)
+        self.after(Constants.DELAY, self.onTimer)
 
 
 class Console(LabelFrame):
@@ -134,7 +141,7 @@ class Console(LabelFrame):
     def __init__(self, parent):
         LabelFrame.__init__(self, parent, bg='black')
         self.parent = parent
-        self.after(Constants.CONSOLE_DELAY, self.onTimer)
+        self.after(Constants.DELAY, self.onTimer)
         self.index = 0
         self.canvas = Canvas(self, bg='black', width=970, height=306)
         self.frame = Frame(self.canvas, bg='black')
@@ -166,7 +173,7 @@ class Console(LabelFrame):
     def onTimer(self):
         '''creates a cycle each timer event'''
         self.updateConsole()
-        self.after(Constants.CONSOLE_DELAY, self.onTimer)
+        self.after(Constants.DELAY, self.onTimer)
 
 
 class Controls(LabelFrame):
@@ -193,10 +200,13 @@ class Controls(LabelFrame):
         self.canvas.create_polygon(upArrow, tags="up_arrow")
         self.canvas.create_polygon(downArrow, tags="down_arrow")
 
-        button1 = Button(self, text="MODE", anchor=S)
-        button1.configure(width=10, activebackground="#33B5E5", relief=FLAT)
-        button1_window = self.canvas.create_window(
-            210, 450, anchor=S, window=button1)
+        self.button1 = Button(self, text="MODE", width=10,
+                              command=self.setNavigationMode, state=NORMAL)
+        self.button1_window = self.canvas.create_window(
+            210, 450, anchor=S, window=self.button1)
+        self.inputField = Entry(self)
+        self.inputField_window = self.canvas.create_window(
+            210, 490, anchor=S, window=self.inputField)
 
     def onKeyPressed(self, e):
         '''controls direction variables with cursor keys'''
@@ -230,10 +240,7 @@ class Controls(LabelFrame):
         # Pauses the autoscroll in the console
         SPACE = "space"
         if key == SPACE:
-            if Constants.AUTO_SCROLL:
-                Constants.AUTO_SCROLL = False
-            else:
-                Constants.AUTO_SCROLL = True
+            Constants.AUTO_SCROLL = not Constants.AUTO_SCROLL
 
     def onKeyReleased(self, e):
 
@@ -263,6 +270,13 @@ class Controls(LabelFrame):
             self.canvas.itemconfig(arrow, fill='black')
             print("Go backwards")
 
+    def setNavigationMode(self):
+        # self.button1.config(relief=SUNKEN)
+        Constants.AUTONOMOUS = not Constants.AUTONOMOUS
+
+    def setPd():
+        print("Hello")
+
 
 class Information(LabelFrame):
 
@@ -271,14 +285,28 @@ class Information(LabelFrame):
     def __init__(self, parent):
         LabelFrame.__init__(self, parent)
         self.parent = parent
-        canvas = Canvas(self, bg='gray', width=420, height=299)
-        canvas.create_text(Constants.PADDING,
-                           Constants.PADDING, font=("Purisa", 20), text="Position: ", anchor=NW, tags="position_text")
-        canvas.create_text(Constants.PADDING,
-                           Constants.PADDING * 4, font=("Purisa", 20), text="Direction: ", anchor=NW, tags="heading_text")
-        canvas.create_text(Constants.PADDING, Constants.PADDING * 7,
-                           font=("Purisa", 20), text="Mode: ", anchor=NW, tags="mode_text")
-        canvas.pack(side=LEFT)
+        self.after(Constants.DELAY, self.onTimer)
+        self.canvas = Canvas(self, bg='gray', width=420, height=299)
+        self.canvas.create_text(Constants.PADDING,
+                                Constants.PADDING, font=("Purisa", 20), text="Position: ", anchor=NW, tags="position_text")
+        self.canvas.create_text(Constants.PADDING,
+                                Constants.PADDING * 4, font=("Purisa", 20), text="Direction: ", anchor=NW, tags="heading_text")
+        self.canvas.create_text(Constants.PADDING, Constants.PADDING * 7,
+                                font=("Purisa", 20), text="Mode: ", anchor=NW, tags="mode_text")
+        self.canvas.pack(side=LEFT)
+
+    def updateInforamation(self):
+        '''updates the console'''
+        mode = self.canvas.find_withtag("mode_text")
+        if(Constants.AUTONOMOUS):
+            self.canvas.itemconfig(mode, text="Mode: AUTONOMOUS")
+        else:
+            self.canvas.itemconfig(mode, text="Mode: MANUAL")
+
+    def onTimer(self):
+        '''creates a cycle each timer event'''
+        self.updateInforamation()
+        self.after(Constants.DELAY, self.onTimer)
 
 
 def main():
