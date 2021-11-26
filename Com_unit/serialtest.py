@@ -17,18 +17,21 @@ def lisener():
     run in the back ground
     """""
     while True:
-        header = ser.read()
+        temp = ser.read()
+        header = ( ( temp >> 4 ) & 0xF0 ) | ( ( temp << 4 ) & 0x0F )
         out = []
         addr = ( ( header >> 4 ) & 0x0F )
         count = ( ( header >> 1) & 0x07 )
 
         out.append( addr )
         out.append( count )
-        for _ in range( count - 1 ):
-            paket = ser.read()
+        i = 0
+        while( i < count ):
+            temp = ser.read()
+            paket = ( ( temp >> 4 ) & 0xF0 ) | ( ( temp << 4 ) & 0x0F )
             out.append( paket )
-        else:
-            print(out)
+            i += 1        
+        print(out)
 
 def Write():
     data_bytes = bytes(b'\xB2\x01')
@@ -36,11 +39,15 @@ def Write():
         time.sleep()
         ser.write( data_bytes )
 
-tl0 = threading.Thread( target = lisener )
-tl1 = threading.Thread( target = write)
+def main():
+    tl0 = threading.Thread( target = lisener )
+    tl1 = threading.Thread( target = write)
 
-t0.start
-t1.start
+    t0.start
+    t1.start
 
-while True:
-    pass
+    while True:
+        pass
+
+if __name__ == '__main__':
+    main()
