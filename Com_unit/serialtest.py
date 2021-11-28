@@ -17,7 +17,7 @@ def lisener():
     run in the back ground
     """""
     while True:
-        temp = ser.read()
+        temp = ser.read().hex()
         header = ( ( temp >> 4 ) & 0xF0 ) | ( ( temp << 4 ) & 0x0F )
         out = []
         addr = ( ( header >> 4 ) & 0x0F )
@@ -27,7 +27,7 @@ def lisener():
         out.append( count )
         i = 0
         while( i < count ):
-            temp = ser.read()
+            temp = ser.read().hex()
             paket = ( ( temp >> 4 ) & 0xF0 ) | ( ( temp << 4 ) & 0x0F )
             out.append( paket )
             i += 1        
