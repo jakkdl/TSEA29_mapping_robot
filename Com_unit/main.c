@@ -1,6 +1,7 @@
 #define F_CPU 16000000UL
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <util/delay.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -11,11 +12,13 @@ bool packet;
 struct data_packet currentPaket;
 
 int main(void)
-{
+{	
+	/*main loop in com unit does nothing as it just works as a pass thought no error handling*/
 	UART_Init( 0 );
 	UART_Init( 1 );
     sei();
     while(1){
+		_delay_ms(100);
 		
     };
 }

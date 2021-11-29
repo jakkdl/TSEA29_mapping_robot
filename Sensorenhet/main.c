@@ -100,12 +100,14 @@ int main(void)
 void ConvertOdo()
 {
 	// converts odo count to mm traveled;
-	//data.odometer_left = round(g_leftCount * 65 * M_PI / OPENINGS);
-	g_leftCount = 0;
+	//data.odometer_left = round(g_leftCount * 65 * M_PI / OPENINGS); // max is 50 mm /cycle / 10 pegs
+	g_leftCount = round(g_leftCount * 65 * M_PI / OPENINGS);;
 	// store res
-	//data.odometer_right = round(g_rightCount * 65 * M_PI / OPENINGS);
+	//data.odometer_right = round(g_rightCount * 65 * M_PI / OPENINGS); // const 5.105088
+	g_rightCount = round(g_rightCount * 65 * M_PI / OPENINGS);;
+	// store res
 	g_rightCount = 0;
-	// store res
+	g_leftCount = 0;
 }
 
 ISR(ADC_vect)
@@ -140,65 +142,16 @@ ISR(ADC_vect)
 	}
 }
 
-ISR(PCINT1_vect)
+ISR(INT0_vect)
 {
-	// works decently but sometimes wrong val (very)
-	uint16_t PWMTime = 0;
-	uint16_t firstTime = 0;
-	// PWMsignal is 4ms
-	if ((PINB & (1 << PINB5)) && !(PINB & (1 << PINB6))) // if PB5 is high but not PB4
-	{
-		//read clock
-		firstTime = TCNT1;
-		while (PINB & (1 << PINB5))
-		;
-		//read clock
-		PWMTime = TCNT1;
-		PORTB |= (1 << PORTB6);
-		if(PWMTime < firstTime)
-		{
-			PWMTime += (0xFFFF - firstTime);
-		}
-		else
-		{
-			PWMTime -= firstTime;
-		}
-		g_lidarDistance = PWMTime / 2; 
-		g_lidarDistance -= 30; // back
-	}
-	else if ((PINB & (1 << PINB7)) && !(PINB & (1 << PINB4))) // if PB7 is high but not PB4 read pwm time
-	{
-		firstTime = TCNT1;
-		while (PINB & (1 << PINB7))
-		;
-		//read clock
-		PWMTime = TCNT1;
-		PORTB |= (1 << PINB4);
-		uint16_t temp = PWMTime;
-		if(PWMTime < firstTime)
-		{
-			PWMTime += (0xFFFF - firstTime);
-		}
-		else
-		{
-			PWMTime -= firstTime;
-		}
-		g_lidarDistance = PWMTime / 2;
-		g_lidarDistance -= 30;	// front
-	}
-	// save lidar distance
+	g_leftCount++;
 }
-ISR(PCINT2_vect)
+
+ISR(INT1_vect)
 {
-	if(PINC & (1 << PINC0))
-	{
-		g_leftCount++;
-	}
-	else if (PINC & (1 << PINC1))
-	{
-		g_rightCount++;
-	}
+	g_rightCount++;
 }
+
 ISR(TIMER3_COMPA_vect)
 {
 	ConvertOdo();
