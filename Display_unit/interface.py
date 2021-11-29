@@ -1,5 +1,7 @@
 from tkinter import *
-import serial
+#import bluetooth
+#from bluetooth.bluez import lookup_name
+#import serial
 # port=""
 #bluetooth = serial.Serial(port, xxxx)
 """ 
@@ -8,6 +10,8 @@ Get currentPosX and currentPosY -> Redraw the robot + output in information sect
 Get direction -> Outpu in information section
 Get sensordata -> Output in console
 """
+
+#nearby_devices = bluetooth.discover_devices(lookup_names=True)
 
 """
 INSTRUCTIONS:
