@@ -175,7 +175,7 @@ ISR( USART0_RX_vect )
     cli(); //disable interrupts
     struct data_packet received = DATA_Receive(0);
     sei(); //re enable interrupts
-    handle_sensor_data(&received);
+    communication_unit_interrupt(&received);
 }
 #endif
 
@@ -185,6 +185,7 @@ ISR( USART1_RX_vect )
     cli(); //disable interrupts
     struct data_packet received = DATA_Receive(1);
     sei(); //re enable interrupts
-    communication_unit_interrupt(&received);
+    
+	handle_sensor_data(&received);
 }
 #endif

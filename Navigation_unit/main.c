@@ -6,8 +6,6 @@
 #include "pwm_timer.h"
 #include "navigation_unit.h"
 
-uint8_t g_leftSpeed = 0;
-uint8_t g_rightSpeed = 0;
 
 int main(void)
 {
@@ -20,7 +18,6 @@ int main(void)
     UART_Init(1);
 
 
-    g_leftSpeed = 0x00;
 
     // timer init?
     // TCNT1 = 0x0000;
@@ -34,7 +31,7 @@ int main(void)
 #endif
     //g_wheelSpeedLeft = 0x30;
     //_delay_ms(1);
-    g_wheelSpeedLeft = 0x0;
+    g_wheelSpeedLeft = 0x00;
     while(1)
     {
     }

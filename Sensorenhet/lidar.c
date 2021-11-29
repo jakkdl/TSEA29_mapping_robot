@@ -19,7 +19,7 @@ void MeasureLidar()
 			//read clock
 			PWMTime = TCNT1;
 			PORTB |= (1 << PORTB4);
-			uint16_t temp = PWMTime;
+			//uint16_t temp = PWMTime;
 			if(PWMTime < firstTime)
 			{
 				PWMTime += (0xFFFF - firstTime);
@@ -37,9 +37,10 @@ void MeasureLidar()
 	PWMTime = 0;
 	firstTime = 0;
 	PORTB &= ~(0x40); // pull PB6 low to start PWM reading from lidar B
+	/*
 	while(!(PINB & (1 << PINB6)))
 	{
-		if ((PINB & (1 << PINB5)) && !(PINB & (1 << PINB6))) // if PB5 is high but not PB4
+		if ((PINB & (1 << PINB5)) && !(PINB & (1 << PINB6))) // if PB5 is high but not PB6
 		{
 			//read clock
 			firstTime = TCNT1;
@@ -59,7 +60,7 @@ void MeasureLidar()
 			lidarB= PWMTime / 2;
 			lidarB -= 55; // back
 		}
-	}
+	}*/
 	sei();
 }
 

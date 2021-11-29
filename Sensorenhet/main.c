@@ -7,11 +7,11 @@
 #include "adc.h"
 #include "lidar.h"
 #include "gyro.h"
-//#include "../AVR_common/sensors.h"
-//#include "../AVR_common/robot.h"
-//#include "../AVR_common/uart.h"
+#include "../AVR_common/sensors.h"
+#include "../AVR_common/robot.h"
+#include "../AVR_common/uart.h"
 
-//void SendData();
+void SendData();
 uint8_t OPENINGS = 40;
 uint8_t g_leftCount = 0;
 uint8_t g_rightCount = 0;
@@ -19,7 +19,7 @@ uint16_t g_lidarDistance = 0; // distance in mm
 bool g_readingDone = true;
 bool g_sentData = true;
 
-//struct sensor_data data;
+struct sensor_data data;
 /*
  * TODO:
  * implement storage in memory where all data is stored for sending
@@ -34,7 +34,7 @@ bool g_sentData = true;
 void StartReading()
 {
 	g_readingDone = false;
-	/*cli();
+	cli();
 	AdcInit();
 	sei();
 	StartAdc();
@@ -45,7 +45,7 @@ void StartReading()
 	_delay_ms(1);
 	NextInputPin();
 	_delay_ms(1);
-	NextInputPin();*/
+	NextInputPin();
 	MeasureLidar();
 	//while(!g_IRDone){}
 	//StartMLX();
@@ -72,7 +72,7 @@ int main(void)
 	PinInit();
 	TimerInit();
 	ExtInterruptInit();
-	//UART_Init(0);
+	UART_Init(0);
 	MsTimerInit();
 	sei();
 	StartReading();
@@ -82,13 +82,13 @@ int main(void)
 		if(true)
 		{
 			StartReading();
-			//SendData();
+			SendData();
 			_delay_ms(100);
 		}
     }
 }
 
-/*void SendData()
+void SendData()
 {
 	struct data_packet packet;
 	packet.address = IR_LEFTFRONT;
@@ -96,7 +96,7 @@ int main(void)
 	packet.bytes[0] = Uint16ToByte0(data.ir_leftfront);
 	packet.bytes[1] = Uint16ToByte1(data.ir_leftfront);
 	DATA_Transmit(0, &packet);
-}*/
+}
 void ConvertOdo()
 {
 	// converts odo count to mm traveled;
@@ -135,9 +135,23 @@ ISR(ADC_vect)
 		 * ADMUX 0x42 = IR RF
 		 * ADMUX 0x43 = IR RB
 		 */
-		//data.ir_leftfront = IRDistance;
+		switch (ADMUX)
+		{
+			case 0x40:
+				data.ir_leftfront = IRDistance;
+				break;
+			case 0x41:
+				data.ir_leftback = IRDistance;
+				break;
+			case 0x42:
+				data.ir_rightfront = IRDistance;
+				break;
+			case 0x43:
+				data.ir_rightback = IRDistance;
+		}
+		
 		// store value in correct place in memory
-		//NextInputPin(); //update ADMUX
+		NextInputPin(); //update ADMUX
 		// update memory for next ad conversion
 	}
 }
