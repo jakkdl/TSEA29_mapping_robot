@@ -17,39 +17,24 @@ uint8_t g_leftCount = 0;
 uint8_t g_rightCount = 0;
 uint16_t g_lidarDistance = 0; // distance in mm
 bool g_readingDone = true;
-bool g_sentData = true;
+bool g_sendData = false;
 
 struct sensor_data data;
 /*
  * TODO:
- * implement storage in memory where all data is stored for sending
  * implement communication with other devices
  * move around functions to correct positions
  * testing functionality:
- * lidar sensor/s
- * odometer/s
  * MLX gyro
  */
 
 void StartReading()
 {
 	g_readingDone = false;
-	cli();
-	AdcInit();
-	sei();
-	StartAdc();
-	_delay_ms(1);
-	NextInputPin();
-	_delay_ms(1);
-	NextInputPin();
-	_delay_ms(1);
-	NextInputPin();
-	_delay_ms(1);
-	NextInputPin();
-	MeasureLidar();
-	//while(!g_IRDone){}
-	//StartMLX();
-	//g_readingDone = true;
+	MeasureIR();
+	data.lidar_forward = MeasureLidarFront();
+	data.lidar_backward = MeasureLidarBack();
+	MeasureMLX();
 }
 
 void PinInit()
@@ -67,6 +52,7 @@ void PinInit()
 	DDRD |= (1 << PORTD1);
 	PORTD = 0x00;
 }
+
 int main(void)
 {
 	PinInit();
@@ -76,14 +62,13 @@ int main(void)
 	MsTimerInit();
 	sei();
 	StartReading();
-	//SendData();
     while (1)
     {
-		if(true)
+		if(g_readingDone && g_sendData)
 		{
-			StartReading();
 			SendData();
-			_delay_ms(100);
+			StartReading();
+			//_delay_ms(100);
 		}
     }
 }
@@ -97,15 +82,12 @@ void SendData()
 	packet.bytes[1] = Uint16ToByte1(data.ir_leftfront);
 	DATA_Transmit(0, &packet);
 }
+
 void ConvertOdo()
 {
 	// converts odo count to mm traveled;
-	//data.odometer_left = round(g_leftCount * 65 * M_PI / OPENINGS); // max is 50 mm /cycle / 10 pegs
-	g_leftCount = round(g_leftCount * 65 * M_PI / OPENINGS);;
-	// store res
-	//data.odometer_right = round(g_rightCount * 65 * M_PI / OPENINGS); // const 5.105088
-	g_rightCount = round(g_rightCount * 65 * M_PI / OPENINGS);;
-	// store res
+	data.odometer_left = round(g_leftCount * 65 * M_PI / OPENINGS); // max is 50 mm /cycle / 10 pegs
+	data.odometer_right = round(g_rightCount * 65 * M_PI / OPENINGS); // const 5.105088
 	g_rightCount = 0;
 	g_leftCount = 0;
 }
@@ -117,6 +99,8 @@ ISR(ADC_vect)
 		cli();
 		g_angle += MLXGyroVal();
 		sei();
+		data.gyro = g_angle;
+		g_readingDone = true;
 	}
 	else // reading from IR
 	{
@@ -129,12 +113,6 @@ ISR(ADC_vect)
 		cli();
 		IRDistance = ConvertVoltage(ADCVoltage);
 		sei();
-		/*
-		 * ADMUX 0x40 = IR LF
-		 * ADMUX 0x41 = IR LB
-		 * ADMUX 0x42 = IR RF
-		 * ADMUX 0x43 = IR RB
-		 */
 		switch (ADMUX)
 		{
 			case 0x40:
@@ -149,10 +127,6 @@ ISR(ADC_vect)
 			case 0x43:
 				data.ir_rightback = IRDistance;
 		}
-		
-		// store value in correct place in memory
-		NextInputPin(); //update ADMUX
-		// update memory for next ad conversion
 	}
 }
 
@@ -170,6 +144,6 @@ ISR(TIMER3_COMPA_vect)
 {
 	ConvertOdo();
 	// send data via UART every 50 ms + a fraction of a microsec
-	g_sentData = true;
+	g_sendData = true;
 	TCNT3 = 0x0000; // reset timer
 }

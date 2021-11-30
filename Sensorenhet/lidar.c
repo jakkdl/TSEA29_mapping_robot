@@ -1,13 +1,13 @@
 #include "lidar.h"
 
-void MeasureLidar()
+uint16_t MeasureLidarFront()
 {
 	
 	//_delay_ms(1);
 	uint16_t PWMTime = 0;
 	uint16_t firstTime = 0;
 	uint16_t lidarF = 0;
-	uint16_t lidarB = 0;
+
 	cli();
 	PORTB &= ~(0x10); //pull PB4 low to start PWM reading from lidar F
 	while(!(PINB & (1 << PINB4)))
@@ -32,12 +32,20 @@ void MeasureLidar()
 			lidarF -= 55;	// front
 		}
 	}
+	sei();
+	return lidarF;
+}
+
+uint16_t MeasureLidarBack()
+{
 	// works decently but sometimes wrong val (very)
 	// PWMsignal is 4ms
-	PWMTime = 0;
-	firstTime = 0;
+	uint16_t PWMTime = 0;
+	uint16_t firstTime = 0;
+	uint16_t lidarB = 0;
+	cli();
 	PORTB &= ~(0x40); // pull PB6 low to start PWM reading from lidar B
-	/*
+	
 	while(!(PINB & (1 << PINB6)))
 	{
 		if ((PINB & (1 << PINB5)) && !(PINB & (1 << PINB6))) // if PB5 is high but not PB6
@@ -60,8 +68,9 @@ void MeasureLidar()
 			lidarB= PWMTime / 2;
 			lidarB -= 55; // back
 		}
-	}*/
+	}
 	sei();
+	return lidarB;
 }
 
 void ExtInterruptInit()

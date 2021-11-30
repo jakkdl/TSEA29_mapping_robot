@@ -12,7 +12,7 @@ int16_t MLXGyroVal()
 	AngularRate = round((MLXV - 2.5) * 150);
 	return AngularRate * 0.05; // multiply by time in seconds it takes to get here now 50ms measure actual time
 }
-void StartMLX()
+void MeasureMLX()
 {
 	ADMUX = 0x46; // enable ADC from MLX
 	g_angle = 0;
