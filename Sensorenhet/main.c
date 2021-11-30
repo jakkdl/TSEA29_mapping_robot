@@ -64,9 +64,11 @@ int main(void)
 	StartReading();
     while (1)
     {
+		_delay_ms(1000);
 		if(g_readingDone && g_sendData)
 		{
 			SendData();
+			//_delay_ms(1000);
 			TCNT3 = 0x0000; // reset timer
 			StartReading();
 		}
@@ -76,12 +78,24 @@ int main(void)
 void SendData()
 {
 	struct data_packet packet;
-	packet.address = IR_LEFTFRONT;
 	packet.byte_count = 2;
-	packet.bytes[0] = Uint16ToByte0(data.ir_leftfront);
-	packet.bytes[1] = Uint16ToByte1(data.ir_leftfront);
+	
+	uint16_t* value = (uint16_t*) &data;
+	for (int i=0; i < 7; ++i)
+	{
+		packet.address = i;
+		packet.bytes[0] = Uint16ToByte0(*value);
+		packet.bytes[1] = Uint16ToByte1(*value);
+		DATA_Transmit(0, &packet);
+		++value;
+	}
+	packet.address = ODOMETER;
+	packet.bytes[0] = data.odometer_left;
+	packet.bytes[1] = data.odometer_right;
 	DATA_Transmit(0, &packet);
 }
+
+
 
 void ConvertOdo()
 {
@@ -94,7 +108,8 @@ void ConvertOdo()
 
 ISR(ADC_vect)
 {
-	if ((ADMUX & (1 << PORTB3)) && (ADMUX & 1 << PORTB2)) // reading from MLX
+	//if ((ADMUX & (1 << PORTB3)) && (ADMUX & 1 << PORTB2)) // reading from MLX
+	if (ADMUX == 0x46)
 	{
 		cli();
 		g_angle += MLXGyroVal();

@@ -134,15 +134,15 @@ struct data_packet DATA_Receive( uint8_t interface )
     uint8_t temp = UART_Receive( interface );
 	
 	/*this part reverse the bit order so we get back correct info after serial tx*/
-	uint8_t header = ( (temp>>4) & 0xF0) | ( ( temp << 4 ) & 0x0F );
+	//uint8_t header = ( (temp>>4) & 0x0F) | ( ( temp << 4 ) & 0x0F );
 
-    ReceivedPaket.address = ( ( header >> 4 ) & 0x0F );
-    ReceivedPaket.byte_count = ( ( header >> 2 ) & 0x07 );
+    ReceivedPaket.address = ( ( temp >> 4 ) & 0x0F );
+    ReceivedPaket.byte_count = ( ( temp >> 1 ) & 0x07 );
 
     /*receive the rest of the data*/
     uint8_t i = 0;
 	
-	//for loop implemetion as to not get stuck in case of miss math of packets
+	//for loop implementation as to not get stuck in case of miss math of packets
     for( i = 0; i < ReceivedPaket.byte_count; ++i)
 	{
         /* Wait for data to be received */
@@ -151,10 +151,10 @@ struct data_packet DATA_Receive( uint8_t interface )
         
 		//this part reverse the bit order so we get back correct info after serial tx
 		uint8_t temp = UART_Receive( interface );
-        uint8_t CurrentRecivedPaket = ( (temp>>4) & 0xF0) | ( ( temp << 4 ) & 0x0F );
+        //uint8_t CurrentRecivedPaket = ( (temp>>4) & 0xF0) | ( ( temp << 4 ) & 0x0F );
 		
 		//set no correct byte to a byte in the struct
-        ReceivedPaket.bytes[i] = CurrentRecivedPaket;
+        ReceivedPaket.bytes[i] = temp;
 		if ( interface == 0){
 			while ( !(UCSR0A & (1<<RXC0)) )
 			;
@@ -184,8 +184,10 @@ ISR( USART1_RX_vect )
 {
     cli(); //disable interrupts
     struct data_packet received = DATA_Receive(1);
-    sei(); //re enable interrupts
     
+    // I had to move this to within interrupt guards when debugging,
+	// but should ultimately be outside TODO
 	handle_sensor_data(&received);
+	sei(); //re enable interrupts
 }
 #endif
