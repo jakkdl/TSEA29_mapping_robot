@@ -29,7 +29,21 @@ void NextInputPin()
 		StartAdc();
 	}
 }
-
+void MeasureIR()
+{
+	cli();
+	AdcInit();
+	sei();
+	StartAdc();
+	_delay_ms(1);
+	NextInputPin();
+	_delay_ms(1);
+	NextInputPin();
+	_delay_ms(1);
+	NextInputPin();
+	_delay_ms(1);
+	NextInputPin();
+}
 uint16_t ConvertVoltage(double ADCVoltage)
 // converts the input voltage to closest cm only between 8-80 cm
 {
@@ -45,27 +59,27 @@ uint16_t ConvertVoltage(double ADCVoltage)
 	}
 	else if ((ADCVoltage <= 2.8) && (ADCVoltage > 2.3))
 	{
-		res = ADCVoltage*-4.44 + 20.22;
+		res = ADCVoltage*-44.4 + 202.2;
 	}
 	else if ((ADCVoltage <= 2.3) && (ADCVoltage > 1.62))
 	{
-		res = ADCVoltage*-7.69+27.69;
+		res = ADCVoltage*-76.9+276.9;
 	}
 	else if ((ADCVoltage <= 1.62) && (ADCVoltage > 1.09))
 	{
-		res = ADCVoltage*-17.49+43.56;
+		res = ADCVoltage*-174.9+435.6;
 	}
 	else if ((ADCVoltage <= 1.09) && (ADCVoltage > 0.73))
 	{
-		res = ADCVoltage*-41.67*69.58;
+		res = ADCVoltage*-416.7+695.8;
 	}
 	else if ((ADCVoltage <= 0.73) && (ADCVoltage > 0.52))
 	{
-		res = ADCVoltage*-86.47+102.74;
+		res = ADCVoltage*-864.7+1027.4;
 	}
 	else if ((ADCVoltage <= 0.52) && (ADCVoltage >= 0.4))
 	{
-		res = ADCVoltage*-197.37+158.16;
+		res = ADCVoltage*-1973.7+1581.6;
 	}
 	else
 	{

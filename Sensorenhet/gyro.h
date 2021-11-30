@@ -6,5 +6,5 @@
 #include <util/delay.h>
 extern uint8_t g_angle;
 int16_t MLXGyroVal();
-void StartMLX();
+void MeasureMLX();
 #endif
