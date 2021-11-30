@@ -1,13 +1,11 @@
 from tkinter import *
-#import bluetooth
-#from bluetooth.bluez import lookup_name
-#import serial
-# port=""
-#bluetooth = serial.Serial(port, xxxx)
+import serial
+import threading
+
 """ 
 Get g_navigationMap -> Redraw the map
 Get currentPosX and currentPosY -> Redraw the robot + output in information section
-Get direction -> Outpu in information section
+Get direction -> Output in information section
 Get sensordata -> Output in console
 """
 
@@ -20,11 +18,26 @@ Use arrow keys to send movement input. Press space to pause autoscrolling in the
 """
 
 
+""" def init_port():
+    ser = serial.Serial(
+        port='/dev/cu.Bluetooth-Incoming-Port',
+        baudrate=9600,
+        parity=serial.PARITY_ODD,
+        stopbits=serial.STOPBITS_ONE,
+        bytesize=serial.EIGHTBITS
+    )
+    while(True):
+
+        temp = ser.read().hex()
+        print(temp)
+ """
+
+
 class Constants:
 
     FRAME_WIDTH = 1445
     FRAME_HEIGHT = 1000
-    DELAY = 400
+    DELAY = 300
     ONE_STEP = 20
     CELL_SIZE = 20
     PADDING = 10
@@ -325,4 +338,9 @@ def main():
 
 
 if __name__ == '__main__':
+    #tl0 = threading.Thread(target=init_port)
+    #tl1 = threading.Thread(target=main)
+
+    # tl0.start
+    # tl1.start
     main()
