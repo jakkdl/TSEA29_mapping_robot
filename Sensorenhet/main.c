@@ -67,8 +67,8 @@ int main(void)
 		if(g_readingDone && g_sendData)
 		{
 			SendData();
+			TCNT3 = 0x0000; // reset timer
 			StartReading();
-			//_delay_ms(100);
 		}
     }
 }
@@ -145,5 +145,4 @@ ISR(TIMER3_COMPA_vect)
 	ConvertOdo();
 	// send data via UART every 50 ms + a fraction of a microsec
 	g_sendData = true;
-	TCNT3 = 0x0000; // reset timer
 }

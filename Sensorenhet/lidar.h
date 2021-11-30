@@ -8,6 +8,5 @@ uint16_t MeasureLidarFront();
 uint16_t MeasureLidarBack();
 void ExtInterruptInit();
 void TimerInit();
-void TimerStop();
 void MsTimerInit();
 #endif
