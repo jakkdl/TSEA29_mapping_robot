@@ -277,51 +277,38 @@ int8_t draw_laser_line(uint8_t  laser_x,
         default:
             return -1;
     }
-    // loop(max_steps, x_0, y_0, delta_x, sin*delta_y, &no_rounding, &floor);
-    /*
-    //do the same for y%400 == 0
-    y_0 = math.ceil(laser_y / 400);
-    x_0 = laser_x + cos(heading) * (laser_y / 400) - y_0;
-    // number of potential walls the laser crosses before hitting the end wall
-    max_steps = end_y - y_0;
-
-    for (int steps = 0; steps < max_steps; ++steps)
-    {
-        int y = y_0 + steps;
-        int x = math.floor(x_0 + steps * sin(heading));
-    */
     return 0;
 }
 
 int8_t laser_positive_x(uint16_t x, uint16_t y, uint16_t end_x, double delta_y)
 {
-    uint8_t  x_0       = ceil(x / 400);
-    uint16_t y_0       = y + delta_y * ((double)x_0 - (double)x / 400);
-    uint8_t  max_steps = round(end_x / 400) - x_0;
+    uint8_t  x_0       = x % 400 ? x / 400 + 1 : x / 400; // ceil
+    uint16_t y_0       = y + delta_y * (x_0 - (double) x / 400);
+    uint8_t  max_steps = round((double) end_x / 400) - x_0;
     return laser_loop(max_steps, x_0, y_0, +1.0, delta_y, mark_empty);
 }
 
 int8_t laser_negative_x(uint16_t x, uint16_t y, uint16_t end_x, double delta_y)
 {
-    uint8_t  x_0       = floor(x / 400);
-    uint16_t y_0       = y + delta_y * (x_0 - x / 400);
-    uint8_t  max_steps = x_0 - round(end_x / 400);
+    uint8_t  x_0       = x / 400; // integer division == floor
+    uint16_t y_0       = y + delta_y * (x_0 - (double) x / 400);
+    uint8_t  max_steps = x_0 - round((double) end_x / 400);
     return laser_loop(max_steps, x_0, y_0, -1.0, delta_y, mark_empty);
 }
 
 int8_t laser_positive_y(uint16_t x, uint16_t y, uint16_t end_y, double delta_x)
 {
-    uint8_t  y_0       = ceil(y / 400);
-    uint16_t x_0       = x + delta_x * (y / 400 - y_0);
-    uint8_t  max_steps = round(end_y / 400) - y_0;
+    uint8_t  y_0       = y % 400 ? y / 400 + 1 : y / 400; // ceil
+    uint16_t x_0       = x + delta_x * ((double) y / 400 - y_0);
+    uint8_t  max_steps = round((double) end_y / 400) - y_0;
     return laser_loop(max_steps, y_0, x_0, +1.0, delta_x, mark_empty_rev);
 }
 
 int8_t laser_negative_y(uint16_t x, uint16_t y, uint16_t end_y, double delta_x)
 {
-    uint8_t  y_0       = floor(y / 400);
-    uint16_t x_0       = x + delta_x * (y / 400 - y_0);
-    uint8_t  max_steps = y_0 - round(end_y / 400);
+    uint8_t  y_0       = y / 400; // integer division == floor
+    uint16_t x_0       = x + delta_x * ((double) y / 400 - y_0);
+    uint8_t  max_steps = y_0 - round((double) end_y / 400);
     return laser_loop(max_steps, y_0, x_0, -1.0, delta_x, mark_empty_rev);
 }
 
@@ -630,7 +617,34 @@ Test_test(Test, laser_loop_9)
     g_navigationMap[11][9] = 0;
 }
 
+Test_test(Test, laser_positive_x_1)
+{
+    // 2 cells straight to the right
+    // there's a wall at (0, 3)
+    Test_assertEquals(laser_positive_x(200, 200, 1200, 0), 0);
 
+    Test_assertEquals(g_navigationMap[1][0], 1);
+    Test_assertEquals(g_navigationMap[2][0], 1);
+    g_navigationMap[1][0] = 0;
+    g_navigationMap[2][0] = 0;
+}
+
+Test_test(Test, laser_negative_x_1)
+{
+    // 2 cells straight to the left from (1000, 200)
+    Test_assertEquals(laser_negative_x(1000, 200, 0, 0), 0);
+
+    Test_assertEquals(g_navigationMap[2][0], 1);
+    Test_assertEquals(g_navigationMap[1][0], 1);
+    g_navigationMap[1][0] = 0;
+    g_navigationMap[2][0] = 0;
+}
+
+Test_test(Test, laser_positive_y_1)
+{
+    // 3 cells straight up
+
+}
 
 #endif
 
