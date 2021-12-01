@@ -9,6 +9,8 @@ ser = serial.Serial(
     stopbits=serial.STOPBITS_ONE,
     bytesize=serial.EIGHTBITS
 )
+if not ser.open():
+    ser.open()
 
 def lisener():
     """""
@@ -20,17 +22,17 @@ def lisener():
         out = []
         temp = ser.read().hex()
        
-        addr = ( ( temp >> 4 ) & 0x0F )
-        count = ( ( temp >> 1) & 0x07 )
+        addr = ( ( temp >> 4 ) & 0x0F ) #bitshift down and mask away everythign that is not part of the 4bit addres
+        count = ( ( temp >> 1) & 0x07 ) #bitshift down and mask away everythign that is not part of the 3bit byte count
 
-        out.append( addr )
-        out.append( count )
+        out.append( temp )
         i = 0
         while( i < count ):
             temp = ser.read().hex()
             out.append( temp )
             i += 1        
         print(out)
+    #return out
 
 def write( send ):
     data_bytes = bytes(send)
