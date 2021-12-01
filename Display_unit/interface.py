@@ -1,6 +1,9 @@
 from tkinter import *
 import serial
 import threading
+import sys
+from Com_unit import serialtestMAC
+
 
 """ 
 Get g_navigationMap -> Redraw the map

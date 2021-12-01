@@ -19,7 +19,7 @@ import serial
 import threading
 
 ser = serial.Serial(
-    port='/dev/cu.Firefly-71B7-SPP',  # need to fin the correct port
+    port='/dev/tty.Firefly-71B7-SPP',  # need to fin the correct port
     baudrate=9600,
     parity=serial.PARITY_ODD,
     stopbits=serial.STOPBITS_ONE,
@@ -28,17 +28,18 @@ ser = serial.Serial(
 
 
 def listener():
-    """""
-    This function is an early version of the 
-    constant listener funtion that will         
-    run in the background
-    """""
+    """ This function is an early version of the
+    constant listener funtion that will
+    run in the background """
+
     while True:
 
         temp = ser.read()[0]
-
+        print("TEMP: ", temp)
         header = ((temp >> 4) & 0xF0) | (
             (temp << 4) & 0x0F)
+
+        print("HEADER: ", header)
         out = []
         addr = ((header >> 4) & 0x0F)
         count = ((header >> 1) & 0x07)
