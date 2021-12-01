@@ -22,6 +22,7 @@ bool   arrived_at_goal(void);
 
 int8_t handle_sensor_data(struct data_packet* data)
 {
+
     // check packet count
     if (data->address != ADR_DEBUG)
     {
@@ -31,7 +32,7 @@ int8_t handle_sensor_data(struct data_packet* data)
             return -1;
         }
     }
-
+    // Check for parity error?
     // TODO Forward to com unit
 
     // Save the data
@@ -83,6 +84,16 @@ int8_t handle_sensor_data(struct data_packet* data)
 // EXTRA: assumes we've checked for parity error
 int8_t nav_main(struct sensor_data* data)
 {
+	// TODO: temporary debug stuff
+	if (data->odometer_left == 0)
+	{
+		g_wheelSpeedLeft = 0x80;
+	}
+	else
+	{
+		g_wheelSpeedLeft = 0;
+	}
+	
     // uses data, updates g_currentHeading, g_currentPosX and g_currentPosY
     if (calculate_heading_and_position(data) == -1)
     {
