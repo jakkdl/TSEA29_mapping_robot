@@ -17,34 +17,28 @@ def lisener():
     run in the back ground
     """""
     while True:
-        temp = ser.read().hex()
-        header = ( ( temp >> 4 ) & 0xF0 ) | ( ( temp << 4 ) & 0x0F )
         out = []
-        addr = ( ( header >> 4 ) & 0x0F )
-        count = ( ( header >> 1) & 0x07 )
+        temp = ser.read().hex()
+       
+        addr = ( ( temp >> 4 ) & 0x0F )
+        count = ( ( temp >> 1) & 0x07 )
 
         out.append( addr )
         out.append( count )
         i = 0
         while( i < count ):
             temp = ser.read().hex()
-            paket = ( ( temp >> 4 ) & 0xF0 ) | ( ( temp << 4 ) & 0x0F )
-            out.append( paket )
+            out.append( temp )
             i += 1        
         print(out)
 
-def Write():
-    data_bytes = bytes(b'\xB2\x01')
-    while True:
-        time.sleep()
-        ser.write( data_bytes )
+def write( send ):
+    data_bytes = bytes(send)
+    ser.write( data_bytes )
 
 def main():
     tl0 = threading.Thread( target = lisener )
-    tl1 = threading.Thread( target = write)
-
-    t0.start
-    t1.start
+    tl0.start
 
     while True:
         pass
