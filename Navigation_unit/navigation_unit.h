@@ -21,8 +21,8 @@ enum Direction
 #define FULL_TURN 65536 // 1 << 16
 
 // This broke with {}'s, unsure why /john
-#define GridToMm(coord) (coord) * 250 + 125
-#define MmToGrid(coord) (coord) / 250
+#define GridToMm(coord) (coord) * 400 + 200
+#define MmToGrid(coord) (coord) / 400
 
 /* GLOBAL VARIABLES */
 
