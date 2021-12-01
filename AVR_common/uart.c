@@ -12,7 +12,8 @@
 #endif
 
 /*
- *TODO on hardware
+ *This code now work to make pairty work we need to set setting on firefly so
+ *8bit + 1 stop + no pairty is the current setting that works i have adjusted to code
  */
 
 
