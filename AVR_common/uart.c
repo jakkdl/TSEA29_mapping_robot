@@ -4,7 +4,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include "uart.h"
-#define UART_BAUD 103 //16MHz system clock
+#define UART_BAUD 8 //16MHz system clock
 
 #if __NAVIGATION_UNIT__
 #include "../Navigation_unit/nav_sensor_loop.h"
@@ -13,7 +13,7 @@
 
 /*
  *This code now work to make pairty work we need to set setting on firefly so
- *8bit + 1 stop + no pairty is the current setting that works i have adjusted to code
+ *8bit + 1 stop + even pairty at 115,200 baud is the current setting that works i have adjusted to code
  */
 
 
@@ -34,7 +34,7 @@ void UART_Init(uint8_t interface)
         UCSR0B = (1<<RXCIE0) | (0<<TXCIE0) |(1<<RXEN0)|(1<<TXEN0);
 
         /* Set frame format: 8data, 1stop bit, no parity bit */
-        UCSR0C =  (0<<USBS0) |(0<<UPM01) | (3<<UCSZ00);
+        UCSR0C =  (0<<USBS0) |(1<<UPM01) | (3<<UCSZ00);
     }
     else
     {
@@ -48,7 +48,7 @@ void UART_Init(uint8_t interface)
         UCSR1B = (1<<RXCIE1) | (0<<TXCIE1) | (1<<RXEN1)| (1<<TXEN1);
 
         /* Set frame format: 8data, 1stop bit, no parity bit */
-		UCSR1C =  (0<<USBS1) | (0<<UPM11) | (3<<UCSZ10);
+		UCSR1C =  (0<<USBS1) | (1<<UPM11) | (3<<UCSZ10);
     }
 }
 

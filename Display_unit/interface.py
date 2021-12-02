@@ -1,12 +1,10 @@
-from struct import pack
 from tkinter import *
 import serial
 import threading
 import time
-#import serialtestMAC
 
 ser = serial.Serial(
-    port='/dev/tty.Firefly-71B7-SPP',  # need to fin the correct port
+    port='/dev/tty.Firefly-71B7-SPP',
     baudrate=9600,
     parity=serial.PARITY_NONE,
     stopbits=serial.STOPBITS_ONE,
@@ -15,37 +13,7 @@ ser = serial.Serial(
 )
 
 g_output = []
-g_dict = {"kd": 0xD2, "kp": 0xE2, "command": 0xB2}
-
-""" 
-Get g_navigationMap -> Redraw the map
-Get currentPosX and currentPosY -> Redraw the robot + output in information section
-Get direction -> Output in information section
-Get sensordata -> Output in console
-"""
-
-#nearby_devices = bluetooth.discover_devices(lookup_names=True)
-
-"""
-INSTRUCTIONS:
-
-Use arrow keys to send movement input. Press space to pause autoscrolling in the console.
-"""
-
-
-""" def init_port():
-    ser = serial.Serial(
-        port='/dev/cu.Bluetooth-Incoming-Port',
-        baudrate=9600,
-        parity=serial.PARITY_ODD,
-        stopbits=serial.STOPBITS_ONE,
-        bytesize=serial.EIGHTBITS
-    )
-    while(True):
-
-        temp = ser.read().hex()
-        print(temp)
- """
+g_dict = {"command": 0xB2, "kd": 0xD2, "kp": 0xE2}
 
 
 class Constants:
@@ -99,12 +67,6 @@ class Map(LabelFrame):
                 self.canvas.itemconfig(square, fill='blue')
                 g_output.pop(0)
 
-    def getCoordinates(self):
-        print("Fetching currentXPos and currentYPos")
-
-    def getDirection():
-        print("Direction")
-
     def moveRobot(self):
         '''animates the robot's movement'''
         robot = self.canvas.find_withtag('robot')
@@ -113,7 +75,7 @@ class Map(LabelFrame):
     def onTimer(self):
         '''creates a cycle each timer event'''
         self.moveRobot()
-        # self.updateMap()
+        self.updateMap()
         self.after(Constants.DELAY, self.onTimer)
 
 
@@ -148,9 +110,73 @@ class Console(LabelFrame):
         '''updates the console'''
 
         global g_output
+        # lidar forwward
+        if g_output:
+            if g_output[0][0] == 0:
+                nrOut = g_output[0][2] << 8 | g_output[0][3]
+                nrOut = "Lidar Forward: " + str(nrOut)
+                g_output.pop(0)
+
+            # lidar backwards
+            elif g_output[0][0] == 1:
+                nrOut = g_output[0][2] << 8 | g_output[0][3]
+                nrOut = "Lidar Backwards: " + str(nrOut)
+                g_output.pop(0)
+
+                # IR front left
+            elif g_output[0][0] == 2:
+                nrOut = g_output[0][2] << 8 | g_output[0][3]
+                nrOut = "IR Front Left: " + str(nrOut)
+                g_output.pop(0)
+
+                # IR back left
+            elif g_output[0][0] == 3:
+                nrOut = g_output[0][2] << 8 | g_output[0][3]
+                nrOut = "IR Back Left: " + str(nrOut)
+                g_output.pop(0)
+
+                # IR right front
+            elif g_output[0][0] == 4:
+                nrOut = g_output[0][2] << 8 | g_output[0][3]
+                nrOut = "IR Front Right: " + str(nrOut)
+                g_output.pop(0)
+
+                # IR right back
+            elif g_output[0][0] == 5:
+                nrOut = g_output[0][2] << 8 | g_output[0][3]
+                nrOut = "IR Back Right: " + str(nrOut)
+                g_output.pop(0)
+
+                # gyro
+            elif g_output[0][0] == 6:
+                nrOut = g_output[0][2] << 8 | g_output[0][3]
+                nrOut = "Gyro: : " + str(nrOut)
+                g_output.pop(0)
+
+                # odometer
+            elif g_output[0][0] == 7:
+                nrOut = g_output[0][2] << 8 | g_output[0][3]
+                nrOut = "Odometer: " + str(nrOut)
+                g_output.pop(0)
+
+                # direction
+            elif g_output[0][0] == 9:
+                nrOut = g_output[0][2] << 8 | g_output[0][3]
+                nrOut = "Direction: " + str(nrOut)
+                g_output.pop(0)
+
+                # debug
+            elif g_output[0][0] == 12:
+                debug = len(g_output[0])
+                nrOut = str(debug)
+                i = 2
+                while(i < debug):
+                    nrOut += " " + str(g_output[0][i])
+                g_output.pop(0)
+
         if g_output:
             self.index += 1
-            Label(self.frame, text="Some sensor data: "+str(self.index),
+            Label(self.frame, text=nrOut,
                   bg='black', fg='white').grid(row=self.index, sticky=W)
             self.updateScollRegion()
         if Constants.AUTO_SCROLL:
@@ -276,7 +302,13 @@ class Controls(LabelFrame):
             print("Go backwards")
 
     def setNavigationMode(self):
-        Constants.AUTONOMOUS = not Constants.AUTONOMOUS
+        global g_dict
+        if Constants.AUTONOMOUS:
+            packageMaker("command", [0])
+            Constants.AUTONOMOUS = False
+        else:
+            packageMaker("command", [1])
+            Constants.AUTONOMOUS = True
 
     def setPd(self):
         """Function called when pressing SET PD"""
@@ -306,11 +338,19 @@ class Information(LabelFrame):
 
     def updateInforamation(self):
         '''updates the console'''
+        global g_output
         mode = self.canvas.find_withtag("mode_text")
+        pos = self.canvas.find_withtag("position_text")
         if(Constants.AUTONOMOUS):
             self.canvas.itemconfig(mode, text="Mode: AUTONOMOUS")
         else:
             self.canvas.itemconfig(mode, text="Mode: MANUAL")
+        if g_output:
+            if g_output[0][0] == 8:
+                x = g_output[0][2] << 8 | g_output[0][3]
+                y = g_output[0][4] << 8 | g_output[0][5]
+                xy = str(x) + " , " + str(y)
+                self.canvas.itemconfig(pos, text="Position: " + xy)
 
     def onTimer(self):
         '''creates a cycle each timer event'''
