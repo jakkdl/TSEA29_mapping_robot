@@ -157,9 +157,9 @@ struct data_packet DATA_Receive( uint8_t interface )
 #if __NAVIGATION_UNIT__
 ISR( USART0_RX_vect )
 {
-    cli(); //disable interrupts
+    //cli(); //disable interrupts
     struct data_packet received = DATA_Receive(0);
-    sei(); //re enable interrupts
+    //sei(); //re enable interrupts
     communication_unit_interrupt(&received);
 }
 #endif
@@ -167,12 +167,13 @@ ISR( USART0_RX_vect )
 #if __NAVIGATION_UNIT__
 ISR( USART1_RX_vect )
 {
-    cli(); //disable interrupts
+    //cli(); //disable interrupts
     struct data_packet received = DATA_Receive(1);
     
     // I had to move this to within interrupt guards when debugging,
 	// but should ultimately be outside TODO
+	
+	//sei(); //re enable interrupts
 	handle_sensor_data(&received);
-	sei(); //re enable interrupts
 }
 #endif
