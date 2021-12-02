@@ -5,8 +5,8 @@ import time
 
 ser = serial.Serial(
     port='/dev/tty.Firefly-71B7-SPP',
-    baudrate=9600,
-    parity=serial.PARITY_NONE,
+    baudrate=115200,
+    parity=serial.PARITY_EVEN,
     stopbits=serial.STOPBITS_ONE,
     bytesize=serial.EIGHTBITS,
     timeout=1
@@ -69,8 +69,13 @@ class Map(LabelFrame):
 
     def moveRobot(self):
         '''animates the robot's movement'''
+        if g_output:
+            if g_output[0][0] == 8:
+                x = g_output[0][2] << 8 | g_output[0][3]
+                y = g_output[0][4] << 8 | g_output[0][5]
+
         robot = self.canvas.find_withtag('robot')
-        self.canvas.move(robot, Constants.ONE_STEP, 0)
+        self.canvas.move(robot, x, y)
 
     def onTimer(self):
         '''creates a cycle each timer event'''
@@ -173,6 +178,8 @@ class Console(LabelFrame):
                 while(i < debug):
                     nrOut += " " + str(g_output[0][i])
                 g_output.pop(0)
+        else:
+            nrOut = ""
 
         if g_output:
             self.index += 1
