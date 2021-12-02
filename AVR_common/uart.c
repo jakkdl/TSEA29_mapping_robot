@@ -112,7 +112,6 @@ uint8_t UART_Receive(uint8_t interface)
     /* This function is the basic receiver function who returns UDRn data to caller */
     if (interface == 0)
     {
-		__asm("nop");
         /* Wait for data to be received */
         while ( !(UCSR0A & (1<<RXC0)) )
             ;

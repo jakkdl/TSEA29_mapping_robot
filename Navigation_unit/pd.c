@@ -8,6 +8,8 @@
 void PDcontroller_Reset();
 void PDcontroller_Set_RefNode();
 
+#define MAX_SPEED = 0x80;
+
 struct PDcontroller {
 	/* internal memory */
 	double PrevCTE;
@@ -41,8 +43,8 @@ void turnToHeading()
     }
 
     // TODO determine speed according to remaining left to turn
-    g_wheelSpeedLeft = 255;
-    g_wheelSpeedRight = 255;
+    g_wheelSpeedLeft = MAX_SPEED;
+    g_wheelSpeedRight = MAX_SPEED;
 
 }
 
@@ -89,13 +91,13 @@ void PDcontroller_Update(void)
     // TODO Set g_wheelSpeedLeft & right
     if (out < 0)
     {
-        g_wheelSpeedRight = UINT8_MAX;
-        g_wheelSpeedLeft = UINT8_MAX+out;
+        g_wheelSpeedRight = MAX_SPEED;
+        g_wheelSpeedLeft = MAX_SPEED+out;
     }
     else
     {
-        g_wheelSpeedLeft = UINT8_MAX;
-        g_wheelSpeedRight= UINT8_MAX-out;
+        g_wheelSpeedLeft = MAX_SPEED;
+        g_wheelSpeedRight= MAX_SPEED-out;
     }
 }
 

@@ -105,12 +105,15 @@ int8_t handle_sensor_data(struct data_packet* data)
 int8_t nav_main(void)
 {
 	struct sensor_data* data = current_sensor_data;
-	struct data_packet data_p;
+	
+	// debug stuff
+	/*struct data_packet data_p;
 	data_p.address    = LIDAR_FORWARD;
 	data_p.byte_count = 2;
 	data_p.bytes[0] = Uint16ToByte0(data->lidar_forward);
 	data_p.bytes[1] = Uint16ToByte1(data->lidar_forward);
-	DATA_Transmit(COM_UNIT_INTERFACE, &data_p);
+	DATA_Transmit(COM_UNIT_INTERFACE, &data_p);*/
+	
     // uses data, updates g_currentHeading, g_currentPosX and g_currentPosY
     if (calculate_heading_and_position(data) == -1)
     {
