@@ -12,12 +12,14 @@
 #include "../AVR_common/uart.h"
 
 void SendData();
-uint8_t OPENINGS = 40;
+#define OPENINGS 40;
 uint8_t g_leftCount = 0;
 uint8_t g_rightCount = 0;
 uint16_t g_lidarDistance = 0; // distance in mm
 bool g_readingDone = true;
 bool g_sendData = false;
+
+#define WHEEL_DIAMETER 62
 
 struct sensor_data data;
 /*
@@ -100,8 +102,8 @@ void SendData()
 void ConvertOdo()
 {
 	// converts odo count to mm traveled;
-	data.odometer_left = round(g_leftCount * 65 * M_PI / OPENINGS); // max is 50 mm /cycle / 10 pegs
-	data.odometer_right = round(g_rightCount * 65 * M_PI / OPENINGS); // const 5.105088
+	data.odometer_left = round(g_leftCount * WHEEL_DIAMETER * M_PI / OPENINGS); // max is 50 mm /cycle / 10 pegs
+	data.odometer_right = round(g_rightCount * WHEEL_DIAMETER * M_PI / OPENINGS); // const 5.105088
 	g_rightCount = 0;
 	g_leftCount = 0;
 }
