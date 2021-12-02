@@ -15,7 +15,7 @@ ser = serial.Serial(
 )
 
 g_output = []
-g_dict = {'kd': 0xD2, 'kp': 0xE2}
+g_dict = {"kd": 0xD2, "kp": 0xE2, "command": 0xB2}
 
 """ 
 Get g_navigationMap -> Redraw the map
@@ -218,24 +218,28 @@ class Controls(LabelFrame):
         if key == LEFT_CURSOR_KEY:
             arrow = self.canvas.find_withtag("left_arrow")
             self.canvas.itemconfig(arrow, fill='green')
+            packageMaker("command", [4])
             print("Rotate left")
 
         RIGHT_CURSOR_KEY = "Right"
         if key == RIGHT_CURSOR_KEY:
             arrow = self.canvas.find_withtag("right_arrow")
             self.canvas.itemconfig(arrow, fill='green')
+            packageMaker("command", [5])
             print("Rotate right")
 
         UP_CURSOR_KEY = "Up"
         if key == UP_CURSOR_KEY:
             arrow = self.canvas.find_withtag("up_arrow")
             self.canvas.itemconfig(arrow, fill='green')
+            packageMaker("command", [2])
             print("Go forward")
 
         DOWN_CURSOR_KEY = "Down"
         if key == DOWN_CURSOR_KEY:
             arrow = self.canvas.find_withtag("down_arrow")
             self.canvas.itemconfig(arrow, fill='green')
+            packageMaker("command", [3])
             print("Go backwards")
 
         # Pauses the autoscroll in the console
