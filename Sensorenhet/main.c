@@ -61,7 +61,7 @@ int main(void)
 	PinInit();
 	TimerInit();
 	ExtInterruptInit();
-	UART_Init(0);
+	UART_Init(0, false, true);
 	MsTimerInit();
 	sei();
 	StartReading();
@@ -159,4 +159,9 @@ ISR(TIMER3_COMPA_vect)
 	// send data via UART every 50 ms + a fraction of a microsec
 	g_sendData = true;
 	ConvertOdo();
+}
+
+ISR(BADISR_vect)
+{
+    // user code here
 }

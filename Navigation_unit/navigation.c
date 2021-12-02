@@ -125,7 +125,6 @@ void wall_follow()
 {
     uint8_t dir = get_heading();
 
-	g_wheelSpeedLeft = UINT8_MAX;
     // left opening?
     if (!is_wall(dir + 1))
     {

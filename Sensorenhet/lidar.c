@@ -83,7 +83,7 @@ void TimerInit()
 	TCCR1B = (1 << CS11); // divide clock by 8 to get 2 tick every microsec
 }
 
-#define TIME_BETWEEN_SEND 50 // time in ms
+#define TIME_BETWEEN_SEND 500 // time in ms
 #define F 62.5
 void MsTimerInit()
 {

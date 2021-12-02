@@ -14,8 +14,8 @@ struct data_packet currentPaket;
 int main(void)
 {	
 	/*main loop in com unit does nothing as it just works as a pass thought no error handling*/
-	UART_Init( 0 );
-	UART_Init( 1 );
+	UART_Init(0, true, true);
+	UART_Init(1, true, true);
     sei();
     while(1){
 		_delay_ms(100);

@@ -6,6 +6,7 @@
 
 #include "../AVR_common/robot.h"
 #define COM_UNIT_INTERFACE 0
+#define SENSOR_UNIT_INTERFACE 1
 
 enum NavigationMode
 {
