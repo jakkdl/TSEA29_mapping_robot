@@ -42,18 +42,14 @@ void PDcontroller_Update()
     }
 
     /* calculate the dot product between reference node one and target node with respect to current pos */
-    uint16_t deltaX = g_navigationGoalX - referencePosX;
-    uint16_t deltaY = g_navigationGoalY - referencePosY;
+    int16_t deltaX = g_navigationGoalX - referencePosX;
+    int16_t deltaY = g_navigationGoalY - referencePosY;
 
-    uint16_t RX = g_currentPosX - g_navigationGoalX;
-    uint16_t RY = g_currentPosY - g_navigationGoalY;
+    int16_t RX = g_currentPosX - g_navigationGoalX;
+    int16_t RY = g_currentPosY - g_navigationGoalY;
 
     /* cross track error for current iteration */
-    uint16_t CTE = ( RY*deltaX - RX*deltaY ) / ( deltaX*deltaX + deltaY*deltaY );
-
-    /*
-     * int16_t u = ( RX*deltaX - RY*deltaY ) / ( deltaX*deltaX + deltaY*deltaY );
-     */
+    int16_t CTE = ( RY*deltaX - RX*deltaY ) / ( deltaX*deltaX + deltaY*deltaY );
 
     /*
      * e(t) = r(t) - u(t) Error signal (this part needed?)
@@ -62,21 +58,30 @@ void PDcontroller_Update()
     /*
      * Kp*error proptional part of pd controller
      */
-    uint16_t proptional = g_pdKp * CTE;
+    int16_t proportional = g_pdKp * CTE;
 
     /*
      * Kp*derivative error is the dervitave part of the pd controller
      */
-    uint16_t derivative = g_pdKd * ( CTE - pd.PrevCTE );
+    int16_t derivative = g_pdKd * ( CTE - pd.PrevCTE );
 
     /*
-     * U(out) = proptional part + derivative part
+     * U(out) = proportional part + derivative part
      */
-    pd.out = proptional + derivative;
-    pd.PrevCTE = CTE;
+    int16_t out = proportional + derivative;
+    int16_t PrevCTE = CTE;
 
     // TODO Set g_wheelSpeedLeft & right
-
+	if (out < 0)
+	{
+		g_wheelSpeedRight = INT8_MAX;
+		g_wheelSpeedLeft = INT8_MAX+out;
+	}
+	else
+	{
+		g_wheelSpeedLeft = INT8_MAX;
+		g_wheelSpeedRight= INT8_MAX-out;
+	}
 }
 
 void PDcontroller_NewGoal()

@@ -12,7 +12,8 @@
 #endif
 
 /*
- *TODO on hardware
+ *This code now work to make pairty work we need to set setting on firefly so
+ *8bit + 1 stop + no pairty is the current setting that works i have adjusted to code
  */
 
 
@@ -32,8 +33,8 @@ void UART_Init(uint8_t interface)
         /* Enable receiver and transmitter and tx and rx intrupts */
         UCSR0B = (1<<RXCIE0) | (0<<TXCIE0) |(1<<RXEN0)|(1<<TXEN0);
 
-        /* Set frame format: 8data, 1stop bit, 1 parity bit */
-        UCSR0C =  (0<<USBS0) |(1<<UPM01) | (3<<UCSZ00);
+        /* Set frame format: 8data, 1stop bit, no parity bit */
+        UCSR0C =  (0<<USBS0) |(0<<UPM01) | (3<<UCSZ00);
     }
     else
     {
@@ -46,10 +47,9 @@ void UART_Init(uint8_t interface)
         /* Enable receiver and transmitter */
         UCSR1B = (1<<RXCIE1) | (0<<TXCIE1) | (1<<RXEN1)| (1<<TXEN1);
 
-        /* Set frame format: 8data, 1stop bit, 1 parity bit */
-		UCSR1C =  (0<<USBS1) | (1<<UPM11) | (3<<UCSZ10);
+        /* Set frame format: 8data, 1stop bit, no parity bit */
+		UCSR1C =  (0<<USBS1) | (0<<UPM11) | (3<<UCSZ10);
     }
-    /* 0_0_1_1_0_1_1_0*/
 }
 
 
@@ -64,9 +64,6 @@ void UART_Transmit(uint8_t interface, uint8_t data )
             ;
         /* Put data into buffer, sends the data */
         UDR0 = data;
-		/*
-		while( !( UCSR0A & (1 << TXC0) ))
-		;*/
     }
     else
     {
@@ -75,9 +72,6 @@ void UART_Transmit(uint8_t interface, uint8_t data )
             ;
         /* Put data into buffer, sends the data */
         UDR1 = data;
-		/*
-		while( !( UCSR1A & (1 << TXC1) ))
-		;*/
     }
 }
 
@@ -104,7 +98,6 @@ uint8_t UART_Receive(uint8_t interface)
     /* This funktion is the basic reciver funktion who returns UDRn data to caller */
     if (interface == 0)
     {
-        /* This part might not be need need to check*/
         /* Wait for data to be received */
         while ( !(UCSR0A & (1<<RXC0)) )
             ;
@@ -113,7 +106,6 @@ uint8_t UART_Receive(uint8_t interface)
     }
     else
     {
-        /* This part might not be need need to check*/
         /* Wait for data to be received */
         while ( !(UCSR1A & (1<<RXC1)) )
             ;
@@ -132,10 +124,6 @@ struct data_packet DATA_Receive( uint8_t interface )
 
     //receive the first byte that contain all the info we need for receive the rest
     uint8_t temp = UART_Receive( interface );
-	
-	/*this part reverse the bit order so we get back correct info after serial tx*/
-	//uint8_t header = ( (temp>>4) & 0x0F) | ( ( temp << 4 ) & 0x0F );
-
     ReceivedPaket.address = ( ( temp >> 4 ) & 0x0F );
     ReceivedPaket.byte_count = ( ( temp >> 1 ) & 0x07 );
 
@@ -147,13 +135,10 @@ struct data_packet DATA_Receive( uint8_t interface )
 	{
         /* Wait for data to be received */
         /* do we wait 2x the time here or not? I asume the check always passes
-         * in the other function making that check redundant */	
+         * in the other function making that check redundant but it fiexd fram erros so leaave alone*/	
         
-		//this part reverse the bit order so we get back correct info after serial tx
+        //recive the byte and add it to the struct by index from count
 		uint8_t temp = UART_Receive( interface );
-        //uint8_t CurrentRecivedPaket = ( (temp>>4) & 0xF0) | ( ( temp << 4 ) & 0x0F );
-		
-		//set no correct byte to a byte in the struct
         ReceivedPaket.bytes[i] = temp;
 		if ( interface == 0){
 			while ( !(UCSR0A & (1<<RXC0)) )
