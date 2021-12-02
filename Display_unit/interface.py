@@ -1,6 +1,8 @@
+from struct import pack
 from tkinter import *
 import serial
 import threading
+import time
 #import serialtestMAC
 
 ser = serial.Serial(
@@ -13,6 +15,7 @@ ser = serial.Serial(
 )
 
 g_output = []
+g_dict = {'kd': 0xD2, 'kp': 0xE2}
 
 """ 
 Get g_navigationMap -> Redraw the map
@@ -90,7 +93,6 @@ class Map(LabelFrame):
     def updateMap(self):
         global g_output
         if g_output:
-            print("g_output: ", g_output)
             if (g_output[0][0] == 10) and (g_output[0][4] == 1):
                 square = self.canvas.find_withtag(
                     str(g_output[0][2]) + "," + str(g_output[0][3]))
@@ -111,7 +113,7 @@ class Map(LabelFrame):
     def onTimer(self):
         '''creates a cycle each timer event'''
         self.moveRobot()
-        self.updateMap()
+        # self.updateMap()
         self.after(Constants.DELAY, self.onTimer)
 
 
@@ -144,10 +146,13 @@ class Console(LabelFrame):
 
     def updateConsole(self):
         '''updates the console'''
-        self.index += 1
-        Label(self.frame, text="Some sensor data: "+str(self.index),
-              bg='black', fg='white').grid(row=self.index, sticky=W)
-        self.updateScollRegion()
+
+        global g_output
+        if g_output:
+            self.index += 1
+            Label(self.frame, text="Some sensor data: "+str(self.index),
+                  bg='black', fg='white').grid(row=self.index, sticky=W)
+            self.updateScollRegion()
         if Constants.AUTO_SCROLL:
             self.canvas.yview_moveto(1)
 
@@ -171,10 +176,10 @@ class Controls(LabelFrame):
                              height=CELL_SIZE * 25 - 1)
         self.canvas.pack(side=LEFT)
 
-        rightArrow = [270, 200, 270, 300, 320, 250]
-        leftArrow = [150, 200, 150, 300, 100, 250]
-        upArrow = [210, 140, 260, 190, 160, 190]
-        downArrow = [210, 360, 260, 310, 160, 310]
+        rightArrow = [270, 150, 270, 250, 320, 200]
+        leftArrow = [150, 150, 150, 250, 100, 200]
+        upArrow = [210, 90, 260, 140, 160, 140]
+        downArrow = [210, 310, 260, 260, 160, 260]
 
         self.canvas.create_polygon(rightArrow, tags="right_arrow")
         self.canvas.create_polygon(leftArrow, tags="left_arrow")
@@ -184,10 +189,25 @@ class Controls(LabelFrame):
         self.button1 = Button(self, text="MODE", width=10,
                               command=self.setNavigationMode, state=NORMAL)
         self.button1_window = self.canvas.create_window(
-            210, 450, anchor=S, window=self.button1)
-        self.inputField = Entry(self)
-        self.inputField_window = self.canvas.create_window(
-            210, 490, anchor=S, window=self.inputField)
+            210, 350, anchor=S, window=self.button1)
+
+        self.canvas.create_text(90,
+                                385, font=("Purisa", 20), text="KD: ", )
+        self.canvas.create_text(90,
+                                415, font=("Purisa", 20), text="KP: ", )
+
+        self.inputKd = Entry(self)
+        self.inputKd_window = self.canvas.create_window(
+            210, 400, anchor=S, window=self.inputKd)
+
+        self.inputKp = Entry(self)
+        self.inputKp_window = self.canvas.create_window(
+            210, 430, anchor=S, window=self.inputKp)
+
+        self.button1 = Button(self, text="SET PD", width=10,
+                              command=self.setPd, state=NORMAL)
+        self.button1_window = self.canvas.create_window(
+            210, 470, anchor=S, window=self.button1)
 
     def onKeyPressed(self, e):
         '''controls direction variables with cursor keys'''
@@ -252,11 +272,15 @@ class Controls(LabelFrame):
             print("Go backwards")
 
     def setNavigationMode(self):
-        # self.button1.config(relief=SUNKEN)
         Constants.AUTONOMOUS = not Constants.AUTONOMOUS
 
-    def setPd():
-        print("Hello")
+    def setPd(self):
+        """Function called when pressing SET PD"""
+        kd = self.inputKd.get()
+        kp = self.inputKp.get()
+
+        packageMaker("kd", [int(kd)])
+        packageMaker("kp", [int(kp)])
 
 
 class Information(LabelFrame):
@@ -298,9 +322,9 @@ def listener():
         out = []
         temp = ser.read()[0]
 
-        # bitshift down and mask away everythign that is not part of the 4bit addres
+        # bitshift right and mask away everything that is not part of the 4-bit address
         addr = ((temp >> 4) & 0x0F)
-        # bitshift down and mask away everythign that is not part of the 3bit byte count
+        # bitshift right and mask away everything that is not part of the 3-bit byte count
         count = ((temp >> 1) & 0x07)
 
         # out.append(temp)
@@ -313,6 +337,27 @@ def listener():
             i += 1
         print(out)
         g_output.append(out)
+
+
+""" def write(send):
+    data_bytes = bytes(send)
+
+    # ser.write(data_bytes) """
+
+
+def packageMaker(operation, byteList):
+
+    global g_dict
+
+    output = bytearray()
+    output.append(g_dict.get(operation))
+
+    for byte in byteList:
+        output.append(byte)
+
+    print(str(output))
+
+    ser.write(output)
 
 
 def check_output():
@@ -339,9 +384,4 @@ def main():
 
 
 if __name__ == '__main__':
-    #tl0 = threading.Thread(target=init_port)
-    #tl1 = threading.Thread(target=main)
-
-    # tl0.start
-    # tl1.start
     main()
