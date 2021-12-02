@@ -12,7 +12,7 @@
 #include "../AVR_common/uart.h"
 
 void SendData();
-#define OPENINGS 40;
+#define OPENINGS 40
 uint8_t g_leftCount = 0;
 uint8_t g_rightCount = 0;
 uint16_t g_lidarDistance = 0; // distance in mm
@@ -33,6 +33,7 @@ struct sensor_data data;
 void StartReading()
 {
 	g_readingDone = false;
+	g_sendData = false;
 	MeasureIR();
 	data.lidar_forward = MeasureLidarFront();
 	data.lidar_backward = MeasureLidarBack();
@@ -66,20 +67,19 @@ int main(void)
 	StartReading();
     while (1)
     {
-		_delay_ms(1000);
+		_delay_us(1);
 		if(g_readingDone && g_sendData)
 		{
+			TCNT3 = 0x0000; // reset timer
 			SendData();
 			//_delay_ms(1000);
-			TCNT3 = 0x0000; // reset timer
 			StartReading();
 		}
     }
 }
-
+struct data_packet packet;
 void SendData()
 {
-	struct data_packet packet;
 	packet.byte_count = 2;
 	
 	uint16_t* value = (uint16_t*) &data;
@@ -113,9 +113,7 @@ ISR(ADC_vect)
 	//if ((ADMUX & (1 << PORTB3)) && (ADMUX & 1 << PORTB2)) // reading from MLX
 	if (ADMUX == 0x46)
 	{
-		cli();
 		g_angle += MLXGyroVal();
-		sei();
 		data.gyro = g_angle;
 		g_readingDone = true;
 	}
@@ -127,9 +125,7 @@ ISR(ADC_vect)
 		double ADCRes = ADCH<<8 | ADCLowBit; // puts result of ADC in ADCRes
 		ADCRes = ADCRes * 5;
 		ADCVoltage = ADCRes / 1024;
-		cli();
 		IRDistance = ConvertVoltage(ADCVoltage);
-		sei();
 		switch (ADMUX)
 		{
 			case 0x40:
@@ -159,7 +155,8 @@ ISR(INT1_vect)
 
 ISR(TIMER3_COMPA_vect)
 {
-	ConvertOdo();
+	
 	// send data via UART every 50 ms + a fraction of a microsec
 	g_sendData = true;
+	ConvertOdo();
 }
