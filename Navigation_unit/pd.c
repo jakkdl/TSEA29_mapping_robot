@@ -3,6 +3,7 @@
 
 #include "pd.h"
 #include "navigation_unit.h"
+#include "../AVR_testing/test.h"
 
 void PDcontroller_Rest();
 void PDcontroller_Set_RefNode();
@@ -16,8 +17,12 @@ void turnToHeading()
     // TODO PD-regulate this
 
     // insert math here
+    if (g_currentHeading == g_navigationGoalHeading)
+    {
+        return;
+    }
     // vänster
-    if (g_currentHeading - g_navigationGoalHeading > FULL_TURN/2)
+    else if (g_currentHeading - g_navigationGoalHeading > FULL_TURN/2)
     {
         g_wheelDirectionLeft = DIR_BACKWARD;
         g_wheelDirectionRight = DIR_FORWARD;
@@ -28,10 +33,80 @@ void turnToHeading()
         g_wheelDirectionRight = DIR_BACKWARD;
     }
 
+    // TODO determine speed according to remaining left to turn
     g_wheelSpeedLeft = 255;
     g_wheelSpeedRight = 255;
 
 }
+
+#if __TEST__
+Test_test(Test, turnToHeading)
+{
+    enum Direction oldDirLeft = g_wheelDirectionLeft;
+    enum Direction oldDirRight = g_wheelDirectionRight;
+    uint8_t oldSpeedLeft = g_wheelSpeedLeft;
+    uint8_t oldSpeedRight = g_wheelSpeedRight;
+    uint16_t oldGoalheading = g_navigationGoalHeading;
+    uint16_t oldheading = g_currentHeading;
+
+    // no turn
+    g_currentHeading = FULL_TURN/2;
+    g_navigationGoalHeading = g_currentHeading;
+    turnToHeading();
+    Test_assertEquals(g_wheelDirectionLeft, oldDirLeft);
+    Test_assertEquals(g_wheelDirectionRight, oldDirRight);
+
+    // Exactly turn around (default right turn)
+    g_currentHeading = 0;
+    g_navigationGoalHeading = FULL_TURN/2;
+    turnToHeading();
+    Test_assertEquals(g_wheelDirectionLeft, DIR_FORWARD);
+    Test_assertEquals(g_wheelDirectionRight, DIR_BACKWARD);
+
+    g_currentHeading = FULL_TURN/2;
+    g_navigationGoalHeading = 0;
+    turnToHeading();
+    Test_assertEquals(g_wheelDirectionLeft, DIR_FORWARD);
+    Test_assertEquals(g_wheelDirectionRight, DIR_BACKWARD);
+
+    // left turn
+    g_currentHeading = FULL_TURN/2;
+    g_navigationGoalHeading = g_currentHeading + FULL_TURN/4;
+    turnToHeading();
+    Test_assertEquals(g_wheelDirectionLeft, DIR_BACKWARD);
+    Test_assertEquals(g_wheelDirectionRight, DIR_FORWARD);
+
+    // right turn
+    g_currentHeading = FULL_TURN/2;
+    g_navigationGoalHeading = g_currentHeading - FULL_TURN/4;
+    turnToHeading();
+    Test_assertEquals(g_wheelDirectionLeft, DIR_FORWARD);
+    Test_assertEquals(g_wheelDirectionRight, DIR_BACKWARD);
+
+    // left turn across 0
+    g_currentHeading = FULL_TURN/8*7;
+    g_navigationGoalHeading = g_currentHeading + FULL_TURN/4;
+    turnToHeading();
+    Test_assertEquals(g_wheelDirectionLeft, DIR_BACKWARD);
+    Test_assertEquals(g_wheelDirectionRight, DIR_FORWARD);
+
+    // right turn across 0
+    g_currentHeading = FULL_TURN/8;
+    g_navigationGoalHeading = g_currentHeading - FULL_TURN/4;
+    turnToHeading();
+    Test_assertEquals(g_wheelDirectionLeft, DIR_FORWARD);
+    Test_assertEquals(g_wheelDirectionRight, DIR_BACKWARD);
+
+
+    g_wheelDirectionLeft = oldDirLeft;
+    g_wheelDirectionRight = oldDirRight;
+    g_wheelSpeedLeft = oldSpeedLeft;
+    g_wheelSpeedRight = oldSpeedRight;
+    g_navigationGoalHeading = oldGoalheading;
+    g_currentHeading = oldheading;
+}
+
+#endif
 void PDcontroller_Update()
 {
     // calculate what heading we should go in
