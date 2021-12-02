@@ -2,6 +2,7 @@
 
 #include "../AVR_common/robot.h"
 #include "../AVR_common/sensors.h"
+#include "../AVR_common/uart.h"
 #include "../AVR_testing/test.h"
 #include "navigation_unit.h"
 #include "pd.h"
@@ -67,7 +68,9 @@ int8_t handle_sensor_data(struct data_packet* data)
         default:
             return -1;
     }
-
+	
+	
+	DATA_Transmit(COM_UNIT_INTERFACE, data);
     // Check if we've received all data
     if (sensor_count == SENSOR_PACKETS)
     {
@@ -78,22 +81,13 @@ int8_t handle_sensor_data(struct data_packet* data)
 
         return nav_main(&current_sensor_data);
     }
+	
     return 0;
 }
 
 // EXTRA: assumes we've checked for parity error
 int8_t nav_main(struct sensor_data* data)
 {
-	// TODO: temporary debug stuff
-	if (data->odometer_left == 0)
-	{
-		g_wheelSpeedLeft = 0x80;
-	}
-	else
-	{
-		g_wheelSpeedLeft = 0;
-	}
-	
     // uses data, updates g_currentHeading, g_currentPosX and g_currentPosY
     if (calculate_heading_and_position(data) == -1)
     {
@@ -124,6 +118,8 @@ int8_t nav_main(struct sensor_data* data)
     // which if there's updates, sends them to com-unit
     update_map(data);
 
+
+//check in sim
     // Check if we should run nav algo
     if (g_navigationMode == AUTONOMOUS && !g_navigationGoalSet)
     {

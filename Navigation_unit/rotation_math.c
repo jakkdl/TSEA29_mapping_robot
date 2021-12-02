@@ -446,7 +446,7 @@ int8_t mark_empty(uint8_t x, uint8_t y)
     return 0;
 }
 
-#define COM_UNIT_INTERFACE 0
+
 void send_map_update(uint8_t x, uint8_t y, int8_t value)
 {
     struct data_packet packet;

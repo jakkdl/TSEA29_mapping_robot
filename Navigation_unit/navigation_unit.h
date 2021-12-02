@@ -5,6 +5,7 @@
 #include <stdbool.h>
 
 #include "../AVR_common/robot.h"
+#define COM_UNIT_INTERFACE 0
 
 enum NavigationMode
 {
