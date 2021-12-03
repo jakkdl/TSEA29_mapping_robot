@@ -4,15 +4,9 @@ import threading
 import time
 
 ser = serial.Serial(
-<<<<<<< HEAD
     port='/dev/rfcomm0',
     baudrate=115200,
-    parity=serial.PARITY_NONE,
-=======
-    port='/dev/tty.Firefly-71B7-SPP',
-    baudrate=115200,
     parity=serial.PARITY_EVEN,
->>>>>>> 6870b6c5d434c81a3a88ae0e25bd4facd9e121db
     stopbits=serial.STOPBITS_ONE,
     bytesize=serial.EIGHTBITS,
     timeout=1
@@ -414,19 +408,16 @@ def listener():
 
 def packageMaker(operation, byteList):
 
-    global g_dict
+    listToSend = [g_dict.get(operation)] + byteList
+ 
+     for byte in listToSend:
+         package = bytearray()
+         package.append(byte)
+         ser.write(package)
+         print("Package: ", package)
+         time.sleep(0.1)
+     time.sleep(1)
 
-    output = bytearray()
-    output.append(g_dict.get(operation))
-
-    for byte in byteList:
-        output.append(byte)
-
-    for byte in output:
-        time.sleep(0.01)
-        print("sending", byte)
-        ser.write(byte)
-    print(str(output))
 
 
 def check_output():
