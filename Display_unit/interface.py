@@ -4,8 +4,8 @@ import threading
 import time
 
 ser = serial.Serial(
-    port='/dev/tty.Firefly-71B7-SPP',
-    baudrate=9600,
+    port='/dev/rfcomm0',
+    baudrate=115200,
     parity=serial.PARITY_NONE,
     stopbits=serial.STOPBITS_ONE,
     bytesize=serial.EIGHTBITS,
@@ -365,6 +365,7 @@ def listener():
         #this part just waits for byte to come in
         while not ser.in_waiting:
             pass
+
         out = []
         temp = ser.read()[0]
 
@@ -401,9 +402,11 @@ def packageMaker(operation, byteList):
     for byte in byteList:
         output.append(byte)
 
+    for byte in output:
+        time.sleep(0.01)
+        print("sending", byte)
+        ser.write(byte)
     print(str(output))
-
-    ser.write(output)
 
 
 def check_output():
