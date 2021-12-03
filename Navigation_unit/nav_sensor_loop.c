@@ -12,10 +12,10 @@
 #include "nav_sensor_loop.h"
 
 // robot will turn to a precision of at least 2.8 degrees
-#define TURN_SENSITIVITY FULL_TURN / 128
+#define TURN_SENSITIVITY FULL_TURN / 16
 // robot will stop when the middle of the robot is within this many mm of
 // the middle of the target square along both the x and y axis
-#define POS_SENSITIVITY 50
+#define POS_SENSITIVITY 200
 
 struct sensor_data sensor_data_0;
 struct sensor_data sensor_data_1;
@@ -23,7 +23,7 @@ struct sensor_data sensor_data_1;
 struct sensor_data *next_sensor_data = &sensor_data_0;
 struct sensor_data *current_sensor_data = &sensor_data_1;
 
-bool g_SensorDataReady = false;
+volatile bool g_SensorDataReady = false;
 uint8_t            sensor_count = 0;
 
 bool   arrived_at_goal(void);
@@ -160,7 +160,7 @@ int8_t nav_main(void)
 
 bool arrived_at_goal(void)
 {
-    return (abs(g_currentHeading - g_navigationGoalHeading) < TURN_SENSITIVITY &&
+    return (abs((int16_t) g_currentHeading - g_navigationGoalHeading) < TURN_SENSITIVITY &&
             abs(g_currentPosX    - g_navigationGoalX)       < POS_SENSITIVITY  &&
             abs(g_currentPosY    - g_navigationGoalY)       < POS_SENSITIVITY);
 }

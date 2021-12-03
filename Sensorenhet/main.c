@@ -113,7 +113,7 @@ ISR(ADC_vect)
 	//if ((ADMUX & (1 << PORTB3)) && (ADMUX & 1 << PORTB2)) // reading from MLX
 	if (ADMUX == 0x46)
 	{
-		g_angle += MLXGyroVal();
+		g_angle = MLXGyroVal();
 		data.gyro = g_angle;
 		g_readingDone = true;
 	}

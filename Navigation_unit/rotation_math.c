@@ -17,8 +17,8 @@
 // map update throws out an update if a wall is too far from where it can be
 #define MAX_ERROR 50
 
-#define AXLE_WIDTH 200          // must be measured
-#define MID_TO_WHEEL_CENTER 141 // must be measured
+#define AXLE_WIDTH 170          // must be measured
+#define MID_TO_WHEEL_CENTER 110 // must be measured
 
 #define USE_ODO_FOR_HEADING 1
 #define M_TAU (2 * M_PI)
@@ -49,6 +49,7 @@ int8_t draw_laser_line(int8_t  x,
                        uint16_t distance);
 
 void send_map_update(uint8_t x, uint8_t y, int8_t value);
+void send_debug(uint16_t value, int8_t type);
 // using the trigonometric addition formulas
 double laser_cos(uint8_t direction)
 {
@@ -132,10 +133,10 @@ int8_t calculate_heading_and_position(struct sensor_data* data)
         {
             // this can also be calibrated with wheel speed
             // crude estimate
-            //distance = (data->odometer_left + data->odometer_right) / 2;
+            distance = (data->odometer_left + data->odometer_right) / 2;
 
             // estimated w/ circle sector + pythagoras
-            if (data->odometer_left < data->odometer_right)
+            /*if (data->odometer_left < data->odometer_right)
             {
                 distance = (double) M_SQRT2 * (data->odometer_left * AXLE_WIDTH
                     / (data->odometer_right - data->odometer_left)
@@ -146,7 +147,7 @@ int8_t calculate_heading_and_position(struct sensor_data* data)
                 distance = (double) M_SQRT2 * (data->odometer_right * AXLE_WIDTH
                     / (data->odometer_left - data->odometer_right)
                     + AXLE_WIDTH / 2);
-            }
+            }*/
             //distance = 1.414214 * ((double) min(data->odometer_left, data->odometer_right)
              //       / heading_change + AXLE_WIDTH/2);
         }
@@ -158,11 +159,25 @@ int8_t calculate_heading_and_position(struct sensor_data* data)
 
         g_currentPosX += round(cos(headingAvg) * distance);
         g_currentPosY += round(sin(headingAvg) * distance);
+		send_debug(g_currentPosX, 0);
+		send_debug(g_currentPosY, 1);
+		
     }
     g_currentHeading += heading_change;
 
     // TODO use lidar & IR to calibrate heading and position
     return 0;
+}
+
+void send_debug(uint16_t value, int8_t type)
+{
+	static struct data_packet data;
+	data.address = ADR_DEBUG;
+	data.byte_count = 3;
+	data.bytes[0] = type;
+	data.bytes[1] = Uint16ToByte0(value);
+	data.bytes[2] = Uint16ToByte1(value);
+	DATA_Transmit(COM_UNIT_INTERFACE, &data);
 }
 
 int8_t update_map(struct sensor_data* data)
@@ -178,6 +193,10 @@ int8_t update_map(struct sensor_data* data)
                     LaserDirection(data, data->lidar_forward),
                     data->lidar_forward);
     // lidar backward
+	// throw out <300
+	
+	
+	// throw out 0, MAX, and everything outside of 80-800
     // 4*ir
 
     // We can optionally also check if the robot is currently standing on top of
