@@ -362,7 +362,9 @@ def listener():
     print("Hello")
     global g_output
     while True:
-
+        #this part just waits for byte to come in
+        while not ser.in_waiting:
+            pass
         out = []
         temp = ser.read()[0]
 
