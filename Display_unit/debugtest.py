@@ -135,7 +135,7 @@ def packageMaker(operation, byteList):
     for byte in listToSend:
         package = bytearray()
         package.append(byte)
-        #ser.write(package)
+        ser.write(package)
         time.sleep(0.1)
     time.sleep(1)
 
