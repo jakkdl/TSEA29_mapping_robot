@@ -2,7 +2,6 @@ import serial
 import threading
 import time
 
-"""
 #port defention dont changed things beside port
 ser = serial.Serial(
     port='/dev/rfcomm0', #this part is where you pu thr firefly port
@@ -12,9 +11,6 @@ ser = serial.Serial(
     bytesize=serial.EIGHTBITS,
     timeout=1
 )
-"""
-
-
 
 """CHange here to adjust times"""
 g_time_stop = 1 #time before stop is sent
@@ -25,8 +21,6 @@ g_time_delay = 0.5 #delay after the stop has ben sent to when we read all info i
 g_output = [] #will contian all pakets in following format [addres, byte count, paket, ... , paket] up to 7 pakets
 g_dict = {"command": 0xB2, "kd": 0xD2, "kp": 0xE2} #this has the header should not be change unless you know what you are doing
 
-
-"""
 def listener():
     global g_output
     while True:
@@ -54,7 +48,7 @@ def listener():
             out.append(result)
             i += 1
         g_output.append(out)
-"""
+
 def consolOut():
     """
     this funtion reads the incomming data from the port that is saved to
@@ -131,6 +125,9 @@ def consolOut():
         g_output.pop(0)
 
 def packageMaker(operation, byteList):
+    """
+    this function sends the byte to the fire fly
+    """
     global g_dict
 
     listToSend = [g_dict.get(operation)] + byteList
@@ -143,7 +140,9 @@ def packageMaker(operation, byteList):
     time.sleep(1)
 
 def main():
-
+    """
+    this function does everything in reagard to choosing what to send
+    """
     #clear the debug file before run
     f = open("debug.txt", "w")
     f.write("")
@@ -152,10 +151,10 @@ def main():
     global g_output
     global g_time
     #start a lisner thread that read port pakets
-    """
+
     t1 = threading.Thread(target=listener)
     t1.start()
-    """
+
     print("OBS this does not work if we never stop sending data")
     while True:
         
