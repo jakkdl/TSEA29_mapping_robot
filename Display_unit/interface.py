@@ -20,7 +20,7 @@ class Constants:
 
     FRAME_WIDTH = 1445
     FRAME_HEIGHT = 1000
-    DELAY = 300
+    DELAY = 100
     ONE_STEP = 20
     CELL_SIZE = 20
     PADDING = 10
@@ -35,6 +35,7 @@ class Map(LabelFrame):
     """Graphical representation of the robot's movement and the room"""
 
     def __init__(self, parent):
+        """Constructor"""
         LabelFrame.__init__(self, parent)
         self.parent = parent
         self.after(Constants.DELAY, self.onTimer)
@@ -56,7 +57,6 @@ class Map(LabelFrame):
         self.canvas.create_rectangle(Constants.ROBOT_X * CELL_SIZE + SPACING, Constants.ROBOT_Y * CELL_SIZE + SPACING, 25 *
                                      CELL_SIZE, 25 * CELL_SIZE, fill='red', tags='robot')
         self.canvas.pack(side=LEFT)
-        # self.updateMap()
 
     def updateMap(self):
         global g_output
@@ -69,13 +69,13 @@ class Map(LabelFrame):
 
     def moveRobot(self):
         '''animates the robot's movement'''
+        global g_output
         if g_output:
             if g_output[0][0] == 8:
                 x = g_output[0][2] << 8 | g_output[0][3]
                 y = g_output[0][4] << 8 | g_output[0][5]
-
-        robot = self.canvas.find_withtag('robot')
-        self.canvas.move(robot, x, y)
+                robot = self.canvas.find_withtag('robot')
+                self.canvas.move(robot, x, y)
 
     def onTimer(self):
         '''creates a cycle each timer event'''
@@ -89,6 +89,7 @@ class Console(LabelFrame):
     """Console for displaying sensor data and other relevant information"""
 
     def __init__(self, parent):
+        """Constructor"""
         LabelFrame.__init__(self, parent, bg='black')
         self.parent = parent
         self.after(Constants.DELAY, self.onTimer)
@@ -115,58 +116,60 @@ class Console(LabelFrame):
         '''updates the console'''
 
         global g_output
+        nrOut = ""
         # lidar forwward
         if g_output:
+            print("Length of g_output: ", len(g_output[0]))
             if g_output[0][0] == 0:
-                nrOut = g_output[0][2] << 8 | g_output[0][3]
+                nrOut = g_output[0][3] << 8 | g_output[0][2]
                 nrOut = "Lidar Forward: " + str(nrOut)
                 g_output.pop(0)
 
             # lidar backwards
             elif g_output[0][0] == 1:
-                nrOut = g_output[0][2] << 8 | g_output[0][3]
+                nrOut = g_output[0][3] << 8 | g_output[0][2]
                 nrOut = "Lidar Backwards: " + str(nrOut)
                 g_output.pop(0)
 
                 # IR front left
             elif g_output[0][0] == 2:
-                nrOut = g_output[0][2] << 8 | g_output[0][3]
+                nrOut = g_output[0][3] << 8 | g_output[0][2]
                 nrOut = "IR Front Left: " + str(nrOut)
                 g_output.pop(0)
 
                 # IR back left
             elif g_output[0][0] == 3:
-                nrOut = g_output[0][2] << 8 | g_output[0][3]
+                nrOut = g_output[0][3] << 8 | g_output[0][2]
                 nrOut = "IR Back Left: " + str(nrOut)
                 g_output.pop(0)
 
                 # IR right front
             elif g_output[0][0] == 4:
-                nrOut = g_output[0][2] << 8 | g_output[0][3]
+                nrOut = g_output[0][3] << 8 | g_output[0][2]
                 nrOut = "IR Front Right: " + str(nrOut)
                 g_output.pop(0)
 
                 # IR right back
             elif g_output[0][0] == 5:
-                nrOut = g_output[0][2] << 8 | g_output[0][3]
+                nrOut = g_output[0][3] << 8 | g_output[0][2]
                 nrOut = "IR Back Right: " + str(nrOut)
                 g_output.pop(0)
 
                 # gyro
             elif g_output[0][0] == 6:
-                nrOut = g_output[0][2] << 8 | g_output[0][3]
-                nrOut = "Gyro: : " + str(nrOut)
+                nrOut = g_output[0][3] << 8 | g_output[0][2]
+                nrOut = "Gyro: " + str(nrOut)
                 g_output.pop(0)
 
                 # odometer
             elif g_output[0][0] == 7:
-                nrOut = g_output[0][2] << 8 | g_output[0][3]
+                nrOut = g_output[0][3] << 8 | g_output[0][2]
                 nrOut = "Odometer: " + str(nrOut)
                 g_output.pop(0)
 
                 # direction
             elif g_output[0][0] == 9:
-                nrOut = g_output[0][2] << 8 | g_output[0][3]
+                nrOut = g_output[0][3] << 8 | g_output[0][2]
                 nrOut = "Direction: " + str(nrOut)
                 g_output.pop(0)
 
@@ -183,6 +186,10 @@ class Console(LabelFrame):
 
         if g_output:
             self.index += 1
+            if self.index % 100 == 0:
+                print("----- DESTROYING CONSOLE CONTENT -----")
+                for widget in self.frame.winfo_children():
+                    widget.destroy()
             Label(self.frame, text=nrOut,
                   bg='black', fg='white').grid(row=self.index, sticky=W)
             self.updateScollRegion()
@@ -200,6 +207,7 @@ class Controls(LabelFrame):
     """Keyboard controls"""
 
     def __init__(self, parent):
+        """Constructor"""
         LabelFrame.__init__(self, parent)
         self.parent = parent
         self.bind_all("<Key>", self.onKeyPressed)
@@ -331,6 +339,7 @@ class Information(LabelFrame):
     """Section for displaying some general info about the robot's current state"""
 
     def __init__(self, parent):
+        """Constructor"""
         LabelFrame.__init__(self, parent)
         self.parent = parent
         self.after(Constants.DELAY, self.onTimer)
@@ -366,9 +375,11 @@ class Information(LabelFrame):
 
 
 def listener():
-    print("Hello")
+    print("----- LISTENING FOR BLUETOOTH INPUT -----")
     global g_output
     while True:
+        while not ser.in_waiting:
+            pass
 
         out = []
         temp = ser.read()[0]
@@ -383,17 +394,16 @@ def listener():
         out.append(count)
         i = 0
         while(i < count):
-            temp = ser.read()[0]
-            out.append(temp)
+            temp = ser.read()
+            if len(temp):
+                result = temp[0]
+            else:
+                print(temp)
+                break
+            out.append(result)
             i += 1
-        print(out)
+        print("OUT: ", out)
         g_output.append(out)
-
-
-""" def write(send):
-    data_bytes = bytes(send)
-
-    # ser.write(data_bytes) """
 
 
 def packageMaker(operation, byteList):
@@ -406,7 +416,7 @@ def packageMaker(operation, byteList):
     for byte in byteList:
         output.append(byte)
 
-    print(str(output))
+    print("----- SENDING: ", str(output), " -----")
 
     ser.write(output)
 
