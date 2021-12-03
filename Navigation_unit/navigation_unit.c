@@ -41,7 +41,7 @@ uint8_t        g_wheelSpeedRight     = 0;
 // and/or what the navigation algorithm wanna use.
 
 // Current navigation goal
-bool                g_navigationGoalSet     = false;
+volatile bool       g_navigationGoalSet     = false;
 uint16_t            g_navigationGoalX       = 24;
 uint16_t            g_navigationGoalY       = 0;
 uint16_t            g_navigationGoalHeading = 0;

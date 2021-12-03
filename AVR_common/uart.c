@@ -2,13 +2,8 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include "uart.h"
-//#define UART_BAUD 8 //16MHz system clock 115.2k baud
-#define UART_BAUD 103 // 9.6k baud
-
-#if __NAVIGATION_UNIT__
-#include "../Navigation_unit/nav_sensor_loop.h"
-#include "../Navigation_unit/nav_unit_com_interrupt_logic.h"
-#endif
+#define UART_BAUD 8 //16MHz system clock 115.2k baud
+//#define UART_BAUD 103 // 9.6k baud
 
 /*
  *This code now work to make parity work we need to set setting on firefly so
@@ -93,7 +88,6 @@ void UART_Transmit(uint8_t interface, uint8_t data )
 void DATA_Transmit(uint8_t interface, struct data_packet *paket)
 {
 	/*This function sends a struct byte by byte*/
-	cli(); //disable interrupts
     UART_Transmit( interface , (paket->address<<4) | (paket->byte_count<<1) );
 
     /*transmission of the data*/
@@ -102,9 +96,6 @@ void DATA_Transmit(uint8_t interface, struct data_packet *paket)
         UART_Transmit( interface,  (uint8_t)paket->bytes[i]);
         i = i + 1;
     }
-
-	sei(); //re enable interrupts
-
 }
 
 uint8_t UART_Receive(uint8_t interface)
@@ -129,71 +120,41 @@ uint8_t UART_Receive(uint8_t interface)
 
 }
 
+
 struct data_packet DATA_Receive( uint8_t interface )
-{
+{	 
 	/*this function receives struct byte by byte*/
-	
+	static struct data_packet ReceivedPaket;
     //create an instance of a new paket to return once called by the ISR
-    struct data_packet ReceivedPaket;
 
     //receive the first byte that contain all the info we need for receive the rest
     uint8_t temp = UART_Receive( interface );
     ReceivedPaket.address = ( ( temp >> 4 ) & 0x0F );
     ReceivedPaket.byte_count = ( ( temp >> 1 ) & 0x07 );
 	
+	/*
 	if (ReceivedPaket.byte_count != 2 || ReceivedPaket.address > 0xF || temp & 0x01)
 	{
 		return ReceivedPaket;
-	}
-
+	}*/
+	
     /*receive the rest of the data*/
     uint8_t i = 0;
 	
-	//for loop implementation as to not get stuck in case of miss math of packets
-    for( i = 0; i < ReceivedPaket.byte_count; ++i)
+	if ( ReceivedPaket.byte_count == 1 )
 	{
-        /* Wait for data to be received */
-        /* do we wait 2x the time here or not? I assume the check always passes
-         * in the other function making that check redundant but it fixed frame errors so leave alone*/	
-        
-        //receive the byte and add it to the struct by index from count
-		uint8_t temp = UART_Receive( interface );
-        ReceivedPaket.bytes[i] = temp;
-		if ( interface == 0){
-			while ( !(UCSR0A & (1<<RXC0)) )
-			;
-		}
-		else
+		ReceivedPaket.bytes[0] = UART_Receive( interface );
+	}
+	else
+	{
+		for( i = 0; i < ReceivedPaket.byte_count; i++)
 		{
-			while ( !(UCSR1A & (1<<RXC1)) )
-			;
+			//receive the byte and add it to the struct by index from count
+			ReceivedPaket.bytes[i] = UART_Receive( interface );
 		}
-    }
-	//return the now hopefully correct struct
-    return ReceivedPaket;
+		//return the now hopefully correct struct
+		}
+	return ReceivedPaket;
 }
 
-#if __NAVIGATION_UNIT__
-ISR( USART0_RX_vect )
-{
-    //cli(); //disable interrupts
-    //struct data_packet received = DATA_Receive(0);
-    //sei(); //re enable interrupts
-    //communication_unit_interrupt(&received);
-}
-#endif
 
-#if __NAVIGATION_UNIT__
-ISR( USART1_RX_vect )
-{
-    //cli(); //disable interrupts
-    struct data_packet received = DATA_Receive(1);
-    
-    //DATA_Transmit(0, &received);
-    // I had to move this to within interrupt guards when debugging,
-	// but should ultimately be outside TODO
-	
-	//sei(); //re enable interrupts
-	handle_sensor_data(&received);
-}
-#endif

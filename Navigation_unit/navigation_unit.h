@@ -16,8 +16,8 @@ enum NavigationMode
 
 enum Direction
 {
-    DIR_FORWARD,
-    DIR_BACKWARD
+	DIR_BACKWARD,
+    DIR_FORWARD
 };
 
 #define FULL_TURN 65536 // 1 << 16
@@ -64,7 +64,7 @@ extern uint8_t        g_wheelSpeedRight;     // = 0;
 // and/or what the navigation algorithm wanna use.
 
 // Current navigation goal
-extern bool     g_navigationGoalSet;     // = false;
+extern volatile bool g_navigationGoalSet;     // = false;
 extern uint16_t g_navigationGoalX;       // = 24;
 extern uint16_t g_navigationGoalY;       // = 0;
 extern uint16_t g_navigationGoalHeading; // = 0;

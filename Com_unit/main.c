@@ -8,8 +8,8 @@
 #include "../AVR_common/robot.h"
 #include "../AVR_common/uart.h"
 
-bool packet;
-struct data_packet currentPaket;
+//bool packet;
+//struct data_packet currentPaket;
 
 int main(void)
 {	
@@ -18,7 +18,7 @@ int main(void)
 	UART_Init(1, true, true);
     sei();
     while(1){
-		_delay_ms(100);
+		//_delay_ms(100);
 		
     };
 }
@@ -26,21 +26,17 @@ int main(void)
 
 ISR( USART0_RX_vect ) //should be the firefly connection
 {
-    cli(); //disable interrupts
-    struct data_packet received = DATA_Receive( 0 );
-	DATA_Transmit( 1, &received );
-    sei(); //re enable interrupts
-
+	struct data_packet received0;
+    received0 = DATA_Receive( 0 );
+	DATA_Transmit( 1, &received0 );
 }
 
 
 ISR( USART1_RX_vect ) //should be the firefly connection
 {
-    cli(); //disable interrupts
-    struct data_packet received = DATA_Receive( 1 );
-	DATA_Transmit( 0, &received );
-    sei(); //re enable interrupts
-
+	struct data_packet received1;
+    received1 = DATA_Receive( 1 );
+	DATA_Transmit( 0, &received1 );
 }
 
 
