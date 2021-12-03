@@ -1,11 +1,10 @@
-from struct import pack
 from tkinter import *
 import serial
 import threading
 import time
 
 ser = serial.Serial(
-    port='/dev/tty.Firefly-71B7-SPP',
+    port='/dev/rfcomm0',
     baudrate=115200,
     parity=serial.PARITY_EVEN,
     stopbits=serial.STOPBITS_ONE,
@@ -118,7 +117,7 @@ class Console(LabelFrame):
 
         global g_output
         nrOut = ""
-        # lidar forward
+        # lidar forwward
         if g_output:
             print("Length of g_output: ", len(g_output[0]))
             if g_output[0][0] == 0:
@@ -265,32 +264,28 @@ class Controls(LabelFrame):
         if key == LEFT_CURSOR_KEY:
             arrow = self.canvas.find_withtag("left_arrow")
             self.canvas.itemconfig(arrow, fill='green')
-            threading.Thread(target=packageMaker,
-                             args=("command", [4])).start()
+            packageMaker("command", [4])
             print("Rotate left")
 
         RIGHT_CURSOR_KEY = "Right"
         if key == RIGHT_CURSOR_KEY:
             arrow = self.canvas.find_withtag("right_arrow")
             self.canvas.itemconfig(arrow, fill='green')
-            threading.Thread(target=packageMaker,
-                             args=("command", [5])).start()
+            packageMaker("command", [5])
             print("Rotate right")
 
         UP_CURSOR_KEY = "Up"
         if key == UP_CURSOR_KEY:
             arrow = self.canvas.find_withtag("up_arrow")
             self.canvas.itemconfig(arrow, fill='green')
-            threading.Thread(target=packageMaker,
-                             args=("command", [2])).start()
+            packageMaker("command", [2])
             print("Go forward")
 
         DOWN_CURSOR_KEY = "Down"
         if key == DOWN_CURSOR_KEY:
             arrow = self.canvas.find_withtag("down_arrow")
             self.canvas.itemconfig(arrow, fill='green')
-            threading.Thread(target=packageMaker,
-                             args=("command", [3])).start()
+            packageMaker("command", [3])
             print("Go backwards")
 
         # Pauses the autoscroll in the console
@@ -340,13 +335,8 @@ class Controls(LabelFrame):
         kd = self.inputKd.get()
         kp = self.inputKp.get()
 
-        threading.Thread(target=packageMaker, args=("kd", [int(kd)])).start()
-        threading.Thread(target=packageMaker, args=("kp", [int(kp)])).start()
-
-    def stopRobot(self):
-        global g_dict
-
-        threading.Thread(target=packageMaker, args=("command", [0])).start()
+        packageMaker("kd", [int(kd)])
+        packageMaker("kp", [int(kp)])
 
 
 class Information(LabelFrame):
@@ -422,8 +412,6 @@ def listener():
 
 
 def packageMaker(operation, byteList):
-
-    global g_dict
 
     listToSend = [g_dict.get(operation)] + byteList
 
