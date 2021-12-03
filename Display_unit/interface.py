@@ -1,3 +1,4 @@
+from struct import pack
 from tkinter import *
 import serial
 import threading
@@ -117,7 +118,7 @@ class Console(LabelFrame):
 
         global g_output
         nrOut = ""
-        # lidar forwward
+        # lidar forward
         if g_output:
             print("Length of g_output: ", len(g_output[0]))
             if g_output[0][0] == 0:
@@ -227,10 +228,15 @@ class Controls(LabelFrame):
         self.canvas.create_polygon(upArrow, tags="up_arrow")
         self.canvas.create_polygon(downArrow, tags="down_arrow")
 
-        self.button1 = Button(self, text="MODE", width=10,
-                              command=self.setNavigationMode, state=NORMAL)
-        self.button1_window = self.canvas.create_window(
-            210, 350, anchor=S, window=self.button1)
+        self.modeButton = Button(self, text="MODE", width=10,
+                                 command=self.setNavigationMode, state=NORMAL)
+        self.modeButton_window = self.canvas.create_window(
+            210, 350, anchor=S, window=self.modeButton)
+
+        self.stopButton = Button(self, text="STOP", width=10,
+                                 command=self.stopRobot, state=NORMAL)
+        self.stopButton_window = self.canvas.create_window(
+            210, 210, anchor=S, window=self.stopButton)
 
         self.canvas.create_text(90,
                                 385, font=("Purisa", 20), text="KD: ", )
@@ -245,10 +251,10 @@ class Controls(LabelFrame):
         self.inputKp_window = self.canvas.create_window(
             210, 430, anchor=S, window=self.inputKp)
 
-        self.button1 = Button(self, text="SET PD", width=10,
-                              command=self.setPd, state=NORMAL)
-        self.button1_window = self.canvas.create_window(
-            210, 470, anchor=S, window=self.button1)
+        self.pdButton = Button(self, text="SET PD", width=10,
+                               command=self.setPd, state=NORMAL)
+        self.pdButton_window = self.canvas.create_window(
+            210, 470, anchor=S, window=self.pdButton)
 
     def onKeyPressed(self, e):
         '''controls direction variables with cursor keys'''
@@ -259,28 +265,32 @@ class Controls(LabelFrame):
         if key == LEFT_CURSOR_KEY:
             arrow = self.canvas.find_withtag("left_arrow")
             self.canvas.itemconfig(arrow, fill='green')
-            packageMaker("command", [4])
+            threading.Thread(target=packageMaker,
+                             args=("command", [4])).start()
             print("Rotate left")
 
         RIGHT_CURSOR_KEY = "Right"
         if key == RIGHT_CURSOR_KEY:
             arrow = self.canvas.find_withtag("right_arrow")
             self.canvas.itemconfig(arrow, fill='green')
-            packageMaker("command", [5])
+            threading.Thread(target=packageMaker,
+                             args=("command", [5])).start()
             print("Rotate right")
 
         UP_CURSOR_KEY = "Up"
         if key == UP_CURSOR_KEY:
             arrow = self.canvas.find_withtag("up_arrow")
             self.canvas.itemconfig(arrow, fill='green')
-            packageMaker("command", [2])
+            threading.Thread(target=packageMaker,
+                             args=("command", [2])).start()
             print("Go forward")
 
         DOWN_CURSOR_KEY = "Down"
         if key == DOWN_CURSOR_KEY:
             arrow = self.canvas.find_withtag("down_arrow")
             self.canvas.itemconfig(arrow, fill='green')
-            packageMaker("command", [3])
+            threading.Thread(target=packageMaker,
+                             args=("command", [3])).start()
             print("Go backwards")
 
         # Pauses the autoscroll in the console
@@ -330,8 +340,13 @@ class Controls(LabelFrame):
         kd = self.inputKd.get()
         kp = self.inputKp.get()
 
-        packageMaker("kd", [int(kd)])
-        packageMaker("kp", [int(kp)])
+        threading.Thread(target=packageMaker, args=("kd", [int(kd)])).start()
+        threading.Thread(target=packageMaker, args=("kp", [int(kp)])).start()
+
+    def stopRobot(self):
+        global g_dict
+
+        threading.Thread(target=packageMaker, args=("command", [0])).start()
 
 
 class Information(LabelFrame):
@@ -410,15 +425,15 @@ def packageMaker(operation, byteList):
 
     global g_dict
 
-    output = bytearray()
-    output.append(g_dict.get(operation))
+    listToSend = [g_dict.get(operation)] + byteList
 
-    for byte in byteList:
-        output.append(byte)
-
-    print("----- SENDING: ", str(output), " -----")
-
-    ser.write(output)
+    for byte in listToSend:
+        package = bytearray()
+        package.append(byte)
+        ser.write(package)
+        print("Package: ", package)
+        time.sleep(0.1)
+    time.sleep(1)
 
 
 def check_output():
