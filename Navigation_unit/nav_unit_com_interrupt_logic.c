@@ -165,12 +165,18 @@ int8_t command_set_target_square(uint8_t id)
             return navigate_forward((dir + 3) % 4);
         case TURN_LEFT:
             g_navigationGoalHeading = ((dir + 1) % 4) * FULL_TURN / 4;
+			g_navigationGoalX = g_currentPosX;
+			g_navigationGoalY = g_currentPosY;
             return 0;
         case TURN_RIGHT:
             g_navigationGoalHeading = ((dir + 3) % 4) * FULL_TURN / 4;
+			g_navigationGoalX = g_currentPosX;
+			g_navigationGoalY = g_currentPosY;
             return 0;
         case TURN_AROUND:
             g_navigationGoalHeading = ((dir + 2) % 4) * FULL_TURN / 4;
+			g_navigationGoalX = g_currentPosX;
+			g_navigationGoalY = g_currentPosY;
             return 0;
         default:
             return -1;
