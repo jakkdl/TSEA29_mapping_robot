@@ -4,6 +4,7 @@ import serial
 import threading
 import time
 
+"""port needs to be changed depending on which computer you are using"""
 ser = serial.Serial(
     port='/dev/tty.Firefly-71B7-SPP',
     baudrate=115200,
@@ -14,6 +15,7 @@ ser = serial.Serial(
 )
 
 g_output = []
+nrOut = ""
 g_dict = {"command": 0xB2, "kd": 0xD2, "kp": 0xE2}
 
 
@@ -21,7 +23,7 @@ class Constants:
 
     FRAME_WIDTH = 1445
     FRAME_HEIGHT = 1000
-    DELAY = 100
+    DELAY = 300
     ONE_STEP = 20
     CELL_SIZE = 20
     PADDING = 10
@@ -117,10 +119,10 @@ class Console(LabelFrame):
         '''updates the console'''
 
         global g_output
-        nrOut = ""
+        global nrOut
         # lidar forward
         if g_output:
-            print("Length of g_output: ", len(g_output[0]))
+            #print("Length of g_output: ", len(g_output[0]))
             if g_output[0][0] == 0:
                 nrOut = g_output[0][3] << 8 | g_output[0][2]
                 nrOut = "Lidar Forward: " + str(nrOut)
@@ -176,14 +178,17 @@ class Console(LabelFrame):
 
                 # debug
             elif g_output[0][0] == 12:
-                debug = len(g_output[0])
-                nrOut = str(debug)
-                i = 2
-                while(i < debug):
-                    nrOut += " " + str(g_output[0][i])
+                print("G_output:", g_output)
+                if g_output[0][1] == 3:
+                    nrOut = str(g_output[0][2]) + " " + \
+                        str(g_output[0][4] << 8 | g_output[0][3])
+                    """else:
+                    debug = len(g_output[0])
+                    nrOut = "Debug: " + str(debug)
+                    i = 2
+                    while(i < debug):
+                        nrOut += " " + str(g_output[0][i])"""
                 g_output.pop(0)
-        else:
-            nrOut = ""
 
         if g_output:
             self.index += 1
@@ -229,12 +234,12 @@ class Controls(LabelFrame):
         self.canvas.create_polygon(downArrow, tags="down_arrow")
 
         self.modeButton = Button(self, text="MODE", width=10,
-                                 command=self.setNavigationMode, state=NORMAL)
+                                 command=self.setNavigationMode, state=NORMAL, highlightbackground='gray')
         self.modeButton_window = self.canvas.create_window(
             210, 350, anchor=S, window=self.modeButton)
 
         self.stopButton = Button(self, text="STOP", width=10,
-                                 command=self.stopRobot, state=NORMAL)
+                                 command=self.stopRobot, state=NORMAL, highlightbackground='gray')
         self.stopButton_window = self.canvas.create_window(
             210, 210, anchor=S, window=self.stopButton)
 
@@ -243,16 +248,16 @@ class Controls(LabelFrame):
         self.canvas.create_text(90,
                                 415, font=("Purisa", 20), text="KP: ", )
 
-        self.inputKd = Entry(self)
+        self.inputKd = Entry(self, highlightbackground='gray')
         self.inputKd_window = self.canvas.create_window(
             210, 400, anchor=S, window=self.inputKd)
 
-        self.inputKp = Entry(self)
+        self.inputKp = Entry(self, highlightbackground='gray')
         self.inputKp_window = self.canvas.create_window(
             210, 430, anchor=S, window=self.inputKp)
 
         self.pdButton = Button(self, text="SET PD", width=10,
-                               command=self.setPd, state=NORMAL)
+                               command=self.setPd, state=NORMAL, highlightbackground='gray')
         self.pdButton_window = self.canvas.create_window(
             210, 470, anchor=S, window=self.pdButton)
 
@@ -344,8 +349,6 @@ class Controls(LabelFrame):
         threading.Thread(target=packageMaker, args=("kp", [int(kp)])).start()
 
     def stopRobot(self):
-        global g_dict
-
         threading.Thread(target=packageMaker, args=("command", [0])).start()
 
 
@@ -417,7 +420,7 @@ def listener():
                 break
             out.append(result)
             i += 1
-        print("OUT: ", out)
+        #print("OUT: ", out)
         g_output.append(out)
 
 
@@ -434,13 +437,6 @@ def packageMaker(operation, byteList):
         print("Package: ", package)
         time.sleep(0.1)
     time.sleep(1)
-
-
-def check_output():
-    global g_output
-    if g_output:
-        print(g_output)
-        g_output = []
 
 
 def main():
