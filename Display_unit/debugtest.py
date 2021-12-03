@@ -2,6 +2,8 @@ import serial
 import threading
 import time
 
+from serial.serialutil import Timeout
+
 #port defention dont changed things beside port
 ser = serial.Serial(
     port='/dev/rfcomm0', #this part is where you pu thr firefly port
@@ -11,6 +13,9 @@ ser = serial.Serial(
     bytesize=serial.EIGHTBITS,
     timeout=1
 )
+
+"""time out timmer"""
+g_timeout = 0.5
 
 """CHange here to adjust times"""
 g_time_stop = 1 #time before stop is sent
@@ -58,7 +63,12 @@ def consolOut():
     uint16_t are sent with lower part first.
     """
     global g_output
+
+    timeout = time.time() + g_timeout
     while g_output:
+        if time.time() > timeout:
+            break
+
         nrOut = ""
 
         #debug
@@ -155,7 +165,7 @@ def main():
     t1 = threading.Thread(target=listener)
     t1.start()
 
-    print("OBS this does not work if we never stop sending data")
+    print("To save all thing to file and prin them out send 10")
     while True:
         
         print("-------------------------------------------------------")
@@ -187,12 +197,12 @@ def main():
         elif val == 6:
             threading.Thread(target=packageMaker,
                                 args=("command", [6])).start()
+        elif val == 10:
+            global g_timeout
+            g_timeout = 60
+            consolOut()
+            quit()
 
-        for _ in range(100):
-            g_output.append([0,2,1,1])
-            g_output.append([2,2,1,1])
-            g_output.append([12,2,0,1,1])
-        
         time.sleep(g_time_stop)
         threading.Thread(target=packageMaker, args=("command", [0])).start()
         time.sleep(g_time_delay)
