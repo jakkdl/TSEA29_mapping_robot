@@ -2,18 +2,31 @@ import serial
 import threading
 import time
 
+"""
+#port defention dont changed things beside port
 ser = serial.Serial(
-    port='/dev/rfcomm0',
+    port='/dev/rfcomm0', #this part is where you pu thr firefly port
     baudrate=115200,
     parity=serial.PARITY_EVEN,
     stopbits=serial.STOPBITS_ONE,
     bytesize=serial.EIGHTBITS,
     timeout=1
 )
+"""
 
-g_output = []
-g_dict = {"command": 0xB2, "kd": 0xD2, "kp": 0xE2}
 
+
+"""CHange here to adjust times"""
+g_time_stop = 1 #time before stop is sent
+g_time_sample = 1 #time before we print out g_output
+g_time_delay = 0.5 #delay after the stop has ben sent to when we read all info in g_output
+
+"""glboal static vars"""
+g_output = [] #will contian all pakets in following format [addres, byte count, paket, ... , paket] up to 7 pakets
+g_dict = {"command": 0xB2, "kd": 0xD2, "kp": 0xE2} #this has the header should not be change unless you know what you are doing
+
+
+"""
 def listener():
     global g_output
     while True:
@@ -41,7 +54,7 @@ def listener():
             out.append(result)
             i += 1
         g_output.append(out)
-
+"""
 def consolOut():
     """
     this funtion reads the incomming data from the port that is saved to
@@ -53,15 +66,17 @@ def consolOut():
     global g_output
     while g_output:
         nrOut = ""
+
         #debug
         if g_output[0][0] == 12:
-            if len(g_output) == 4:
-                nrOut = str(g_output[0][2]) + " " + str(g_output[0][3] << 8 | g_output[0][4])
+            if len(g_output[0]) == 5:
+                nrOut = str(g_output[0][2]) + " " + str(g_output[0][4] << 8 | g_output[0][3])
             else:
                 nrOut = str(g_output[0])
             nrOut = "DEBUG: " + nrOut
+
         #lidar forward
-        if g_output[0][0] == 0:
+        elif g_output[0][0] == 0:
             nrOut = g_output[0][3] << 8 | g_output[0][2]
             nrOut = "Lidar Forward: " + str(nrOut)
             
@@ -104,15 +119,15 @@ def consolOut():
         elif g_output[0][0] == 9:
             nrOut = g_output[0][3] << 8 | g_output[0][2]
             nrOut = "Direction: " + str(nrOut)
+
         else:
             nrOut = "Unknow address: " + str(g_output[0])
         
         #add the current nrout which is our output to debug file
-        f = open("debug.txt", "w")
-        f.write(nrOut)
+        f = open("debug.txt", "a")
+        f.write(nrOut + "\n")
         f.close()
-
-        #remove the current list from the g_output
+        print(nrOut)
         g_output.pop(0)
 
 def packageMaker(operation, byteList):
@@ -123,53 +138,69 @@ def packageMaker(operation, byteList):
     for byte in listToSend:
         package = bytearray()
         package.append(byte)
-        ser.write(package)
+        #ser.write(package)
         time.sleep(0.1)
     time.sleep(1)
 
 def main():
+
+    #clear the debug file before run
+    f = open("debug.txt", "w")
+    f.write("")
+    f.close()
+
+    global g_output
+    global g_time
     #start a lisner thread that read port pakets
+    """
     t1 = threading.Thread(target=listener)
     t1.start()
-
     """
-    #starts a read thread that adds the paket to a file and console
-    t2 = threading.Thread(target=consolOut)
-    t2.start()
-    """
-    
-
+    print("OBS this does not work if we never stop sending data")
     while True:
-        #val = input("Enter your paket to send 0-6 (sends stop after 3s): ")
+        
+        print("-------------------------------------------------------")
+        val = input("Enter your paket to send 0-6 " + str(g_time_stop) + " sec to stop: ")
         if val == 0:
             threading.Thread(target=packageMaker,
                                 args=("command", [0])).start()
 
         elif val == 1:
             threading.Thread(target=packageMaker,
-                                args=("command", [3])).start()
+                                args=("command", [1])).start()
 
         elif val == 2:
             threading.Thread(target=packageMaker,
-                                args=("command", [4])).start()
+                                args=("command", [2])).start()
 
         elif val == 3:
             threading.Thread(target=packageMaker,
-                                args=("command", [5])).start()
-        elif val == 4:
-            threading.Thread(target=packageMaker,
                                 args=("command", [3])).start()
 
-        elif val == 5:
+        elif val == 4:
             threading.Thread(target=packageMaker,
                                 args=("command", [4])).start()
 
-        elif val == 6:
+        elif val == 5:
             threading.Thread(target=packageMaker,
                                 args=("command", [5])).start()
+                                
+        elif val == 6:
+            threading.Thread(target=packageMaker,
+                                args=("command", [6])).start()
+
+        for _ in range(100):
+            g_output.append([0,2,1,1])
+            g_output.append([2,2,1,1])
+            g_output.append([12,2,0,1,1])
         
-        time.sleep(2)
-        threading.Thread(target=packageMaker, args=("command", [0])).start() 
+        time.sleep(g_time_stop)
+        threading.Thread(target=packageMaker, args=("command", [0])).start()
+        time.sleep(g_time_delay)
+        consolOut()
+        
+
+        
 
 if __name__ == '__main__':
     main()
