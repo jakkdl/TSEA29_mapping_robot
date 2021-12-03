@@ -229,12 +229,12 @@ class Controls(LabelFrame):
         self.canvas.create_polygon(downArrow, tags="down_arrow")
 
         self.modeButton = Button(self, text="MODE", width=10,
-                                 command=self.setNavigationMode, state=NORMAL)
+                                 command=self.setNavigationMode, state=NORMAL, highlightbackground='gray')
         self.modeButton_window = self.canvas.create_window(
             210, 350, anchor=S, window=self.modeButton)
 
         self.stopButton = Button(self, text="STOP", width=10,
-                                 command=self.stopRobot, state=NORMAL)
+                                 command=self.stopRobot, state=NORMAL, highlightbackground='gray')
         self.stopButton_window = self.canvas.create_window(
             210, 210, anchor=S, window=self.stopButton)
 
@@ -243,16 +243,16 @@ class Controls(LabelFrame):
         self.canvas.create_text(90,
                                 415, font=("Purisa", 20), text="KP: ", )
 
-        self.inputKd = Entry(self)
+        self.inputKd = Entry(self, highlightbackground='gray')
         self.inputKd_window = self.canvas.create_window(
             210, 400, anchor=S, window=self.inputKd)
 
-        self.inputKp = Entry(self)
+        self.inputKp = Entry(self, highlightbackground='gray')
         self.inputKp_window = self.canvas.create_window(
             210, 430, anchor=S, window=self.inputKp)
 
         self.pdButton = Button(self, text="SET PD", width=10,
-                               command=self.setPd, state=NORMAL)
+                               command=self.setPd, state=NORMAL, highlightbackground='gray')
         self.pdButton_window = self.canvas.create_window(
             210, 470, anchor=S, window=self.pdButton)
 
