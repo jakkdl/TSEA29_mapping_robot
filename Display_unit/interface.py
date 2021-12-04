@@ -1,51 +1,21 @@
-from struct import pack
 from tkinter import *
 import serial
 import threading
 import time
-#import serialtestMAC
 
+"""port needs to be changed depending on which computer you are using"""
 ser = serial.Serial(
-    port='/dev/tty.Firefly-71B7-SPP',  # need to fin the correct port
-    baudrate=9600,
-    parity=serial.PARITY_NONE,
+    port='/dev/rfcomm0',
+    baudrate=115200,
+    parity=serial.PARITY_EVEN,
     stopbits=serial.STOPBITS_ONE,
     bytesize=serial.EIGHTBITS,
     timeout=1
 )
 
 g_output = []
-g_dict = {"kd": 0xD2, "kp": 0xE2, "command": 0xB2}
-
-""" 
-Get g_navigationMap -> Redraw the map
-Get currentPosX and currentPosY -> Redraw the robot + output in information section
-Get direction -> Output in information section
-Get sensordata -> Output in console
-"""
-
-#nearby_devices = bluetooth.discover_devices(lookup_names=True)
-
-"""
-INSTRUCTIONS:
-
-Use arrow keys to send movement input. Press space to pause autoscrolling in the console.
-"""
-
-
-""" def init_port():
-    ser = serial.Serial(
-        port='/dev/cu.Bluetooth-Incoming-Port',
-        baudrate=9600,
-        parity=serial.PARITY_ODD,
-        stopbits=serial.STOPBITS_ONE,
-        bytesize=serial.EIGHTBITS
-    )
-    while(True):
-
-        temp = ser.read().hex()
-        print(temp)
- """
+nrOut = ""
+g_dict = {"command": 0xB2, "kd": 0xD2, "kp": 0xE2}
 
 
 class Constants:
@@ -67,6 +37,7 @@ class Map(LabelFrame):
     """Graphical representation of the robot's movement and the room"""
 
     def __init__(self, parent):
+        """Constructor"""
         LabelFrame.__init__(self, parent)
         self.parent = parent
         self.after(Constants.DELAY, self.onTimer)
@@ -88,7 +59,6 @@ class Map(LabelFrame):
         self.canvas.create_rectangle(Constants.ROBOT_X * CELL_SIZE + SPACING, Constants.ROBOT_Y * CELL_SIZE + SPACING, 25 *
                                      CELL_SIZE, 25 * CELL_SIZE, fill='red', tags='robot')
         self.canvas.pack(side=LEFT)
-        # self.updateMap()
 
     def updateMap(self):
         global g_output
@@ -99,21 +69,20 @@ class Map(LabelFrame):
                 self.canvas.itemconfig(square, fill='blue')
                 g_output.pop(0)
 
-    def getCoordinates(self):
-        print("Fetching currentXPos and currentYPos")
-
-    def getDirection():
-        print("Direction")
-
     def moveRobot(self):
         '''animates the robot's movement'''
-        robot = self.canvas.find_withtag('robot')
-        self.canvas.move(robot, Constants.ONE_STEP, 0)
+        global g_output
+        if g_output:
+            if g_output[0][0] == 8:
+                x = g_output[0][2] << 8 | g_output[0][3]
+                y = g_output[0][4] << 8 | g_output[0][5]
+                robot = self.canvas.find_withtag('robot')
+                self.canvas.move(robot, x, y)
 
     def onTimer(self):
         '''creates a cycle each timer event'''
         self.moveRobot()
-        # self.updateMap()
+        self.updateMap()
         self.after(Constants.DELAY, self.onTimer)
 
 
@@ -122,6 +91,7 @@ class Console(LabelFrame):
     """Console for displaying sensor data and other relevant information"""
 
     def __init__(self, parent):
+        """Constructor"""
         LabelFrame.__init__(self, parent, bg='black')
         self.parent = parent
         self.after(Constants.DELAY, self.onTimer)
@@ -148,9 +118,84 @@ class Console(LabelFrame):
         '''updates the console'''
 
         global g_output
+        global nrOut
+        # lidar forward
+        if g_output:
+            # print("Length of g_output: ", len(g_output[0]))
+            if g_output[0][0] == 0:
+                nrOut = g_output[0][3] << 8 | g_output[0][2]
+                nrOut = "Lidar Forward: " + str(nrOut)
+                g_output.pop(0)
+
+            # lidar backwards
+            elif g_output[0][0] == 1:
+                nrOut = g_output[0][3] << 8 | g_output[0][2]
+                nrOut = "Lidar Backwards: " + str(nrOut)
+                g_output.pop(0)
+
+                # IR front left
+            elif g_output[0][0] == 2:
+                nrOut = g_output[0][3] << 8 | g_output[0][2]
+                nrOut = "IR Front Left: " + str(nrOut)
+                g_output.pop(0)
+
+                # IR back left
+            elif g_output[0][0] == 3:
+                nrOut = g_output[0][3] << 8 | g_output[0][2]
+                nrOut = "IR Back Left: " + str(nrOut)
+                g_output.pop(0)
+
+                # IR right front
+            elif g_output[0][0] == 4:
+                nrOut = g_output[0][3] << 8 | g_output[0][2]
+                nrOut = "IR Front Right: " + str(nrOut)
+                g_output.pop(0)
+
+                # IR right back
+            elif g_output[0][0] == 5:
+                nrOut = g_output[0][3] << 8 | g_output[0][2]
+                nrOut = "IR Back Right: " + str(nrOut)
+                g_output.pop(0)
+
+                # gyro
+            elif g_output[0][0] == 6:
+                nrOut = g_output[0][3] << 8 | g_output[0][2]
+                nrOut = "Gyro: " + str(nrOut)
+                g_output.pop(0)
+
+                # odometer
+            elif g_output[0][0] == 7:
+                nrOut = g_output[0][3] << 8 | g_output[0][2]
+                nrOut = "Odometer: " + str(nrOut)
+                g_output.pop(0)
+
+                # direction
+            elif g_output[0][0] == 9:
+                nrOut = g_output[0][3] << 8 | g_output[0][2]
+                nrOut = "Direction: " + str(nrOut)
+                g_output.pop(0)
+
+                # debug
+            elif g_output[0][0] == 12:
+                print("G_output:", g_output)
+                if g_output[0][1] == 3:
+                    nrOut = str(g_output[0][2]) + " " + \
+                        str(g_output[0][4] << 8 | g_output[0][3])
+                    """else:
+                    debug = len(g_output[0])
+                    nrOut = "Debug: " + str(debug)
+                    i = 2
+                    while(i < debug):
+                        nrOut += " " + str(g_output[0][i])"""
+                g_output.pop(0)
+
         if g_output:
             self.index += 1
-            Label(self.frame, text="Some sensor data: "+str(self.index),
+            if self.index % 100 == 0:
+                print("----- DESTROYING CONSOLE CONTENT -----")
+                for widget in self.frame.winfo_children():
+                    widget.destroy()
+            Label(self.frame, text=nrOut,
                   bg='black', fg='white').grid(row=self.index, sticky=W)
             self.updateScollRegion()
         if Constants.AUTO_SCROLL:
@@ -167,6 +212,7 @@ class Controls(LabelFrame):
     """Keyboard controls"""
 
     def __init__(self, parent):
+        """Constructor"""
         LabelFrame.__init__(self, parent)
         self.parent = parent
         self.bind_all("<Key>", self.onKeyPressed)
@@ -186,28 +232,33 @@ class Controls(LabelFrame):
         self.canvas.create_polygon(upArrow, tags="up_arrow")
         self.canvas.create_polygon(downArrow, tags="down_arrow")
 
-        self.button1 = Button(self, text="MODE", width=10,
-                              command=self.setNavigationMode, state=NORMAL)
-        self.button1_window = self.canvas.create_window(
-            210, 350, anchor=S, window=self.button1)
+        self.modeButton = Button(self, text="MODE", width=10,
+                                 command=self.setNavigationMode, state=NORMAL, highlightbackground='gray')
+        self.modeButton_window = self.canvas.create_window(
+            210, 350, anchor=S, window=self.modeButton)
+
+        self.stopButton = Button(self, text="STOP", width=10,
+                                 command=self.stopRobot, state=NORMAL, highlightbackground='gray')
+        self.stopButton_window = self.canvas.create_window(
+            210, 210, anchor=S, window=self.stopButton)
 
         self.canvas.create_text(90,
                                 385, font=("Purisa", 20), text="KD: ", )
         self.canvas.create_text(90,
                                 415, font=("Purisa", 20), text="KP: ", )
 
-        self.inputKd = Entry(self)
+        self.inputKd = Entry(self, highlightbackground='gray')
         self.inputKd_window = self.canvas.create_window(
             210, 400, anchor=S, window=self.inputKd)
 
-        self.inputKp = Entry(self)
+        self.inputKp = Entry(self, highlightbackground='gray')
         self.inputKp_window = self.canvas.create_window(
             210, 430, anchor=S, window=self.inputKp)
 
-        self.button1 = Button(self, text="SET PD", width=10,
-                              command=self.setPd, state=NORMAL)
-        self.button1_window = self.canvas.create_window(
-            210, 470, anchor=S, window=self.button1)
+        self.pdButton = Button(self, text="SET PD", width=10,
+                               command=self.setPd, state=NORMAL, highlightbackground='gray')
+        self.pdButton_window = self.canvas.create_window(
+            210, 470, anchor=S, window=self.pdButton)
 
     def onKeyPressed(self, e):
         '''controls direction variables with cursor keys'''
@@ -276,15 +327,24 @@ class Controls(LabelFrame):
             print("Go backwards")
 
     def setNavigationMode(self):
-        Constants.AUTONOMOUS = not Constants.AUTONOMOUS
+        global g_dict
+        if Constants.AUTONOMOUS:
+            packageMaker("command", [0])
+            Constants.AUTONOMOUS = False
+        else:
+            packageMaker("command", [1])
+            Constants.AUTONOMOUS = True
 
     def setPd(self):
         """Function called when pressing SET PD"""
         kd = self.inputKd.get()
         kp = self.inputKp.get()
 
-        packageMaker("kd", [int(kd)])
-        packageMaker("kp", [int(kp)])
+        threading.Thread(target=packageMaker, args=("kd", [int(kd)])).start()
+        threading.Thread(target=packageMaker, args=("kp", [int(kp)])).start()
+
+    def stopRobot(self):
+        threading.Thread(target=packageMaker, args=("command", [0])).start()
 
 
 class Information(LabelFrame):
@@ -292,6 +352,7 @@ class Information(LabelFrame):
     """Section for displaying some general info about the robot's current state"""
 
     def __init__(self, parent):
+        """Constructor"""
         LabelFrame.__init__(self, parent)
         self.parent = parent
         self.after(Constants.DELAY, self.onTimer)
@@ -306,11 +367,19 @@ class Information(LabelFrame):
 
     def updateInforamation(self):
         '''updates the console'''
+        global g_output
         mode = self.canvas.find_withtag("mode_text")
+        pos = self.canvas.find_withtag("position_text")
         if(Constants.AUTONOMOUS):
             self.canvas.itemconfig(mode, text="Mode: AUTONOMOUS")
         else:
             self.canvas.itemconfig(mode, text="Mode: MANUAL")
+        if g_output:
+            if g_output[0][0] == 8:
+                x = g_output[0][2] << 8 | g_output[0][3]
+                y = g_output[0][4] << 8 | g_output[0][5]
+                xy = str(x) + " , " + str(y)
+                self.canvas.itemconfig(pos, text="Position: " + xy)
 
     def onTimer(self):
         '''creates a cycle each timer event'''
@@ -319,9 +388,11 @@ class Information(LabelFrame):
 
 
 def listener():
-    print("Hello")
+    print("----- LISTENING FOR BLUETOOTH INPUT -----")
     global g_output
     while True:
+        while not ser.in_waiting:
+            pass
 
         out = []
         temp = ser.read()[0]
@@ -336,39 +407,29 @@ def listener():
         out.append(count)
         i = 0
         while(i < count):
-            temp = ser.read()[0]
-            out.append(temp)
+            temp = ser.read()
+            if len(temp):
+                result = temp[0]
+            else:
+                print(temp)
+                break
+            out.append(result)
             i += 1
-        print(out)
+        # print("OUT: ", out)
         g_output.append(out)
-
-
-""" def write(send):
-    data_bytes = bytes(send)
-
-    # ser.write(data_bytes) """
 
 
 def packageMaker(operation, byteList):
 
-    global g_dict
+    listToSend = [g_dict.get(operation)] + byteList
 
-    output = bytearray()
-    output.append(g_dict.get(operation))
-
-    for byte in byteList:
-        output.append(byte)
-
-    print(str(output))
-
-    ser.write(output)
-
-
-def check_output():
-    global g_output
-    if g_output:
-        print(g_output)
-        g_output = []
+    for byte in listToSend:
+        package = bytearray()
+        package.append(byte)
+        ser.write(package)
+        print("Package: ", package)
+        time.sleep(0.1)
+    time.sleep(1)
 
 
 def main():

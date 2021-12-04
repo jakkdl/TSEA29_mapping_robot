@@ -83,10 +83,12 @@ void TimerInit()
 	TCCR1B = (1 << CS11); // divide clock by 8 to get 2 tick every microsec
 }
 
+
+#define F 62.5
 void MsTimerInit()
 {
 	TCNT3 = 0x0000;
 	TCCR3B = (1 << CS32); // divide clock by 256 to get 3125 ticks per 50ms
-	OCR3A = 0x0C35; // output compare on 3125
+	OCR3A = F * TIME_BETWEEN_SEND; // output compare on 3125 0C35
 	TIMSK3 = (1 << OCIE3A); // enable interrupts for output compare with OCR3A register
 }

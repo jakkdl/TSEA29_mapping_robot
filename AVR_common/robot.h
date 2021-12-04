@@ -3,6 +3,10 @@
 #define AVR_COMMON_ROBOT_H_
 #include <stdint.h>
 
+#ifndef F_CPU
+#define F_CPU 16000000UL
+#endif
+
 enum Address
 {
     LIDAR_FORWARD,

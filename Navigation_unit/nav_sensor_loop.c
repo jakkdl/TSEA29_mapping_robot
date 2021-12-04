@@ -1,23 +1,31 @@
 #include <stdlib.h> //abs
+#include <avr/interrupt.h>
 
 #include "../AVR_common/robot.h"
 #include "../AVR_common/sensors.h"
+#include "../AVR_common/uart.h"
 #include "../AVR_testing/test.h"
 #include "navigation_unit.h"
 #include "pd.h"
 #include "navigation.h"
 #include "rotation_math.h"
+#include "nav_sensor_loop.h"
 
 // robot will turn to a precision of at least 2.8 degrees
-#define TURN_SENSITIVITY FULL_TURN / 128
+#define TURN_SENSITIVITY FULL_TURN / 16
 // robot will stop when the middle of the robot is within this many mm of
 // the middle of the target square along both the x and y axis
-#define POS_SENSITIVITY 50
+#define POS_SENSITIVITY 200
 
-struct sensor_data next_sensor_data;
+struct sensor_data sensor_data_0;
+struct sensor_data sensor_data_1;
+
+struct sensor_data *next_sensor_data = &sensor_data_0;
+struct sensor_data *current_sensor_data = &sensor_data_1;
+
+volatile bool g_SensorDataReady = false;
 uint8_t            sensor_count = 0;
 
-int8_t nav_main(struct sensor_data* data);
 bool   arrived_at_goal(void);
 
 int8_t handle_sensor_data(struct data_packet* data)
@@ -40,59 +48,71 @@ int8_t handle_sensor_data(struct data_packet* data)
     switch (data->address)
     {
         case LIDAR_FORWARD:
-            next_sensor_data.lidar_forward = BYTES_TO_UINT16(data);
+            next_sensor_data->lidar_forward = BYTES_TO_UINT16(data);
             break;
         case LIDAR_BACKWARD:
-            next_sensor_data.lidar_backward = BYTES_TO_UINT16(data);
+            next_sensor_data->lidar_backward = BYTES_TO_UINT16(data);
             break;
         case IR_LEFTFRONT:
-            next_sensor_data.ir_leftfront = BYTES_TO_UINT16(data);
+            next_sensor_data->ir_leftfront = BYTES_TO_UINT16(data);
             break;
         case IR_LEFTBACK:
-            next_sensor_data.ir_leftback = BYTES_TO_UINT16(data);
+            next_sensor_data->ir_leftback = BYTES_TO_UINT16(data);
             break;
         case IR_RIGHTFRONT:
-            next_sensor_data.ir_rightfront = BYTES_TO_UINT16(data);
+            next_sensor_data->ir_rightfront = BYTES_TO_UINT16(data);
             break;
         case IR_RIGHTBACK:
-            next_sensor_data.ir_rightback = BYTES_TO_UINT16(data);
+            next_sensor_data->ir_rightback = BYTES_TO_UINT16(data);
             break;
         case ODOMETER:
-            next_sensor_data.odometer_left  = data->bytes[0];
-            next_sensor_data.odometer_right = data->bytes[1];
+            next_sensor_data->odometer_left  = data->bytes[0];
+            next_sensor_data->odometer_right = data->bytes[1];
             break;
         case GYRO:
-            next_sensor_data.gyro = BYTES_TO_UINT16(data);
+            next_sensor_data->gyro = BYTES_TO_UINT16(data);
             break;
         default:
             return -1;
     }
-
+	
+	
+	
+	
     // Check if we've received all data
-    if (sensor_count == SENSOR_PACKETS)
+    if (sensor_count >= SENSOR_PACKETS && data->address == ODOMETER)
     {
         // copy the data, so we can begin writing the next set of data
         // while still working on it
-        struct sensor_data current_sensor_data = next_sensor_data;
-        sensor_count                           = 0;
-
-        return nav_main(&current_sensor_data);
+		if (next_sensor_data == &sensor_data_0)
+		{
+			next_sensor_data = &sensor_data_1;
+			current_sensor_data = &sensor_data_0;
+		}
+		else
+		{
+			next_sensor_data = &sensor_data_0;
+			current_sensor_data = &sensor_data_1;
+		}
+        sensor_count = 0;
+		g_SensorDataReady = true;
     }
+	
     return 0;
 }
 
 // EXTRA: assumes we've checked for parity error
-int8_t nav_main(struct sensor_data* data)
+int8_t nav_main(void)
 {
-	// TODO: temporary debug stuff
-	if (data->odometer_left == 0)
-	{
-		g_wheelSpeedLeft = 0x80;
-	}
-	else
-	{
-		g_wheelSpeedLeft = 0;
-	}
+	struct sensor_data* data = current_sensor_data;
+	
+	// debug stuff
+	/*struct data_packet data_p;
+	data_p.address    = LIDAR_FORWARD;
+	data_p.byte_count = 2;
+	data_p.bytes[0] = Uint16ToByte0(data->lidar_forward);
+	data_p.bytes[1] = Uint16ToByte1(data->lidar_forward);
+	DATA_Transmit(COM_UNIT_INTERFACE, &data_p);*/
 	
     // uses data, updates g_currentHeading, g_currentPosX and g_currentPosY
     if (calculate_heading_and_position(data) == -1)
@@ -124,6 +144,8 @@ int8_t nav_main(struct sensor_data* data)
     // which if there's updates, sends them to com-unit
     update_map(data);
 
+
+//check in sim
     // Check if we should run nav algo
     if (g_navigationMode == AUTONOMOUS && !g_navigationGoalSet)
     {
@@ -138,7 +160,7 @@ int8_t nav_main(struct sensor_data* data)
 
 bool arrived_at_goal(void)
 {
-    return (abs(g_currentHeading - g_navigationGoalHeading) < TURN_SENSITIVITY &&
+    return (abs((int16_t) g_currentHeading - g_navigationGoalHeading) < TURN_SENSITIVITY &&
             abs(g_currentPosX    - g_navigationGoalX)       < POS_SENSITIVITY  &&
             abs(g_currentPosY    - g_navigationGoalY)       < POS_SENSITIVITY);
 }

@@ -2,10 +2,13 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
+#include <stdbool.h>
 #include "../AVR_common/uart.h"
 #include "../AVR_testing/test.h"
 #include "pwm_timer.h"
 #include "navigation_unit.h"
+#include "nav_sensor_loop.h"
+#include "nav_unit_com_interrupt_logic.h"
 
 
 int main(void)
@@ -18,23 +21,19 @@ int main(void)
     // PORTD = 0x00;
     // Don't know if those need to be set when working with UART
 
-    UART_Init(0);
-    UART_Init(1);
-
-
-
-    // timer init?
-    // TCNT1 = 0x0000;
-    // TCCR1B = (1 << CS11); // divide clock by 8 to get 2 tick every microsec
-
+    UART_Init(COM_UNIT_INTERFACE, true, true);
+    UART_Init(SENSOR_UNIT_INTERFACE, true, false);
     PinInitPWM();
     sei();
-
-    //g_wheelSpeedLeft = 0x30;
-    //_delay_ms(1);
-    g_wheelSpeedLeft = 0x00;
     while(1)
     {
+		_delay_us(1);
+		if (g_SensorDataReady)
+		{
+			__asm("nop");
+			g_SensorDataReady = false;
+			nav_main();
+		}
     }
 }
 
@@ -42,4 +41,30 @@ ISR(TIMER0_OVF_vect)
 {
     OCR0A = g_wheelSpeedLeft;
     OCR0B = g_wheelSpeedRight;
+	PORTB = (g_wheelDirectionLeft << PORTB1) | (g_wheelDirectionRight << PORTB2); // set DIR high as standard
+}
+
+ISR(BADISR_vect)
+{
+    // user code here
+	__asm("nop");
+}
+
+ISR( USART0_RX_vect )
+{
+	//cli(); //disable interrupts
+	struct data_packet received = DATA_Receive(0);
+	//sei(); //re enable interrupts
+	communication_unit_interrupt(&received);
+}
+
+ISR( USART1_RX_vect )
+{
+	//cli(); //disable interrupts
+	struct data_packet received = DATA_Receive(1);
+	
+	//DATA_Transmit(0, &received);
+	
+	//sei(); //re enable interrupts
+	handle_sensor_data(&received);
 }

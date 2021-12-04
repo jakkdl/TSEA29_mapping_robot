@@ -152,13 +152,13 @@ void wall_follow()
     }
 
     // wall follow complete
-    if (at_start_pos())
+    /*if (at_start_pos())
     {
         if (unexplored_cells_exist())
         {
             // sample_search();
         }
-    }
+    }*/
 }
 
 // Path finding algorithm that might not work as expected. Can probably be

@@ -8,6 +8,9 @@
 void PDcontroller_Reset();
 void PDcontroller_Set_RefNode();
 
+#define MAX_SPEED 0x40
+#define TURN_SENSITIVITY FULL_TURN / 32
+
 struct PDcontroller {
 	/* internal memory */
 	double PrevCTE;
@@ -41,20 +44,28 @@ void turnToHeading()
     }
 
     // TODO determine speed according to remaining left to turn
-    g_wheelSpeedLeft = 255;
-    g_wheelSpeedRight = 255;
+    g_wheelSpeedLeft = MAX_SPEED;
+    g_wheelSpeedRight = MAX_SPEED;
 
 }
 
 void PDcontroller_Update(void)
 {
+	int16_t temp = abs((int16_t) g_currentHeading - g_navigationGoalHeading);
     // calculate what heading we should go in
-    if (pd.PrevCTE == 0 && (g_currentHeading - g_navigationGoalHeading > FULL_TURN/128 ||
-            g_navigationGoalHeading - g_currentHeading > FULL_TURN/128))
-    {
+    if (pd.PrevCTE == 0)
+	{
+		if (temp > 2048)
+		{
+	/*((int16_t) g_currentHeading - g_navigationGoalHeading > TURN_SENSITIVITY ||
+            (int16_t) g_navigationGoalHeading - g_currentHeading > TURN_SENSITIVITY))*/
+    
         //turn on the spot
-        return;
-    }
+			turnToHeading();
+			return;
+		}
+	}
+	
 
     /* calculate the dot product between reference node one and target node with respect to current pos */
     int32_t deltaX = g_navigationGoalX - g_referencePosX;
@@ -86,17 +97,18 @@ void PDcontroller_Update(void)
     int16_t out = proportional + derivative;
     pd.PrevCTE = CTE;
 
-    // TODO Set g_wheelSpeedLeft & right
-    if (out < 0)
+    /*if (out < 0)
     {
-        g_wheelSpeedRight = UINT8_MAX;
-        g_wheelSpeedLeft = UINT8_MAX+out;
+        g_wheelSpeedRight = MAX_SPEED;
+        g_wheelSpeedLeft = MAX_SPEED+out;
     }
     else
     {
-        g_wheelSpeedLeft = UINT8_MAX;
-        g_wheelSpeedRight= UINT8_MAX-out;
-    }
+        g_wheelSpeedLeft = MAX_SPEED;
+        g_wheelSpeedRight= MAX_SPEED-out;
+    }*/
+	g_wheelSpeedLeft = MAX_SPEED;
+	g_wheelSpeedRight = MAX_SPEED;
 }
 
 void PDcontroller_NewGoal(void)
