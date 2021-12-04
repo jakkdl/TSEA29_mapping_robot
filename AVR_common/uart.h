@@ -3,6 +3,9 @@
 #define UART_H_
 #include "robot.h"
 
+extern volatile uint8_t** receive_buffer;
+extern volatile uint8_t** send_buffer;
+
 void UART_Init(uint8_t interface);
 void UART_Transmit(uint8_t interface, uint8_t data);
 void DATA_Transmit(uint8_t interface, struct data_packet *paket);

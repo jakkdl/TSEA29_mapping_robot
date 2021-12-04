@@ -15,7 +15,8 @@
  *This code now work to make pairty work we need to set setting on firefly so
  *8bit + 1 stop + no pairty is the current setting that works i have adjusted to code
  */
-
+volatile uint8_t receive_buffer[2][32];
+volatile uint8_t send_buffer[2][32];
 
 
 //intrups for tx should not be used as the restart the atmega for now
@@ -77,6 +78,7 @@ void UART_Transmit(uint8_t interface, uint8_t data )
 
 
 //add interrupts to the transmit part of the UART transmit also this part has not been tested
+// why disable interrupts here?
 void DATA_Transmit(uint8_t interface, struct data_packet *paket)
 {
 	/*This funktion sends a struct byte by byte*/
@@ -170,8 +172,6 @@ ISR( USART1_RX_vect )
     cli(); //disable interrupts
     struct data_packet received = DATA_Receive(1);
     
-    // I had to move this to within interrupt guards when debugging,
-	// but should ultimately be outside TODO
 	handle_sensor_data(&received);
 	sei(); //re enable interrupts
 }
