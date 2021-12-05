@@ -173,12 +173,12 @@ bool arrived_at_goal(void)
 Test_test(Test, handle_sensor_data_lidar_forward)
 {
     // save old values to restore later
-    struct sensor_data old_sensor_data  = next_sensor_data;
+    struct sensor_data* old_sensor_data  = next_sensor_data;
     uint8_t            old_sensor_count = sensor_count;
 
     // set up environment
     sensor_count                   = 0;
-    next_sensor_data.lidar_forward = 0;
+    next_sensor_data->lidar_forward = 0;
 
     // construct parameter
     struct data_packet data;
@@ -190,7 +190,7 @@ Test_test(Test, handle_sensor_data_lidar_forward)
     // test
     Test_assertEquals(handle_sensor_data(&data), 0);
     Test_assertEquals(sensor_count, 1);
-    Test_assertEquals(next_sensor_data.lidar_forward, 2000);
+    Test_assertEquals(next_sensor_data->lidar_forward, 2000);
 
     // restore old values
     next_sensor_data = old_sensor_data;
@@ -201,13 +201,13 @@ Test_test(Test, handle_sensor_data_lidar_forward)
 Test_test(Test, handle_sensor_data_odometer)
 {
     // save old values to restore later
-    struct sensor_data old_sensor_data  = next_sensor_data;
+    struct sensor_data* old_sensor_data  = next_sensor_data;
     uint8_t            old_sensor_count = sensor_count;
 
     // set up environment
     sensor_count                    = 3;
-    next_sensor_data.odometer_left  = 0;
-    next_sensor_data.odometer_right = 0;
+    next_sensor_data->odometer_left  = 0;
+    next_sensor_data->odometer_right = 0;
 
     // construct parameter
     struct data_packet data;
@@ -218,8 +218,8 @@ Test_test(Test, handle_sensor_data_odometer)
 
     Test_assertEquals(handle_sensor_data(&data), 0);
     Test_assertEquals(sensor_count, 4);
-    Test_assertEquals(next_sensor_data.odometer_left, 5);
-    Test_assertEquals(next_sensor_data.odometer_right, 6);
+    Test_assertEquals(next_sensor_data->odometer_left, 5);
+    Test_assertEquals(next_sensor_data->odometer_right, 6);
 
     // restore old values
     next_sensor_data = old_sensor_data;

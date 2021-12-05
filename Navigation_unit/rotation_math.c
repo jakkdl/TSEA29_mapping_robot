@@ -1,13 +1,13 @@
 // TSEA29, initial author JL
 // rotation math
 //
+#include <math.h>
+#include <stdlib.h>
+#include "navigation_unit.h"
 #include "../AVR_common/robot.h"
 #include "../AVR_common/sensors.h"
 #include "../AVR_common/uart.h"
 #include "../AVR_testing/test.h"
-#include "navigation_unit.h"
-#include <math.h>
-#include <stdlib.h>
 
 // if we hit right at the corner of a wall, we don't know which
 // coordinate it corresponds to. So we throw out all values too close
@@ -177,7 +177,7 @@ void send_debug(uint16_t value, int8_t type)
 	data.bytes[0] = type;
 	data.bytes[1] = Uint16ToByte0(value);
 	data.bytes[2] = Uint16ToByte1(value);
-	DATA_Transmit(COM_UNIT_INTERFACE, &data);
+	Uart_Send_0(&data);
 }
 
 int8_t update_map(struct sensor_data* data)
@@ -475,7 +475,7 @@ void send_map_update(uint8_t x, uint8_t y, int8_t value)
     packet.bytes[1] = y;
     packet.bytes[2] = value;
 
-    DATA_Transmit(COM_UNIT_INTERFACE, &packet);
+    ComUnitSend(&packet);
 }
 
 #if __TEST__

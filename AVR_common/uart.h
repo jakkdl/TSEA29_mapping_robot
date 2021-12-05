@@ -1,16 +1,33 @@
-#include <stdint.h>
-#include <stdbool.h>
 #ifndef UART_H_
 #define UART_H_
+#include <stdint.h>
+#include <stdbool.h>
 #include "robot.h"
 
-extern volatile uint8_t** receive_buffer;
-extern volatile uint8_t** send_buffer;
+#define RING_SZ 32
+struct ring_buffer
+{
+    volatile uint8_t begin[RING_SZ];
+    volatile uint8_t* current;
+    uint8_t length;
+};
 
-void UART_Init(uint8_t interface, bool rx, bool tx);
-void UART_Transmit(uint8_t interface, uint8_t data);
-void DATA_Transmit(uint8_t interface, struct data_packet *paket);
-uint8_t UART_Receive(uint8_t interface);
-struct data_packet DATA_Receive( uint8_t interface );
+#if __UART_RX_0__
+bool Uart_Receive_0(struct data_packet *paket);
+#endif
+
+#if __UART_TX_0__
+void Uart_Send_0(struct data_packet *paket);
+#endif
+
+#if __UART_RX_1__
+bool Uart_Receive_1(struct data_packet *paket);
+#endif
+
+#if __UART_TX_1__
+void Uart_Send_1(struct data_packet *paket);
+#endif
+
+void Uart_Init(void);
 
 #endif /* UART_H_ */

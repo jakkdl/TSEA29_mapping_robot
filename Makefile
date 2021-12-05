@@ -21,13 +21,13 @@ endif
 
 COMMON_FILES = AVR_common/robot.c AVR_common/sensors.c AVR_common/uart.c
 NAVIGATION_FILES = Navigation_unit/nav_sensor_loop.c Navigation_unit/navigation_unit.c Navigation_unit/nav_unit_com_interrupt_logic.c Navigation_unit/navigation.c Navigation_unit/pd.c Navigation_unit/rotation_math.c Navigation_unit/main.c Navigation_unit/pwm_timer.c
-NAVIGATION_FLAGS = -D __NAVIGATION_UNIT__
+NAVIGATION_FLAGS = -D __NAVIGATION_UNIT__ -D __UART_RX_0__ -D __UART_TX_0__ -D __UART_RX_1__
 
 SENSOR_FILES = Sensorenhet/adc.c Sensorenhet/gyro.c Sensorenhet/lidar.c Sensorenhet/main.c
-SENSOR_FLAGS = -D __SENSOR_UNIT__
+SENSOR_FLAGS = -D __SENSOR_UNIT__ -D __UART_TX_0__
 
 COMMUNICATION_FILES = Com_unit/main.c
-COMMUNICATION_FLAGS = -D __COMMUNICATION_UNIT__
+COMMUNICATION_FLAGS = -D __COMMUNICATION_UNIT__ -D __UART_RX_0__ -D __UART_TX_0__ -D __UART_RX_1__ -D __UART_TX_1__
 
 # required to print floats, as per https://stackoverflow.com/a/26525329
 TEST_FLAGS = -Wl,-u,vfprintf -lprintf_flt -lm -D __TEST__

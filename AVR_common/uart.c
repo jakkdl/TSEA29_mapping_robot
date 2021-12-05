@@ -9,153 +9,200 @@
  *This code now work to make parity work we need to set setting on firefly so
  *8bit + 1 stop + even parity at 115,200 baud is the current setting that works i have adjusted to code
  */
-volatile uint8_t receive_buffer[2][32];
-volatile uint8_t send_buffer[2][32];
 
+void DATA_Transmit(struct ring_buffer* rb, struct data_packet *paket);
+bool valid_header (uint8_t header);
+void increment(struct ring_buffer* rb);
+void write(struct ring_buffer* rb, uint8_t data);
 
-//interrupts for tx should not be used as the restart the atmega for now
-void UART_Init(uint8_t interface, bool rx, bool tx)
+#if __UART_RX_0__
+struct ring_buffer g_uart_rx_0;
+#endif
+#if __UART_TX_0__
+struct ring_buffer g_uart_tx_0;
+#endif
+#if __UART_RX_1__
+struct ring_buffer g_uart_rx_1;
+#endif
+#if __UART_TX_1__
+struct ring_buffer g_uart_tx_1;
+#endif
+
+void init_ring_buffer(struct ring_buffer* rb)
 {
-	/*this function set the correct bits in the various regs current baud is 9600 at clock at 16Mhz */
-    if (interface == 0)
-    {
-        /* Set baud rate see page 174 in avr documentation*/
-        // set upper part
-        UBRR0H = (uint8_t)(UART_BAUD>>8);
-        // set lower part
-        UBRR0L = (uint8_t)UART_BAUD;
-
-        /* Enable receiver and transmitter and tx and rx interrupts */
-		UCSR0B = 0;
-		if (tx)
-		{
-			UCSR0B |= (0<<TXCIE0) | (1<<TXEN0);
-		}
-		if (rx)
-		{
-			UCSR0B |= (1<<RXCIE0) | (1<<RXEN0);
-		}
-        /* Set frame format: 8data, 1stop bit, no parity bit */
-        UCSR0C =  (0<<USBS0) |(1<<UPM01) | (3<<UCSZ00);
-    }
-    else
-    {
-        /* Set baud rate see page 174 in avr documentations*/
-        // set upper part
-        UBRR1H = (uint8_t)(UART_BAUD>>8);
-        // set lower part
-        UBRR1L = (uint8_t)UART_BAUD;
-
-        /* Enable receiver and transmitter */
-		UCSR1B = 0;
-		if (tx)
-		{
-			UCSR1B |= (0<<TXCIE1) | (1<<TXEN1);
-		}
-		if (rx)
-		{
-			UCSR1B |= (1<<RXCIE1) | (1<<RXEN1);
-		}
-        /* Set frame format: 8data, 1stop bit, no parity bit */
-		UCSR1C =  (0<<USBS1) | (1<<UPM11) | (3<<UCSZ10);
-    }
+    rb->current = rb->begin;
+    rb->length = 0;
 }
 
-
-//interrupts for tx should not be used as the restart the atmega for now
-void UART_Transmit(uint8_t interface, uint8_t data )
+void Uart_Init(void)
 {
-	/*this function is the basic UART send function that puts data in the UDRn, atmega does the rest*/
-    if (interface == 0)
-    {
-        /* Wait for empty transmit buffer */
-        while ( !( UCSR0A & (1<<UDRE0)) )
-            ;
-        /* Put data into buffer, sends the data */
-        UDR0 = data;
-    }
-    else
-    {
-        /* Wait for empty transmit buffer */
-        while ( !( UCSR1A & (1<<UDRE1)) )
-            ;
-        /* Put data into buffer, sends the data */
-        UDR1 = data;
-    }
+#if __UART_RX_0__ | __UART_TX_0__
+    UBRR0H = (uint8_t)(UART_BAUD>>8);
+    UBRR0L = (uint8_t)(UART_BAUD & 0xFFFF);
+    UCSR0C = (0<<USBS0) |(1<<UPM01) | (3<<UCSZ00);
+#endif
+#if __UART_RX_1__ | __UART_TX_1__
+    UBRR1H = (uint8_t)(UART_BAUD>>8);
+    UBRR1L = (uint8_t)(UART_BAUD & 0xFFFF);
+    UCSR1C = (0<<USBS1) |(1<<UPM11) | (3<<UCSZ10);
+#endif
+#if __UART_RX_0__
+    UCSR0B |= (1<<RXEN0);
+    init_ring_buffer(&g_uart_rx_0);
+#endif
+#if __UART_TX_0__
+    UCSR0B |= (1<<TXEN0);
+    init_ring_buffer(&g_uart_rx_0);
+#endif
+#if __UART_RX_1__
+    UCSR1B |= (1<<RXEN1);
+    init_ring_buffer(&g_uart_rx_1);
+#endif
+#if __UART_TX_1__
+    UCSR1B |= (1<<TXEN1);
+    init_ring_buffer(&g_uart_tx_1);
+#endif
 }
 
-
-//add interrupts to the transmit part of the UART transmit also this part has not been tested
-// why disable interrupts here?
-void DATA_Transmit(uint8_t interface, struct data_packet *paket)
+void DATA_Transmit(struct ring_buffer* rb, struct data_packet *paket)
 {
-	/*This function sends a struct byte by byte*/
-    UART_Transmit( interface , (paket->address<<4) | (paket->byte_count<<1) );
+    // write header to the ring buffer
+    write(rb, (paket->address<<4) | (paket->byte_count<<1) );
 
-    /*transmission of the data*/
-    uint8_t i = 0;
-    while ( i < (uint8_t)paket->byte_count ){
-        UART_Transmit( interface,  (uint8_t)paket->bytes[i]);
-        i = i + 1;
+    // write data bytes
+    for (uint8_t i = 0; i < paket->byte_count; ++i ){
+        write(rb, paket->bytes[i]);
     }
 }
 
-uint8_t UART_Receive(uint8_t interface)
+#if __UART_TX_0__
+void Uart_Send_0(struct data_packet *paket)
 {
-    /* This function is the basic receiver function who returns UDRn data to caller */
-    if (interface == 0)
-    {
-        /* Wait for data to be received */
-        while ( !(UCSR0A & (1<<RXC0)) )
-            ;
-        /* Get and return received data from buffer */
-        return UDR0;
-    }
-    else
-    {
-        /* Wait for data to be received */
-        while ( !(UCSR1A & (1<<RXC1)) )
-            ;
-        /* Get and return received data from buffer */
-        return UDR1;
-    }
 
+    DATA_Transmit(&g_uart_rx_0, paket);
+    UCSR0A |= 1 << UDRE0;
+}
+#endif
+
+#if __UART_TX_0__
+void Uart_Send_1(struct data_packet *paket)
+{
+    DATA_Transmit(&g_uart_rx_1, paket);
+    UCSR1A |= 1 << UDRE1;
+}
+#endif
+
+bool valid_header (uint8_t header)
+{
+    return ((!header & 0x01) &&
+            (header >> 4 == ADR_DEBUG
+             || ADR_DATA_PACKETS[header >> 4] == ((header >> 1) & 0x3)));
+}
+
+void increment(struct ring_buffer* rb)
+{
+    if (++(rb->current) > rb->begin+RING_SZ)
+    {
+        rb->current = rb->begin;
+    }
+}
+
+void write(struct ring_buffer* rb, uint8_t data)
+{
+    volatile uint8_t* last = rb->current + rb->length;
+    if (last > rb->begin+RING_SZ)
+    {
+        last -= RING_SZ;
+    }
+    *last = data;
+    ++rb->length;
 }
 
 
-struct data_packet DATA_Receive( uint8_t interface )
-{	 
-	/*this function receives struct byte by byte*/
-	static struct data_packet ReceivedPaket;
-    //create an instance of a new paket to return once called by the ISR
-
-    //receive the first byte that contain all the info we need for receive the rest
-    uint8_t temp = UART_Receive( interface );
-    ReceivedPaket.address = ( ( temp >> 4 ) & 0x0F );
-    ReceivedPaket.byte_count = ( ( temp >> 1 ) & 0x07 );
-	
-	/*
-	if (ReceivedPaket.byte_count != 2 || ReceivedPaket.address > 0xF || temp & 0x01)
-	{
-		return ReceivedPaket;
-	}*/
-	
-    /*receive the rest of the data*/
-    uint8_t i = 0;
-	
-	if ( ReceivedPaket.byte_count == 1 )
-	{
-		ReceivedPaket.bytes[0] = UART_Receive( interface );
-	}
-	else
-	{
-		for( i = 0; i < ReceivedPaket.byte_count; i++)
-		{
-			//receive the byte and add it to the struct by index from count
-			ReceivedPaket.bytes[i] = UART_Receive( interface );
-		}
-		//return the now hopefully correct struct
-		}
-	return ReceivedPaket;
+bool Uart_Receive(struct ring_buffer* rb, struct data_packet *paket)
+{
+    if (!rb->length)
+    {
+        return false;
+    }
+    //while current is not a valid header, throw it away
+    while (!valid_header(*(rb->current)) && rb->length)
+    {
+        increment(rb);
+    }
+    //if there's no remaining packets, return false
+    if (!rb->length)
+    {
+        return false;
+    }
+    //if current header is waiting for more bytes, return false
+    if (rb->length < (*(rb->current) >> 4) + 1)
+    {
+        return false;
+    }
+    //else set struct
+    paket->byte_count = (*(rb->current) >> 1) & 0x3;
+    paket->address = (*(rb->current) >> 4);
+    for (int8_t i = 0; i < paket->byte_count; ++i)
+    {
+        increment(rb);
+        paket->bytes[i] = *rb->current;
+    }
+    return true;
 }
 
+#if __UART_RX_0__
+bool Uart_Receive_0(struct data_packet *paket)
+{
+    return Uart_Receive(&g_uart_rx_0, paket);
+}
+#endif
+
+#if __UART_RX_1__
+bool Uart_Receive_1(struct data_packet *paket)
+{
+    return Uart_Receive(&g_uart_rx_1, paket);
+}
+#endif
+
+#define UART_RECEIVE_FUNC(x) \
+    write(&g_uart_rx_##x, UDR##x);
+
+#define UART_SEND_FUNC(x) \
+    if (g_uart_tx_ ## x.length == 0) \
+    { \
+        /* no more data to send */ \
+        /* don't raise interrupt on empty buffer */ \
+        UCSR ## x ## A &= ~(1 << UDRE ## x); \
+    } \
+    else \
+    { \
+        increment(&g_uart_tx_##x); \
+        UDR##x = *(g_uart_tx_##x.current); \
+    } \
+
+
+#if __UART_RX_0__
+ISR( USART0_RX_vect )
+{
+    UART_RECEIVE_FUNC(0)
+}
+#endif
+#if __UART_TX_0__
+ISR( USART0_UDRE_vect )
+{
+    UART_SEND_FUNC(0)
+}
+#endif
+#if __UART_RX_1__
+ISR( USART1_RX_vect )
+{
+    UART_RECEIVE_FUNC(1)
+}
+#endif
+#if __UART_TX_1__
+ISR ( USART1_UDRE_vect )
+{
+    UART_SEND_FUNC(1)
+}
+#endif
