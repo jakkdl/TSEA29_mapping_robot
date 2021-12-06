@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include "robot.h"
 
-#define RING_SZ 64
+#define RING_SZ 128
 struct ring_buffer
 {
     volatile uint8_t begin[RING_SZ];

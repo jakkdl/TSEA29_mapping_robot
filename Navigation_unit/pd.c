@@ -24,8 +24,7 @@ uint16_t g_referencePosY;
 
 void turnToHeading()
 {
-    // TODO PD-regulate this
-
+    // Extra: PD-regulate this
     // insert math here
     if (g_currentHeading == g_navigationGoalHeading)
     {
@@ -51,7 +50,11 @@ void turnToHeading()
 
 void PDcontroller_Update(void)
 {
+
     int16_t temp = abs((int16_t) g_currentHeading - g_navigationGoalHeading);
+
+    // Extra: reverse to a square if that's easier, if temp > FULL_TURN/4
+
     // calculate what heading we should go in
     if (pd.PrevCTE == 0)
     {
