@@ -1,6 +1,7 @@
 #include "nav_unit_com_interrupt_logic.h"
 #include "../AVR_common/robot.h"
 #include "navigation_unit.h"
+#include "pd.h"
 #include <stdio.h>
 
 // assumes data is not corrupt, does not check parity
@@ -128,6 +129,7 @@ int8_t command_set_target_square(uint8_t id)
     // FULL_TURN / 4 = straight up
     // FULL_TURN * 3 / 4 = straight down
     uint8_t dir;
+    int8_t res;
 
     // right
     if (g_currentHeading < FULL_TURN / 8 ||
@@ -155,33 +157,43 @@ int8_t command_set_target_square(uint8_t id)
     switch (id)
     {
         case FORWARD:
-            return navigate_forward(dir);
+            res = navigate_forward(dir);
+            break;
         case BACKWARD:
             // going backward is the same as a half-turn and forward
-            return navigate_forward((dir + 2) % 4);
+            res = navigate_forward((dir + 2) % 4);
+            break;
         case FW_LEFT:
-            return navigate_forward((dir + 1) % 4);
+            res = navigate_forward((dir + 1) % 4);
+            break;
         case FW_RIGHT:
-            return navigate_forward((dir + 3) % 4);
+            res = navigate_forward((dir + 3) % 4);
+            break;
         case TURN_LEFT:
             g_navigationGoalHeading = ((dir + 1) % 4) * FULL_TURN / 4;
 			g_navigationGoalX = g_currentPosX;
 			g_navigationGoalY = g_currentPosY;
-            return 0;
+            res = 0;
+            break;
         case TURN_RIGHT:
             g_navigationGoalHeading = ((dir + 3) % 4) * FULL_TURN / 4;
             g_navigationGoalX = g_currentPosX;
             g_navigationGoalY = g_currentPosY;
-            return 0;
+            res = 0;
+            break;
         case TURN_AROUND:
             g_navigationGoalHeading = ((dir + 2) % 4) * FULL_TURN / 4;
             g_navigationGoalX = g_currentPosX;
             g_navigationGoalY = g_currentPosY;
-            return 0;
+            res = 0;
+            break;
         default:
             return -1;
     }
+    PDcontroller_NewGoal();
+    return res;
 }
+
 #if __TEST__
 #include "../AVR_testing/test.h"
 Test_test(Test, uartCommandStart)
