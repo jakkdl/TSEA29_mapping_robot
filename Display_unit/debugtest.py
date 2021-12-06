@@ -178,7 +178,7 @@ def main():
     while True:
         
         print("-------------------------------------------------------")
-        val = input("Enter your paket to send 0-6 " + str(g_time_stop) + " sec to stop: ")
+        val = input("Enter your paket to send 0-6 and 13-14. 10 to save all paket to file and exit after 1min " + str(g_time_stop) + " sec to stop: ")
         if val == 0:
             threading.Thread(target=packageMaker,
                                 args=("command", [0])).start()
@@ -206,6 +206,17 @@ def main():
         elif val == 6:
             threading.Thread(target=packageMaker,
                                 args=("command", [6])).start()
+
+        elif val == 13:
+            kp = input("Enter kp")
+            threading.Thread(target=packageMaker,
+                                args=("Kp", [kp])).start()
+                                
+        elif val == 14:
+            kd = input("Enter Kd")
+            threading.Thread(target=packageMaker,
+                                args=("Kd", [Kd])).start()
+
         elif val == 10:
             global g_timeout
             g_timeout = 60
