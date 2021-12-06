@@ -65,84 +65,80 @@ def consolOut():
     """
     global g_output
 
-    timeout = time.time() + g_timeout
-    while g_output:
-        if time.time() > timeout:
-            break
+    while True:
+        if g_output:
+            nrOut = ""
 
-        nrOut = ""
+            #debug
+            if g_output[0][0] == 12:
+                if len(g_output[0]) == 5:
+                    nrOut = str(g_output[0][2]) + " " + str(g_output[0][4] << 8 | g_output[0][3])
+                else:
+                    nrOut = str(g_output[0])
+                nrOut = "DEBUG: " + nrOut
 
-        #debug
-        if g_output[0][0] == 12:
-            if len(g_output[0]) == 5:
-                nrOut = str(g_output[0][2]) + " " + str(g_output[0][4] << 8 | g_output[0][3])
+            #lidar forward
+            elif g_output[0][0] == 0:
+                nrOut = g_output[0][3] << 8 | g_output[0][2]
+                nrOut = "Lidar Forward: " + str(nrOut)
+                
+            # lidar backwards
+            elif g_output[0][0] == 1:
+                nrOut = g_output[0][3] << 8 | g_output[0][2]
+                nrOut = "Lidar Backwards: " + str(nrOut)
+
+                # IR front left
+            elif g_output[0][0] == 2:
+                nrOut = g_output[0][3] << 8 | g_output[0][2]
+                nrOut = "IR Front Left: " + str(nrOut)
+
+                # IR back left
+            elif g_output[0][0] == 3:
+                nrOut = g_output[0][3] << 8 | g_output[0][2]
+                nrOut = "IR Back Left: " + str(nrOut)
+
+                # IR right front
+            elif g_output[0][0] == 4:
+                nrOut = g_output[0][3] << 8 | g_output[0][2]
+                nrOut = "IR Front Right: " + str(nrOut)
+
+                # IR right back
+            elif g_output[0][0] == 5:
+                nrOut = g_output[0][3] << 8 | g_output[0][2]
+                nrOut = "IR Back Right: " + str(nrOut)
+
+                # gyro
+            elif g_output[0][0] == 6:
+                nrOut = g_output[0][3] << 8 | g_output[0][2]
+                nrOut = "Gyro: " + str(nrOut)
+
+                # odometer
+            elif g_output[0][0] == 7:
+                nrOut = "L: " + str(g_output[0][3]) + " R: " + str(g_output[0][2])
+                nrOut = "Odometer: " + str(nrOut)
+
+                # position
+            elif g_output[0][0] == 8:
+                nrOut = g_output[0][3] << 8 | g_output[0][2]
+                nrOut = "Position: " + str(nrOut)
+
+                # direction
+            elif g_output[0][0] == 9:
+                nrOut = g_output[0][3] << 8 | g_output[0][2]
+                nrOut = "Direction: " + str(nrOut)
+
+                # map update
+            elif g_output[0][0] == 10:
+                    nrOut = "Map update: " + str(g_output[0][2]) + " " + str(g_output[0][3]) + " " + str( g_output[0][4] )
+
             else:
-                nrOut = str(g_output[0])
-            nrOut = "DEBUG: " + nrOut
-
-        #lidar forward
-        elif g_output[0][0] == 0:
-            nrOut = g_output[0][3] << 8 | g_output[0][2]
-            nrOut = "Lidar Forward: " + str(nrOut)
+                nrOut = "Unknow paket: " + str(g_output[0])
             
-        # lidar backwards
-        elif g_output[0][0] == 1:
-            nrOut = g_output[0][3] << 8 | g_output[0][2]
-            nrOut = "Lidar Backwards: " + str(nrOut)
-
-            # IR front left
-        elif g_output[0][0] == 2:
-            nrOut = g_output[0][3] << 8 | g_output[0][2]
-            nrOut = "IR Front Left: " + str(nrOut)
-
-            # IR back left
-        elif g_output[0][0] == 3:
-            nrOut = g_output[0][3] << 8 | g_output[0][2]
-            nrOut = "IR Back Left: " + str(nrOut)
-
-            # IR right front
-        elif g_output[0][0] == 4:
-            nrOut = g_output[0][3] << 8 | g_output[0][2]
-            nrOut = "IR Front Right: " + str(nrOut)
-
-            # IR right back
-        elif g_output[0][0] == 5:
-            nrOut = g_output[0][3] << 8 | g_output[0][2]
-            nrOut = "IR Back Right: " + str(nrOut)
-
-            # gyro
-        elif g_output[0][0] == 6:
-            nrOut = g_output[0][3] << 8 | g_output[0][2]
-            nrOut = "Gyro: " + str(nrOut)
-
-            # odometer
-        elif g_output[0][0] == 7:
-            nrOut = g_output[0][3] << 8 | g_output[0][2]
-            nrOut = "Odometer: " + str(nrOut)
-
-            # position
-        elif g_output[0][0] == 8:
-            nrOut = g_output[0][3] << 8 | g_output[0][2]
-            nrOut = "Position: " + str(nrOut)
-
-            # direction
-        elif g_output[0][0] == 9:
-            nrOut = g_output[0][3] << 8 | g_output[0][2]
-            nrOut = "Direction: " + str(nrOut)
-
-            # map update
-        elif g_output[0][0] == 10:
-                nrOut = "Map update: " + str(g_output[0][2]) + " " + str(g_output[0][3]) + " " + str( g_output[0][4] )
-
-        else:
-            nrOut = "Unknow paket: " + str(g_output[0])
-        
-        #add the current nrout which is our output to debug file
-        f = open("debug.txt", "a")
-        f.write(nrOut + "\n")
-        f.close()
-        print(nrOut)
-        g_output.pop(0)
+            #add the current nrout which is our output to debug file
+            f = open("debug.txt", "a")
+            f.write(nrOut + "\n")
+            f.close()
+            g_output.pop(0)
 
 def packageMaker(operation, byteList):
     """
@@ -179,12 +175,14 @@ def main():
     t1 = threading.Thread(target=listener)
     t1.start()
 
+    t2 = threading.Thread(target=consolOut)
+    t2.start()
+
     while True:
         
         print("-------------------------------------------------------")
         val = int(input("Enter a value: "))
         if val == 0:
-            print("test0")
             threading.Thread(target=packageMaker,
                                 args=("command", [0])).start()
         elif val == 1:
@@ -225,11 +223,7 @@ def main():
             threading.Thread(target=packageMaker,
                                 args=("Kd", [Kd])).start()
         
-        print("past")
-        #time.sleep(g_time_stop)
-        #threading.Thread(target=packageMaker, args=("command", [0])).start()
         time.sleep(g_time_delay)
-        consolOut()
         
 
         
