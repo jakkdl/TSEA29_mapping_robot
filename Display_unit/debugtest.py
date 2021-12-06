@@ -1,3 +1,4 @@
+from struct import pack
 import serial
 import threading
 import time
@@ -131,7 +132,7 @@ def consolOut():
 
             # map update
         elif g_output[0][0] == 10:
-                nrOut = "Map update: " + str(g_output[0][2]) + " " + str(g_output[0][3]) + " " + g_output[0][4]
+                nrOut = "Map update: " + str(g_output[0][2]) + " " + str(g_output[0][3]) + " " + str( g_output[0][4] )
 
         else:
             nrOut = "Unknow paket: " + str(g_output[0])
@@ -147,14 +148,17 @@ def packageMaker(operation, byteList):
     """
     this function sends the byte to the fire fly
     """
+    print("in sender")
     global g_dict
 
     listToSend = [g_dict.get(operation)] + byteList
+    print("list: ", listToSend)
 
     for byte in listToSend:
         package = bytearray()
         package.append(byte)
         ser.write(package)
+        print("sent: ", package)
         time.sleep(0.1)
     time.sleep(1)
 
@@ -169,20 +173,20 @@ def main():
 
     global g_output
     global g_time
+    global g_timeout
     #start a lisner thread that read port pakets
 
     t1 = threading.Thread(target=listener)
     t1.start()
 
-    print("To save all thing to file and prin them out send 10")
     while True:
         
         print("-------------------------------------------------------")
-        val = input("Enter your paket to send 0-6 and 13-14. 10 to save all paket to file and exit after 1min " + str(g_time_stop) + " sec to stop: ")
+        val = int(input("Enter a value: "))
         if val == 0:
+            print("test0")
             threading.Thread(target=packageMaker,
                                 args=("command", [0])).start()
-
         elif val == 1:
             threading.Thread(target=packageMaker,
                                 args=("command", [1])).start()
@@ -206,7 +210,11 @@ def main():
         elif val == 6:
             threading.Thread(target=packageMaker,
                                 args=("command", [6])).start()
-
+        elif val == 10:      
+            g_timeout = 30
+            consolOut()
+            g_timeout = 0.5
+    
         elif val == 13:
             kp = input("Enter kp")
             threading.Thread(target=packageMaker,
@@ -216,15 +224,10 @@ def main():
             kd = input("Enter Kd")
             threading.Thread(target=packageMaker,
                                 args=("Kd", [Kd])).start()
-
-        elif val == 10:
-            global g_timeout
-            g_timeout = 60
-            consolOut()
-            quit()
-
-        time.sleep(g_time_stop)
-        threading.Thread(target=packageMaker, args=("command", [0])).start()
+        
+        print("past")
+        #time.sleep(g_time_stop)
+        #threading.Thread(target=packageMaker, args=("command", [0])).start()
         time.sleep(g_time_delay)
         consolOut()
         
