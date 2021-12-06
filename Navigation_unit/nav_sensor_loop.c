@@ -169,10 +169,8 @@ int8_t nav_main(void)
     // Check if we should run nav algo
     if (g_navigationMode == AUTONOMOUS && !g_navigationGoalSet)
     {
-        wall_follow();
         // run navigation algorithm, setting g_navigationGoal
-        PDcontroller_NewGoal();
-        // sample_search()
+        wall_follow();
     }
 
     return 0;
