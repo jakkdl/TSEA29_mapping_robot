@@ -19,6 +19,7 @@ struct PDcontroller {
     int16_t out;
 
 } pd;
+
 uint16_t g_referencePosX;
 uint16_t g_referencePosY;
 
@@ -95,20 +96,22 @@ void PDcontroller_Update(void)
      * U(out) = proportional part + derivative part
      */
     int16_t out = proportional + derivative;
+    pd.out = out;
     pd.PrevCTE = CTE;
 
+    g_wheelDirectionRight = DIR_FORWARD;
+    g_wheelDirectionLeft = DIR_FORWARD;
+        
     if (out < 0)
     {
-        g_wheelSpeedRight = MAX_SPEED;
+        g_wheelSpeedRight = MAX_SPEED-out;
         g_wheelSpeedLeft = MAX_SPEED+out;
     }
     else
     {
-        g_wheelSpeedLeft = MAX_SPEED;
-        g_wheelSpeedRight= MAX_SPEED-out;
+        g_wheelSpeedRight = MAX_SPEED+out;
+        g_wheelSpeedLeft = MAX_SPEED-out;
     }
-    //g_wheelSpeedLeft = MAX_SPEED;
-    //g_wheelSpeedRight = MAX_SPEED;
 }
 
 void PDcontroller_NewGoal(void)
