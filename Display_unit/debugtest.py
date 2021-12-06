@@ -119,13 +119,22 @@ def consolOut():
             nrOut = g_output[0][3] << 8 | g_output[0][2]
             nrOut = "Odometer: " + str(nrOut)
 
+            # position
+        elif g_output[0][0] == 8:
+            nrOut = g_output[0][3] << 8 | g_output[0][2]
+            nrOut = "Position: " + str(nrOut)
+
             # direction
         elif g_output[0][0] == 9:
             nrOut = g_output[0][3] << 8 | g_output[0][2]
             nrOut = "Direction: " + str(nrOut)
 
+            # map update
+        elif g_output[0][0] == 10:
+                nrOut = "Map update: " + str(g_output[0][2]) + " " + str(g_output[0][3]) + " " + g_output[0][4]
+
         else:
-            nrOut = "Unknow address: " + str(g_output[0])
+            nrOut = "Unknow paket: " + str(g_output[0])
         
         #add the current nrout which is our output to debug file
         f = open("debug.txt", "a")
