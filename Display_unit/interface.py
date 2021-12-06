@@ -1,3 +1,4 @@
+from struct import pack
 from tkinter import *
 import serial
 import threading
@@ -5,7 +6,7 @@ import time
 
 """port needs to be changed depending on which computer you are using"""
 ser = serial.Serial(
-    port='/dev/rfcomm0',
+    port='/dev/tty.Firefly-71B7-SPP', #this port should be changed to your own port
     baudrate=115200,
     parity=serial.PARITY_EVEN,
     stopbits=serial.STOPBITS_ONE,
@@ -17,6 +18,8 @@ g_output = []
 nrOut = ""
 g_dict = {"command": 0xB2, "kd": 0xD2, "kp": 0xE2}
 
+g_file_raw = False #out put raw paket data to file
+g_file = False #out put console date to file
 
 class Constants:
 
@@ -63,10 +66,11 @@ class Map(LabelFrame):
     def updateMap(self):
         global g_output
         if g_output:
-            if (g_output[0][0] == 10) and (g_output[0][4] == 1):
-                square = self.canvas.find_withtag(
-                    str(g_output[0][2]) + "," + str(g_output[0][3]))
-                self.canvas.itemconfig(square, fill='blue')
+            if g_output[0][0] == 10:
+                if g_output[0][4] == 1:
+                    square = self.canvas.find_withtag(
+                        str(g_output[0][2]) + "," + str(g_output[0][3]))
+                    self.canvas.itemconfig(square, fill='blue')
                 g_output.pop(0)
 
     def moveRobot(self):
@@ -74,10 +78,14 @@ class Map(LabelFrame):
         global g_output
         if g_output:
             if g_output[0][0] == 8:
-                x = g_output[0][2] << 8 | g_output[0][3]
-                y = g_output[0][4] << 8 | g_output[0][5]
-                robot = self.canvas.find_withtag('robot')
-                self.canvas.move(robot, x, y)
+                if len(g_output[0]) == 6:
+                    x = g_output[0][3] << 8 | g_output[0][2]
+                    y = g_output[0][5] << 8 | g_output[0][4]
+                    robot = self.canvas.find_withtag('robot')
+                    self.canvas.move(robot, x, y)
+                else:
+                    print("paket error supposed to be 6 long not ", len(g_output[0]) )
+                g_output.pop(0)
 
     def onTimer(self):
         '''creates a cycle each timer event'''
@@ -121,7 +129,7 @@ class Console(LabelFrame):
         global nrOut
         # lidar forward
         if g_output:
-            # print("Length of g_output: ", len(g_output[0]))
+            #print("Length of g_output: ", len(g_output[0]))
             if g_output[0][0] == 0:
                 nrOut = g_output[0][3] << 8 | g_output[0][2]
                 nrOut = "Lidar Forward: " + str(nrOut)
@@ -177,17 +185,17 @@ class Console(LabelFrame):
 
                 # debug
             elif g_output[0][0] == 12:
-                print("G_output:", g_output)
-                if g_output[0][1] == 3:
-                    nrOut = str(g_output[0][2]) + " " + \
-                        str(g_output[0][4] << 8 | g_output[0][3])
-                    """else:
-                    debug = len(g_output[0])
-                    nrOut = "Debug: " + str(debug)
-                    i = 2
-                    while(i < debug):
-                        nrOut += " " + str(g_output[0][i])"""
+                if len(g_output[0]) == 5:
+                    nrOut = str(g_output[0][2]) + " " + str(g_output[0][4] << 8 | g_output[0][3])
+                else:
+                    nrOut = str(g_output[0])
+                nrOut = "DEBUG: " + nrOut
                 g_output.pop(0)
+            
+            if g_file:
+                f0 = open("debug.txt", "a")
+                f0.write(nrOut + "\n")
+                f0.close()
 
         if g_output:
             self.index += 1
@@ -269,28 +277,32 @@ class Controls(LabelFrame):
         if key == LEFT_CURSOR_KEY:
             arrow = self.canvas.find_withtag("left_arrow")
             self.canvas.itemconfig(arrow, fill='green')
-            packageMaker("command", [4])
+            threading.Thread(target=packageMaker,
+                             args=("command", [4])).start()
             print("Rotate left")
 
         RIGHT_CURSOR_KEY = "Right"
         if key == RIGHT_CURSOR_KEY:
             arrow = self.canvas.find_withtag("right_arrow")
             self.canvas.itemconfig(arrow, fill='green')
-            packageMaker("command", [5])
+            threading.Thread(target=packageMaker,
+                             args=("command", [5])).start()
             print("Rotate right")
 
         UP_CURSOR_KEY = "Up"
         if key == UP_CURSOR_KEY:
             arrow = self.canvas.find_withtag("up_arrow")
             self.canvas.itemconfig(arrow, fill='green')
-            packageMaker("command", [2])
+            threading.Thread(target=packageMaker,
+                             args=("command", [2])).start()
             print("Go forward")
 
         DOWN_CURSOR_KEY = "Down"
         if key == DOWN_CURSOR_KEY:
             arrow = self.canvas.find_withtag("down_arrow")
             self.canvas.itemconfig(arrow, fill='green')
-            packageMaker("command", [3])
+            threading.Thread(target=packageMaker,
+                             args=("command", [3])).start()
             print("Go backwards")
 
         # Pauses the autoscroll in the console
@@ -415,11 +427,17 @@ def listener():
                 break
             out.append(result)
             i += 1
-        # print("OUT: ", out)
+        #print("OUT: ", out)
         g_output.append(out)
+        if g_file_raw:
+            f1 = open("debugraw.txt", "a")
+            f1.write(nrOut + "\n")
+            f1.close()
 
 
 def packageMaker(operation, byteList):
+
+    global g_dict
 
     listToSend = [g_dict.get(operation)] + byteList
 
@@ -433,8 +451,20 @@ def packageMaker(operation, byteList):
 
 
 def main():
+    #reset debug console data
+    if g_file:
+        f0 = open("debug.txt", "w")
+        f0.write("")
+        f0.close()
 
-    t1 = threading.Thread(target=listener)
+    #reset raw paket data
+    if g_file_raw:
+        f1 = open("debugraw.txt", "w")
+        f1.write("")
+        f1.close()
+
+    #paket linser thread
+    t1 = threading.Thread(target=listener) 
     t1.start()
 
     # graphics
