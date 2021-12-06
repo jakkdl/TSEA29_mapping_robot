@@ -169,12 +169,14 @@ int8_t calculate_heading_and_position(struct sensor_data* data)
         ComUnitSend(&packet);
 
     }
-    g_currentHeading += heading_change;
-    packet.address = ADR_HEADING;
-    packet.bytes[0] = Uint16ToByte0(g_currentHeading);
-    packet.bytes[1] = Uint16ToByte1(g_currentHeading);
-    ComUnitSend(&packet);
-
+	if (heading_change)
+	{
+		g_currentHeading += heading_change;
+		packet.address = ADR_HEADING;
+		packet.bytes[0] = Uint16ToByte0(g_currentHeading);
+		packet.bytes[1] = Uint16ToByte1(g_currentHeading);
+		ComUnitSend(&packet);
+	}
     // TODO use lidar & IR to calibrate heading and position
     return 0;
 }

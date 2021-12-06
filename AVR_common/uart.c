@@ -50,7 +50,7 @@ void Uart_Init(void)
     UCSR1C = (0<<USBS1) |(1<<UPM11) | (3<<UCSZ10);
 #endif
 #if __UART_RX_0__
-    UCSR0B |= (1<<RXEN0);
+    UCSR0B |= (1<<RXEN0) | (1<<RXCIE0);
     init_ring_buffer(&g_uart_rx_0);
 #endif
 #if __UART_TX_0__
@@ -58,7 +58,7 @@ void Uart_Init(void)
     init_ring_buffer(&g_uart_tx_0);
 #endif
 #if __UART_RX_1__
-    UCSR1B |= (1<<RXEN1);
+    UCSR1B |= (1<<RXEN1) | (1<<RXCIE1);
     init_ring_buffer(&g_uart_rx_1);
 #endif
 #if __UART_TX_1__
@@ -85,7 +85,8 @@ void Uart_Send_0(struct data_packet *packet)
 {
 #if !__TEST__
     DATA_Transmit(&g_uart_tx_0, packet);
-    UCSR0A |= 1 << UDRE0;
+	// raise interrupt on data register empty
+    UCSR0B |= 1 << UDRIE0;
 #endif
 }
 #endif
@@ -95,7 +96,7 @@ void Uart_Send_1(struct data_packet *packet)
 {
 #if !__TEST__
     DATA_Transmit(&g_uart_tx_1, packet);
-    UCSR1A |= 1 << UDRE1;
+    UCSR1B |= 1 << UDRIE1;
 #endif
 }
 #endif
@@ -191,12 +192,12 @@ bool Uart_Receive_1(struct data_packet *packet)
     { \
         /* no more data to send */ \
         /* don't raise interrupt on empty buffer */ \
-        UCSR ## x ## A &= ~(1 << UDRE ## x); \
+        UCSR ## x ## B &= ~(1 << UDRIE ## x); \
     } \
     else \
     { \
-        increment(&g_uart_tx_##x); \
         UDR##x = *(g_uart_tx_##x.current); \
+		increment(&g_uart_tx_##x); \
     } \
 
 #if !__TEST__
