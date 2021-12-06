@@ -4,7 +4,11 @@
 #define NAVIGATION_UNIT_NAVIGATION_UNIT_H_
 #include <stdbool.h>
 
+
 #include "../AVR_common/robot.h"
+#include "../AVR_common/uart.h"
+
+#define ComUnitSend(x) Uart_Send_0(x)
 #define COM_UNIT_INTERFACE 0
 #define SENSOR_UNIT_INTERFACE 1
 

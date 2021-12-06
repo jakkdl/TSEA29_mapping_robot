@@ -18,7 +18,7 @@ enum Address
     GYRO,
     ODOMETER,
     POSITION,
-    HEADER,
+    ADR_HEADING,
     MAP_UPDATE,
     COMMAND,
     ADR_DEBUG,
@@ -31,6 +31,7 @@ struct data_packet
 {
     enum Address address;
     uint8_t      byte_count;
+    uint8_t      bytes_read;
     uint8_t      bytes[7];
 };
 
