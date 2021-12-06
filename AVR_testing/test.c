@@ -137,7 +137,6 @@ bool Test_assertFloatEqualLog(double actual,
 bool check_reset_map(void)
 {
     bool result = true;
-    stdout = &mystdout;
     for (uint8_t x = 0; x < MAP_X_MAX; ++x)
     {
         for (uint8_t y = 0; y < MAP_Y_MAX; ++y)
@@ -160,8 +159,9 @@ bool check_reset_map(void)
         { \
             if (m_Test_activeTest->testResult == SUCCESS) \
             { \
-                printf("FAIL: %s after test\n    " #var " not reset to " #value "\n", \
-                        m_Test_activeTest->name); \
+                printf("FAIL: %s after test\n    " #var " is %u and not reset to " #value "\n", \
+                        m_Test_activeTest->name, \
+                        var); \
                 m_Test_result.successCount--; \
                 m_Test_result.failureCount++; \
                 m_Test_activeTest->testResult = FAILURE; \
@@ -236,6 +236,12 @@ void Test_runall(void)
         test_reset_global(g_navigationGoalX, 24)
         test_reset_global(g_navigationGoalY, 0)
         test_reset_global(g_navigationGoalHeading, 0)
+        test_reset_global(g_uart_tx_0.length, 0)
+        test_reset_global(g_uart_rx_0.length, 0)
+#if __UART_TX_1__
+        test_reset_global(g_uart_tx_1.length, 0)
+#endif
+        test_reset_global(g_uart_rx_1.length, 0)
         if (!check_reset_map() && m_Test_activeTest->testResult == SUCCESS)
         {
             printf("FAIL: \"%s\" left garbage in the map according to above\n",

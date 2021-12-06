@@ -12,11 +12,11 @@ void PDcontroller_Set_RefNode();
 #define TURN_SENSITIVITY FULL_TURN / 32
 
 struct PDcontroller {
-	/* internal memory */
-	double PrevCTE;
+    /* internal memory */
+    double PrevCTE;
 
-	/* controller output */
-	int16_t out;
+    /* controller output */
+    int16_t out;
 
 } pd;
 uint16_t g_referencePosX;
@@ -51,21 +51,21 @@ void turnToHeading()
 
 void PDcontroller_Update(void)
 {
-	int16_t temp = abs((int16_t) g_currentHeading - g_navigationGoalHeading);
+    int16_t temp = abs((int16_t) g_currentHeading - g_navigationGoalHeading);
     // calculate what heading we should go in
     if (pd.PrevCTE == 0)
-	{
-		if (temp > 2048)
-		{
-	/*((int16_t) g_currentHeading - g_navigationGoalHeading > TURN_SENSITIVITY ||
-            (int16_t) g_navigationGoalHeading - g_currentHeading > TURN_SENSITIVITY))*/
-    
-        //turn on the spot
-			turnToHeading();
-			return;
-		}
-	}
-	
+    {
+        if (temp > 2048)
+        {
+            /*((int16_t) g_currentHeading - g_navigationGoalHeading > TURN_SENSITIVITY ||
+              (int16_t) g_navigationGoalHeading - g_currentHeading > TURN_SENSITIVITY))*/
+
+            //turn on the spot
+            turnToHeading();
+            return;
+        }
+    }
+
 
     /* calculate the dot product between reference node one and target node with respect to current pos */
     int32_t deltaX = g_navigationGoalX - g_referencePosX;
@@ -97,7 +97,7 @@ void PDcontroller_Update(void)
     int16_t out = proportional + derivative;
     pd.PrevCTE = CTE;
 
-    /*if (out < 0)
+    if (out < 0)
     {
         g_wheelSpeedRight = MAX_SPEED;
         g_wheelSpeedLeft = MAX_SPEED+out;
@@ -106,9 +106,9 @@ void PDcontroller_Update(void)
     {
         g_wheelSpeedLeft = MAX_SPEED;
         g_wheelSpeedRight= MAX_SPEED-out;
-    }*/
-	g_wheelSpeedLeft = MAX_SPEED;
-	g_wheelSpeedRight = MAX_SPEED;
+    }
+    //g_wheelSpeedLeft = MAX_SPEED;
+    //g_wheelSpeedRight = MAX_SPEED;
 }
 
 void PDcontroller_NewGoal(void)
@@ -225,36 +225,36 @@ Test_test(Test, PDcontroller_Update)
     PDcontroller_NewGoal();
 
     PDcontroller_Update();
-    Test_assertEquals(g_wheelSpeedLeft, UINT8_MAX);
-    Test_assertEquals(g_wheelSpeedRight, UINT8_MAX);
+    Test_assertEquals(g_wheelSpeedLeft, MAX_SPEED);
+    Test_assertEquals(g_wheelSpeedRight, MAX_SPEED);
 
     g_currentPosX += 100;
     g_currentPosY += 50;
 
     PDcontroller_Update();
-    Test_assertEquals(g_wheelSpeedLeft, UINT8_MAX);
-    Test_assertEquals(g_wheelSpeedRight, 243);
+    Test_assertEquals(g_wheelSpeedLeft, MAX_SPEED);
+    Test_assertEquals(g_wheelSpeedRight, MAX_SPEED-12);
 
     g_currentPosX += 100;
     g_currentPosY += 50;
 
     PDcontroller_Update();
-    Test_assertEquals(g_wheelSpeedLeft, UINT8_MAX);
-    Test_assertEquals(g_wheelSpeedRight, 237);
+    Test_assertEquals(g_wheelSpeedLeft, MAX_SPEED);
+    Test_assertEquals(g_wheelSpeedRight, MAX_SPEED-18);
 
     g_currentPosX += 100;
     g_currentPosY -= 50;
 
     PDcontroller_Update();
-    Test_assertEquals(g_wheelSpeedLeft, UINT8_MAX);
-    Test_assertEquals(g_wheelSpeedRight, UINT8_MAX);
+    Test_assertEquals(g_wheelSpeedLeft, MAX_SPEED);
+    Test_assertEquals(g_wheelSpeedRight, MAX_SPEED);
 
     g_currentPosX += 100;
     g_currentPosY -= 50;
 
     PDcontroller_Update();
-    Test_assertEquals(g_wheelSpeedLeft, 249);
-    Test_assertEquals(g_wheelSpeedRight, UINT8_MAX);
+    Test_assertEquals(g_wheelSpeedLeft, MAX_SPEED-6);
+    Test_assertEquals(g_wheelSpeedRight, MAX_SPEED);
 
     g_wheelDirectionLeft = oldDirLeft;
     g_wheelDirectionRight = oldDirRight;

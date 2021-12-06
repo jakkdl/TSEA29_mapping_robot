@@ -75,10 +75,10 @@ int8_t handle_sensor_data(struct data_packet* data)
         default:
             return -1;
     }
-	
-	
-	
-	
+
+
+
+
     // Check if we've received all data
     if (sensor_count >= SENSOR_PACKETS && data->address == ODOMETER)
     {
@@ -97,15 +97,35 @@ int8_t handle_sensor_data(struct data_packet* data)
         sensor_count = 0;
 		g_SensorDataReady = true;
     }
-	
+
     return 0;
 }
 
-// EXTRA: assumes we've checked for parity error
+void send_sensor_data(struct sensor_data* data)
+{
+    struct data_packet packet;
+    packet.byte_count = 2;
+
+    uint16_t* value = (uint16_t*) data;
+    for (int i=0; i < 7; ++i)
+    {
+        packet.address = i;
+        packet.bytes[0] = Uint16ToByte0(*value);
+        packet.bytes[1] = Uint16ToByte1(*value);
+        Uart_Send_0(&packet);
+        ++value;
+    }
+    packet.address = ODOMETER;
+    packet.bytes[0] = data->odometer_left;
+    packet.bytes[1] = data->odometer_right;
+    Uart_Send_0(&packet);
+}
+
 int8_t nav_main(void)
 {
-	struct sensor_data* data = current_sensor_data;
-	
+    struct sensor_data* data = current_sensor_data;
+    send_sensor_data(data);
+
 	// debug stuff
 	/*struct data_packet data_p;
 	data_p.address    = LIDAR_FORWARD;
@@ -113,7 +133,7 @@ int8_t nav_main(void)
 	data_p.bytes[0] = Uint16ToByte0(data->lidar_forward);
 	data_p.bytes[1] = Uint16ToByte1(data->lidar_forward);
 	DATA_Transmit(COM_UNIT_INTERFACE, &data_p);*/
-	
+
     // uses data, updates g_currentHeading, g_currentPosX and g_currentPosY
     if (calculate_heading_and_position(data) == -1)
     {
@@ -170,6 +190,7 @@ bool arrived_at_goal(void)
 // test handle sensor data
 
 #if __TEST__
+
 Test_test(Test, handle_sensor_data_lidar_forward)
 {
     // save old values to restore later

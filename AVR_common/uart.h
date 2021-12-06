@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include "robot.h"
 
-#define RING_SZ 32
+#define RING_SZ 64
 struct ring_buffer
 {
     volatile uint8_t begin[RING_SZ];
@@ -30,4 +30,12 @@ void Uart_Send_1(struct data_packet *paket);
 
 void Uart_Init(void);
 
+#if __TEST__
+extern struct ring_buffer g_uart_rx_0;
+extern struct ring_buffer g_uart_tx_0;
+extern struct ring_buffer g_uart_rx_1;
+#if __UART_TX_1__
+extern struct ring_buffer g_uart_tx_1;
+#endif
+#endif
 #endif /* UART_H_ */

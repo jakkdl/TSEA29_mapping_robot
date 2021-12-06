@@ -38,6 +38,9 @@ all:	navigation-atmel
 navigation-test:
 	$(GCC) $(COMMON_FILES) $(NAVIGATION_FILES) $(TEST_FILES) $(CFLAGS) $(TEST_FLAGS) $(NAVIGATION_FLAGS) -o navigation_unit.elf
 
+navigation-test-E:
+	$(GCC) $(COMMON_FILES) $(NAVIGATION_FILES) $(TEST_FILES) $(CFLAGS) $(TEST_FLAGS) $(NAVIGATION_FLAGS) -E > expanded_macros.c
+
 navigation:
 	$(GCC) $(COMMON_FILES) $(NAVIGATION_FILES) $(CFLAGS) $(NAVIGATION_FLAGS) -o navigation_unit.elf
 
