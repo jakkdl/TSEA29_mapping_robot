@@ -186,7 +186,7 @@ bool PDcontroller_Update(void)
 	Uart_Send_0(&posPaket);
 	Uart_Send_0(&GoalPaket);
 	Uart_Send_0(&refPaket);
-	Uart_Send_0(%headingpaket)
+	Uart_Send_0(&headingpaket)
 	
     return false;
 }
