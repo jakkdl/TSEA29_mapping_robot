@@ -88,7 +88,7 @@ def consolOut():
                 elif g_output[0][3] == 0xFC:
                     nrOut = "/nReference Pos X: " + str(g_output[0][5] << 8 | g_output[0][4])
                     nrOut = nrOut + " /nReference PosX Y: " + str(g_output[0][7] << 8 | g_output[0][6])
-                elif g_output[0][3] == 0xFF:
+                elif g_output[0][3] == 0xFB:
                     nrOut = "/nCurrentHeading: " + str(g_output[0][5] << 8 | g_output[0][4])
                     nrOut = nrOut + " /nNavigationGoalHeading: " + str(g_output[0][7] << 8 | g_output[0][6])
                 elif len(g_output[0]) == 5:
