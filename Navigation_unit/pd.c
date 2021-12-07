@@ -92,7 +92,7 @@ bool PDcontroller_Update(void)
 	struct data_packet headingpaket;
 	headingpaket.address = (enum Address)ADR_DEBUG;
 	headingpaket.byte_count = 4;
-	headingpaket.bytes[0] =	(g_currentHeading) & 0xFF;
+	headingpaket.bytes[0] =	(g_currentHeading) & 0xFB;
 	headingpaket.bytes[1] =	(g_currentHeading >> 8) & 0xFF;
 	headingpaket.bytes[2] =	(g_navigationGoalHeading) & 0xFF;
 	headingpaket.bytes[3] =	(g_navigationGoalHeading >> 8) & 0xFF;
