@@ -9,8 +9,8 @@
 enum NavigationMode g_navigationMode = MANUAL;
 
 // PD-constants
-uint8_t g_pdKd = 0;
-uint8_t g_pdKp = 0;
+uint8_t g_pdKd = 1;
+uint8_t g_pdKp = 1;
 
 // Current heading, specified as a fraction of the maximal value (FULL_TURN) for
 // the equivalent fraction around a full turn. So e.g. 1/3 of FULL_TURN is 1/3

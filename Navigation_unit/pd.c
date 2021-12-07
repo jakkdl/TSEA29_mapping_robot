@@ -17,6 +17,7 @@ void PDcontroller_Set_RefNode();
 
 /* internal memory */
 double g_PrevCTE;
+
 uint16_t g_referencePosX;
 uint16_t g_referencePosY;
 
@@ -101,15 +102,19 @@ bool PDcontroller_Update(void)
     int16_t out = proportional + derivative;
     g_PrevCTE = CTE;
 
+    g_wheelDirectionRight = DIR_FORWARD;
+    g_wheelDirectionLeft = DIR_FORWARD;
+
     if (out < 0)
     {
-        g_wheelSpeedRight = MAX_SPEED;
-        g_wheelSpeedLeft = MAX_SPEED+out;
+        // out is negative
+        g_wheelSpeedRight = MAX_SPEED+out;
+        g_wheelSpeedLeft = MAX_SPEED-out;
     }
     else
     {
-        g_wheelSpeedLeft = MAX_SPEED;
-        g_wheelSpeedRight= MAX_SPEED-out;
+        g_wheelSpeedRight = MAX_SPEED+out;
+        g_wheelSpeedLeft = MAX_SPEED-out;
     }
 
     return false;
@@ -213,6 +218,7 @@ Test_test(Test, PDcontroller_Update)
     uint8_t oldPdKd = g_pdKd;
     uint8_t oldPdKp = g_pdKp;
 
+    // this one's failing for now
 
     g_currentPosX = GridToMm(10);
     g_currentPosY = GridToMm(10);
