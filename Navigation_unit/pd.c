@@ -49,15 +49,19 @@ void turnToHeading()
 
 // is called repeatedly to move towards the navigationGoal
 // returns true when it is close enough, false otherwise
+// is responsible for setting wheelSpeed and wheelDirection
 bool PDcontroller_Update(void)
 {
 
     int16_t temp = abs((int16_t) g_currentHeading - g_navigationGoalHeading);
 
-    // Extra: reverse to a square if that's easier, if temp > FULL_TURN/4
+    // Extra: reverse to a square if that's easier, i.e. if temp > FULL_TURN/4
 
     // calculate what heading we should go in
-    if (g_PrevCTE == 0 && temp >= TURN_SENSITIVITY)
+    // this currently only triggers at the beginning (prevCTE=0), and relies
+    // on the pd-controller steering correctly afterwards and not requiring
+    // turns on the spot
+    if (g_PrevCTE == 0.0 && temp >= TURN_SENSITIVITY)
     {
         //turn on the spot
         turnToHeading();

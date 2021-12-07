@@ -12,6 +12,10 @@
 #define COM_UNIT_INTERFACE 0
 #define SENSOR_UNIT_INTERFACE 1
 
+// Send a debug value to the display-unit, type is used to differentiate
+// between different types of values being sent for debugging
+void send_debug(uint16_t value, int8_t type);
+
 enum NavigationMode
 {
     MANUAL,

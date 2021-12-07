@@ -48,3 +48,14 @@ uint16_t            g_navigationGoalHeading = 0;
 
 // Map
 int8_t g_navigationMap[MAP_X_MAX][MAP_Y_MAX];
+
+void send_debug(uint16_t value, int8_t type)
+{
+    static struct data_packet data;
+    data.address = ADR_DEBUG;
+    data.byte_count = 3;
+    data.bytes[0] = type;
+    data.bytes[1] = Uint16ToByte0(value);
+    data.bytes[2] = Uint16ToByte1(value);
+    Uart_Send_0(&data);
+}

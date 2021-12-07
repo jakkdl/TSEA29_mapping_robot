@@ -49,7 +49,6 @@ int8_t draw_laser_line(int8_t  x,
                        uint16_t distance);
 
 void send_map_update(uint8_t x, uint8_t y, int8_t value);
-void send_debug(uint16_t value, int8_t type);
 // using the trigonometric addition formulas
 double laser_cos(uint8_t direction)
 {
@@ -179,17 +178,6 @@ int8_t calculate_heading_and_position(struct sensor_data* data)
 	}
     // TODO use lidar & IR to calibrate heading and position
     return 0;
-}
-
-void send_debug(uint16_t value, int8_t type)
-{
-    static struct data_packet data;
-    data.address = ADR_DEBUG;
-    data.byte_count = 3;
-    data.bytes[0] = type;
-    data.bytes[1] = Uint16ToByte0(value);
-    data.bytes[2] = Uint16ToByte1(value);
-    Uart_Send_0(&data);
 }
 
 int8_t update_map(struct sensor_data* data)
