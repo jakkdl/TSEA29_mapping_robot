@@ -1,4 +1,5 @@
 #include "navigation_unit.h"
+#include "../AVR_common/sensors.h"
 
 /* GLOBAL VARIABLES */
 

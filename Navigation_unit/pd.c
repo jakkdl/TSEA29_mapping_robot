@@ -112,13 +112,13 @@ bool PDcontroller_Update(void)
     if (out < 0)
     {
         // out is negative
-        g_wheelSpeedRight = MAX_SPEED+out;
-        g_wheelSpeedLeft = MAX_SPEED-out;
+        g_wheelSpeedRight = MAX_SPEED;
+        g_wheelSpeedLeft = MAX_SPEED+out;
     }
     else
     {
-        g_wheelSpeedRight = MAX_SPEED+out;
-        g_wheelSpeedLeft = MAX_SPEED-out;
+        g_wheelSpeedLeft = MAX_SPEED;
+        g_wheelSpeedRight = MAX_SPEED-out;
     }
 
     return false;
