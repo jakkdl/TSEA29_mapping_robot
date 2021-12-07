@@ -70,9 +70,9 @@ bool PDcontroller_Update(void)
 
 
     /* calculate the dot product between reference node one and target node with respect to current pos */
-    int32_t RX = g_currentPosX - g_navigationGoalX;
-    int32_t RY = g_currentPosY - g_navigationGoalY;
-
+    volatile int32_t RX = g_currentPosX - g_navigationGoalX;
+    volatile int32_t RY = g_currentPosY - g_navigationGoalY;
+	
     if (abs(RX) < POS_SENSITIVITY && abs(RY) < POS_SENSITIVITY)
     {
         g_wheelSpeedLeft = 0;
@@ -80,11 +80,11 @@ bool PDcontroller_Update(void)
         return true;
     }
 
-    int32_t deltaX = g_navigationGoalX - g_referencePosX;
-    int32_t deltaY = g_navigationGoalY - g_referencePosY;
+    volatile int32_t deltaX = g_navigationGoalX - g_referencePosX;
+    volatile int32_t deltaY = g_navigationGoalY - g_referencePosY;
 
     /* cross track error for current iteration */
-    double CTE = (double)( RY*deltaX - RX*deltaY ) / ( deltaX*deltaX + deltaY*deltaY );
+    volatile double CTE = (double)( RY*deltaX - RX*deltaY ) / ( deltaX*deltaX + deltaY*deltaY );
 
     /*
      * e(t) = r(t) - u(t) Error signal (this part needed?)
@@ -93,32 +93,38 @@ bool PDcontroller_Update(void)
     /*
      * Kp*error proptional part of pd controller
      */
-    int16_t proportional = g_pdKp * CTE;
+    volatile int16_t proportional = g_pdKp * CTE;
 
     /*
      * Kp*derivative error is the dervitave part of the pd controller
      */
-    int16_t derivative = g_pdKd * ( CTE - g_PrevCTE );
+    volatile int16_t derivative = g_pdKd * ( CTE - g_PrevCTE );
 
     /*
      * U(out) = proportional part + derivative part
      */
-    int16_t out = proportional + derivative;
-    g_PrevCTE = CTE;
+    volatile double out = proportional + derivative;
+    volatile g_PrevCTE = CTE;
 
     g_wheelDirectionRight = DIR_FORWARD;
     g_wheelDirectionLeft = DIR_FORWARD;
 
-    if (out < 0)
+    if (out < -0.1 )
     {
         // out is negative
         g_wheelSpeedRight = MAX_SPEED;
-        g_wheelSpeedLeft = MAX_SPEED+out;
+        g_wheelSpeedLeft = MAX_SPEED-out;
     }
+	else if ( out > 0.1 )
+	{
+		// out is negative
+		g_wheelSpeedRight = MAX_SPEED-out;
+		g_wheelSpeedLeft = MAX_SPEED;
+	}
     else
     {
         g_wheelSpeedLeft = MAX_SPEED;
-        g_wheelSpeedRight = MAX_SPEED-out;
+        g_wheelSpeedRight = MAX_SPEED;
     }
 
     return false;
