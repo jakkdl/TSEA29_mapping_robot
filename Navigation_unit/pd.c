@@ -8,6 +8,9 @@
 void PDcontroller_Reset();
 void PDcontroller_Set_RefNode();
 
+// maybe of use? If so test what min speed is
+#define MIN_SPEED 0
+
 #define MAX_SPEED 0x40
 #define TURN_SENSITIVITY FULL_TURN / 32
 
@@ -42,6 +45,7 @@ void turnToHeading()
     }
 
     // TODO determine speed according to remaining left to turn
+    // mostly needed if increasing update rate doesn't fix oscillating behavior
     g_wheelSpeedLeft = MAX_SPEED;
     g_wheelSpeedRight = MAX_SPEED;
 

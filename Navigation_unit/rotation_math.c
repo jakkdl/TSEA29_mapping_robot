@@ -28,37 +28,57 @@ double g_sinHeading;
 
 const double COS_QUARTERS[] = { 1.0, 0, -1.0, 0 };
 const double SIN_QUARTERS[] = { 0, 1, 0, -1 };
+struct laser_data
+{
+    int16_t startX;
+    int16_t startY;
+    int16_t endX;
+    int16_t endY;
+
+    // which side of a cell are we hitting
+    // 0 left, 1 bottom, 2 right, 3 top
+    // -1 if invalid data
+    int8_t collision_type;
+
+    // end - (round(end/400)*400)
+    int16_t offset;
+};
+struct laser_data g_laser_data[6];
 
 int8_t laser_positive_x(uint16_t x, uint16_t y, uint8_t end_x_coord, double delta_y);
 int8_t laser_negative_x(uint16_t x, uint16_t y, uint8_t end_x_coord, double delta_y);
 int8_t laser_positive_y(uint16_t x, uint16_t y, uint8_t end_y_coord, double delta_x);
 int8_t laser_negative_y(uint16_t x, uint16_t y, uint8_t end_y_coord, double delta_x);
+bool calculate_laser_data(
+        struct sensor_data* sd,
+        struct laser_data* ld,
+        uint8_t sensor_id);
 
 int8_t laser_loop(uint8_t  max_steps,
-                  uint8_t  a_0,
-                  uint16_t b_0,
-                  int8_t   delta_a,
-                  double   delta_b,
-                  int8_t (*f)(uint8_t, uint8_t));
+        uint8_t  a_0,
+        uint16_t b_0,
+        int8_t   delta_a,
+        double   delta_b,
+        int8_t (*f)(uint8_t, uint8_t));
 int8_t mark_empty(uint8_t x, uint8_t y);
 int8_t mark_empty_rev(uint8_t y, uint8_t x);
 
 int8_t draw_laser_line(int8_t  x,
-                       int8_t  y,
-                       uint8_t  sensor_direction,
-                       uint16_t distance);
+        int8_t  y,
+        uint8_t  sensor_direction,
+        uint16_t distance);
 
 void send_map_update(uint8_t x, uint8_t y, int8_t value);
 // using the trigonometric addition formulas
 double laser_cos(uint8_t direction)
 {
     return g_cosHeading * COS_QUARTERS[direction] +
-           g_sinHeading * SIN_QUARTERS[direction];
+        g_sinHeading * SIN_QUARTERS[direction];
 }
 double laser_sin(uint8_t direction)
 {
     return g_sinHeading * COS_QUARTERS[direction] +
-           g_cosHeading * SIN_QUARTERS[direction];
+        g_cosHeading * SIN_QUARTERS[direction];
 }
 
 double heading_to_radian(uint16_t heading)
@@ -120,7 +140,7 @@ int8_t calculate_heading_and_position(struct sensor_data* data)
 
     // only update position if driving straight
     if (g_wheelDirectionLeft == g_wheelDirectionRight &&
-        (data->odometer_left > 0 || data->odometer_right > 0))
+            (data->odometer_left > 0 || data->odometer_right > 0))
     {
         // if we turned while driving, we don't know when along the line
         // we changed direction. So we take half the gyro change and assume
@@ -140,19 +160,19 @@ int8_t calculate_heading_and_position(struct sensor_data* data)
 
             // estimated w/ circle sector + pythagoras
             /*if (data->odometer_left < data->odometer_right)
-            {
-                distance = (double) M_SQRT2 * (data->odometer_left * AXLE_WIDTH
-                    / (data->odometer_right - data->odometer_left)
-                    + AXLE_WIDTH / 2);
-            }
-            else
-            {
-                distance = (double) M_SQRT2 * (data->odometer_right * AXLE_WIDTH
-                    / (data->odometer_left - data->odometer_right)
-                    + AXLE_WIDTH / 2);
-            }*/
+              {
+              distance = (double) M_SQRT2 * (data->odometer_left * AXLE_WIDTH
+              / (data->odometer_right - data->odometer_left)
+              + AXLE_WIDTH / 2);
+              }
+              else
+              {
+              distance = (double) M_SQRT2 * (data->odometer_right * AXLE_WIDTH
+              / (data->odometer_left - data->odometer_right)
+              + AXLE_WIDTH / 2);
+              }*/
             //distance = 1.414214 * ((double) min(data->odometer_left, data->odometer_right)
-             //       / heading_change + AXLE_WIDTH/2);
+            //       / heading_change + AXLE_WIDTH/2);
         }
 
         if (g_wheelDirectionLeft == DIR_BACKWARD)
@@ -168,35 +188,126 @@ int8_t calculate_heading_and_position(struct sensor_data* data)
         ComUnitSend(&packet);
 
     }
-	if (heading_change)
-	{
-		g_currentHeading += heading_change;
-		packet.address = ADR_HEADING;
-		packet.bytes[0] = Uint16ToByte0(g_currentHeading);
-		packet.bytes[1] = Uint16ToByte1(g_currentHeading);
-		ComUnitSend(&packet);
-	}
+    if (heading_change)
+    {
+        g_currentHeading += heading_change;
+        packet.address = ADR_HEADING;
+        packet.bytes[0] = Uint16ToByte0(g_currentHeading);
+        packet.bytes[1] = Uint16ToByte1(g_currentHeading);
+        ComUnitSend(&packet);
+
+        // cache cos & sin
+        double headingRad = heading_to_radian(g_currentHeading);
+
+        g_cosHeading = cos(headingRad);
+        g_sinHeading = sin(headingRad);
+    }
     // TODO use lidar & IR to calibrate heading and position
     return 0;
 }
 
-int8_t update_map(struct sensor_data* data)
+void adjust_heading_and_position(struct sensor_data* data)
 {
-    // cache cos & sin
     double headingRad = heading_to_radian(g_currentHeading);
 
     g_cosHeading = cos(headingRad);
     g_sinHeading = sin(headingRad);
+    //struct laser_data ld;
+    for (int8_t i = 0; i < 6; ++i)
+    {
+        //calculate_laser_data(data, &ld, i);
+    }
+    //adjust_heading(data);
+    //adjust_position(data);
+}
+/*
+int8_t adjust_heading(struct sensor_data* sd, struct laser_data* ld)
+{
+    int8_t angle_change;
+    // for each sensor, check the sign of the offset
+    for (int8_t i = 0; i < 6; ++i)
+    {
+    }
+    return false;
+}*/
+
+// the largest sensor difference that's taken into consideration
+#define MAX_ADJUST 50
+
+// the minimum number of sensors within MAX_ADJUST in order to update position
+#define MIN_ADJUST_SENSORS 4
+
+// assumes heading is correct, and calibrates the robots position
+// according to the distance to the walls
+/*int8_t adjust_position(struct sensor_data* data)
+{
+    int16_t offset[2];
+    int16_t adjust_sum[2];
+    int8_t adjust_count[2];
+
+    for (int8_t i = 0; i < 6; ++i)
+    {
+        calculate_end_pos(data, i, &offsetX, &offsetY);
+        //TODO
+        //determine if we're hitting an X- or an Y-wall
+        //and only add that one
+        //(i.e. copy/move from laser_line)
+        for (int8_t j = 0; j < 2; ++j)
+        {
+            int8_t diff;
+            if (offset[j] < -MAX_ADJUST)
+            {
+                continue;
+            }
+            else if (offset[j] < 0)
+            {
+                diff = offsets[j];
+            }
+            else
+            {
+                diff = offsets[j] % 400;
+                if (diff > 200)
+                {
+                    diff -= 400;
+                }
+            }
+            if (abs(diff) > MAX_ADJUST)
+            {
+                continue;
+            }
+            ++adjust_count;
+            adjust_sum += diff;
+        }
+    }
+    if (adjust_count[0] >= MIN_ADJUST_SENSORS)
+    {
+        g_currentPosX += round((double)adjust_sum / adjust_count);
+    }
+    if (adjust_count[1] >= MIN_ADJUST_SENSORS)
+    {
+        g_currentPosX += round((double)adjust_sum / adjust_count);
+    }
+
+    // TODO: it's probably *much* smarter to send position as uint16, in mm.
+    packet.address = POSITION;
+    packet.bytes[0] = MmToGrid(g_currentPosX);
+    packet.bytes[1] = MmToGrid(g_currentPosY);
+    ComUnitSend(&packet);
+    return true;
+}*/
+
+int8_t update_map(struct sensor_data* data)
+{
 
     draw_laser_line(LaserPositionX(data, data->lidar_forward),
-                    LaserPositionY(data, data->lidar_forward),
-                    LaserDirection(data, data->lidar_forward),
-                    data->lidar_forward);
+            LaserPositionY(data, data->lidar_forward),
+            LaserDirection(data, data->lidar_forward),
+            data->lidar_forward);
     // lidar backward
-	// throw out <300
+    // throw out <300
 
 
-	// throw out 0, MAX, and everything outside of 80-800
+    // throw out 0, MAX, and everything outside of 80-800
     // 4*ir
 
     // We can optionally also check if the robot is currently standing on top of
@@ -206,10 +317,113 @@ int8_t update_map(struct sensor_data* data)
     return 0;
 }
 
+
+#define GRID_SIZE 400
+int8_t calculate_dif(int16_t pos)
+{
+    if (pos < 0)
+    {
+        return -pos;
+    }
+    uint8_t res = pos % GRID_SIZE;
+    if (res > GRID_SIZE/2)
+    {
+        return GRID_SIZE-res;
+    }
+    return (int8_t)res;
+}
+/*
+bool calculate_laser_data(
+        struct sensor_data* sd,
+        struct laser_data* ld,
+        uint8_t sensor_id)
+{
+    int8_t laser_x = LASER_POSITION_X[sensor_id];
+    int8_t laser_y = LASER_POSITION_X[sensor_id];
+    int8_t laser_dir = LASER_DIRECTION[sensor_id];
+    uint16_t distance = (uint16_t*)sd + sensor_id;
+
+    if (distance == 0 || distance == UINT16_MAX)
+    {
+        ld->collision_type = -1;
+        return false;
+    }
+    // lidar
+    if (sensor_id < 2 && (distance < 300 || distance > 10000))
+    {
+        ld->collision_type = -1;
+        return false;
+    }
+    // IR
+    else if ((sensor_id & 0x6) && (distance < 80 || distance > 800))
+    {
+        ld->collision_type = -1;
+        return false;
+    }
+
+    // extra: calculate if the laser *should* hit a wall we're sure about
+    // that it's not hitting, and if so throw out that value
+
+    double cos = laser_cos(laser_dir);
+    double sin = laser_sin(laser_dir);
+
+    ld->startX = g_currentPosX + g_cosHeading * laser_x + laser_cos(1) * laser_y;
+    ld->startY = g_currentPosY + g_sinHeading * laser_y + laser_sin(1) * laser_x;
+
+    ld->endX = ld->startX + cos * distance;
+    ld->endY = ld->startY + sin * distance;
+
+    int8_t x_dif = calculate_dif(ld->endX);
+    int8_t y_dif = calculate_dif(ld->endX);
+
+    // in which quadrant is the laser pointing
+    uint8_t quadrant_heading =
+        ((g_currentHeading >> 14) + laser_dir) & 3;
+
+    if (x_dif < y_dif)
+    {
+        if (y_dif < CORNER_SENSITIVITY || x_dif > MAX_ERROR)
+        {
+            return false;
+        }
+        ld->offset = x_dif;
+        if (quadrant_heading == 1 || quadrant_heading == 2)
+        {
+            // left
+            ld->collision_type = 0;
+        }
+        else
+        {
+            // right
+            ld->collision_type = 2;
+        }
+    }
+    else
+    {
+        if (x_dif < CORNER_SENSITIVITY || y_dif > MAX_ERROR)
+        {
+            return false;
+        }
+        //Extra: if y_dif < CORNER, set -1
+        ld->offset = y_dif;
+        // if in the 3rd or 4th quadrant, we're hitting the top
+        if (quadrant_heading & 0x2)
+        {
+            ld->collision_type = 3;
+        }
+        else
+        {
+            // bottom
+            ld->collision_type = 1;
+        }
+    }
+    return true;
+}*/
+
 int8_t draw_laser_line(int8_t  laser_x,
-                       int8_t  laser_y,
-                       uint8_t  sensor_direction,
-                       uint16_t distance)
+        int8_t  laser_y,
+        uint8_t  sensor_direction,
+        uint16_t distance)
 {
     // see laser_intersecting_pot_walls.jpg
     // where x_r,y_r is pos_x,pos_y
@@ -269,7 +483,7 @@ int8_t draw_laser_line(int8_t  laser_x,
 
     // in which quadrant is the laser pointing
     uint8_t quadrant_heading =
-      ((g_currentHeading >> 14) + sensor_direction) & 3;
+        ((g_currentHeading >> 14) + sensor_direction) & 3;
 
     // Depending on direction we're hitting different walls of the cell, and
     // that gives different coordinates for the cell
@@ -413,11 +627,11 @@ int8_t laser_negative_y(uint16_t x, uint16_t y, uint8_t end_y_coord, double delt
 }
 
 int8_t laser_loop(uint8_t  max_steps,
-                  uint8_t  a,
-                  uint16_t b_0,
-                  int8_t   delta_a,
-                  double   delta_b,
-                  int8_t (*f)(uint8_t, uint8_t))
+        uint8_t  a,
+        uint16_t b_0,
+        int8_t   delta_a,
+        double   delta_b,
+        int8_t (*f)(uint8_t, uint8_t))
 {
     int8_t res = 0;
     double raw_b;
