@@ -16,7 +16,7 @@
 #define COORD_SIZE 2
 
 void init_wall_follow();
-void wall_follow();
+bool wall_follow();
 void sample_search();
 
 #endif

@@ -9,22 +9,22 @@
 
 enum Address
 {
-    LIDAR_FORWARD,
+    LIDAR_FORWARD, //0
     LIDAR_BACKWARD,
     IR_LEFTFRONT,
-    IR_LEFTBACK,
+    IR_LEFTBACK, // 4
     IR_RIGHTFRONT,
     IR_RIGHTBACK,
     GYRO,
-    ODOMETER,
+    ODOMETER, // 8
     POSITION,
     ADR_HEADING,
     MAP_UPDATE,
-    COMMAND,
+    COMMAND, // 12
     ADR_DEBUG,
-    PD_KP,
-    PD_KD,
-    PARITY_ERROR
+    PD_KP, //13
+    PD_KD, //14
+    PARITY_ERROR //15
 };
 
 struct data_packet

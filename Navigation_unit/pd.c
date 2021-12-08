@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "pd.h"
 #include "navigation_unit.h"
@@ -8,15 +9,16 @@
 void PDcontroller_Reset();
 void PDcontroller_Set_RefNode();
 
-// maybe of use? If so test what min speed is
-#define MIN_SPEED 0
+#define MIN_SPEED 0x40
 
-#define MAX_SPEED 0x40
-#define TURN_SENSITIVITY FULL_TURN / 32
+#define MAX_SPEED 0x80
+#define TURN_SENSITIVITY FULL_TURN / 64
 
 // robot will stop when the middle of the robot is within this many mm of
 // the middle of the target square along both the x and y axis
-#define POS_SENSITIVITY 200
+//TODO: drive with small sensitivity along the intended driving line
+//but if we drive far to the side of the target, stop and don't continue driving
+#define POS_SENSITIVITY 100
 
 /* internal memory */
 double g_PrevCTE;
@@ -26,8 +28,7 @@ uint16_t g_referencePosY;
 
 void turnToHeading()
 {
-    // Extra: PD-regulate this
-    // insert math here
+    // Extra: if the robot's position is shifting, 
     if (g_currentHeading == g_navigationGoalHeading)
     {
         return;
@@ -51,56 +52,17 @@ void turnToHeading()
 
 }
 
+
+
 // is called repeatedly to move towards the navigationGoal
 // returns true when it is close enough, false otherwise
 // is responsible for setting wheelSpeed and wheelDirection
 bool PDcontroller_Update(void)
 {	
+    send_debug_2(g_navigationGoalX, g_navigationGoalY, 0xFE);
+    send_debug_2(g_referencePosX, g_referencePosY, 0xFD);
+    send_debug(g_navigationGoalHeading, 0xFC);
 
- 
-	//pd debug struct should have proptional and derivite part and the CTE
-	struct data_packet pdpaket;
-	pdpaket.address = (enum Address)ADR_DEBUG;
-	pdpaket.byte_count = 7;
-	pdpaket.bytes[0] = 0xFF;
-	
-	//cordinate paket should have all pos y and x
-	struct data_packet posPaket;
-	posPaket.address = (enum Address)ADR_DEBUG;
-	posPaket.byte_count = 5;
-	posPaket.bytes[0] = 0xFE;
-	posPaket.bytes[1] = (g_currentPosX) & 0xFF;
-	posPaket.bytes[2] = (g_currentPosX >> 8) & 0xFF;
-	posPaket.bytes[3] = (g_currentPosY) & 0xFF;
-	posPaket.bytes[4] = (g_currentPosY >> 8) & 0xFF;
-	
-	//navigation paket should have all pos y and x for nav goal
-	struct data_packet GoalPaket;
-	GoalPaket.address = (enum Address)ADR_DEBUG;
-	GoalPaket.byte_count = 5;
-	GoalPaket.bytes[0] = 0xFD;
-	GoalPaket.bytes[1] = (g_navigationGoalX) & 0xFF;
-	GoalPaket.bytes[2] = (g_navigationGoalX >> 8) & 0xFF;
-	GoalPaket.bytes[3] = (g_navigationGoalY) & 0xFF;
-	GoalPaket.bytes[4] = (g_navigationGoalY >> 8) & 0xFF;
-	
-	struct data_packet refPaket;
-	refPaket.address = (enum Address)ADR_DEBUG;
-	refPaket.byte_count = 5;
-	refPaket.bytes[0] = 0xFC;
-	refPaket.bytes[1] = (g_referencePosX) & 0xFF;
-	refPaket.bytes[2] = (g_referencePosX >> 8) & 0xFF;
-	refPaket.bytes[3] = (g_referencePosY) & 0xFF;
-	refPaket.bytes[4] = (g_referencePosY >> 8) & 0xFF;
-	
-	struct data_packet headingpaket;
-	headingpaket.address = (enum Address)ADR_DEBUG;
-	headingpaket.byte_count = 4;
-	headingpaket.bytes[0] =	(g_currentHeading) & 0xFB;
-	headingpaket.bytes[1] =	(g_currentHeading >> 8) & 0xFF;
-	headingpaket.bytes[2] =	(g_navigationGoalHeading) & 0xFF;
-	headingpaket.bytes[3] =	(g_navigationGoalHeading >> 8) & 0xFF;
-	
     int16_t temp = abs((int16_t) g_currentHeading - g_navigationGoalHeading);
 
     // Extra: reverse to a square if that's easier, i.e. if temp > FULL_TURN/4
@@ -118,8 +80,8 @@ bool PDcontroller_Update(void)
 
 
     /* calculate the dot product between reference node one and target node with respect to current pos */
-    volatile int32_t RX = g_currentPosX - g_navigationGoalX;
-    volatile int32_t RY = g_currentPosY - g_navigationGoalY;
+    int32_t RX = ((int32_t) g_currentPosX) - g_navigationGoalX;
+    int32_t RY = ((int32_t) g_currentPosY) - g_navigationGoalY;
 	
     if (abs(RX) < POS_SENSITIVITY && abs(RY) < POS_SENSITIVITY)
     {
@@ -128,17 +90,24 @@ bool PDcontroller_Update(void)
         return true;
     }
 	
-    volatile int32_t deltaX = g_navigationGoalX - g_referencePosX;
-    volatile int32_t deltaY = g_navigationGoalY - g_referencePosY;
+    int32_t deltaX = ((int32_t) g_navigationGoalX) - g_referencePosX;
+    int32_t deltaY = ((int32_t) g_navigationGoalY) - g_referencePosY;
 	
     /* cross track error for current iteration */
-    volatile double CTE = (double)( RY*deltaX - RX*deltaY ) / ( deltaX*deltaX + deltaY*deltaY );
-	
+    double CTE = ((double)( RY*deltaX - RX*deltaY )) / ( deltaX*deltaX + deltaY*deltaY );
+	send_debug((int16_t)CTE, 42);
+    send_debug((int16_t)RX & 0xFFFF, 43);
+    send_debug((int16_t)((RX>>8)& 0xFFFF) , 43);
+    send_debug((int16_t)RY& 0xFFFF, 44);
+    send_debug((int16_t)(RY>>8)& 0xFFFF, 44);
+    send_debug((int16_t)deltaX& 0xFFFF, 45);
+    send_debug((int16_t)(deltaX>>8)& 0xFFFF, 45);
+    send_debug((int16_t)deltaY& 0xFFFF, 46);
+    send_debug((int16_t)(deltaY>>8)& 0xFFFF, 46);
+
 	//i have no idea what this is but works but pointer magic?
-	//create a 2 part long with the cte as refrense then point to is in 2 diffrent byte
-	long * read = (long *)&CTE;
-	pdpaket.bytes[5] = *read;
-	pdpaket.bytes[6] = *(read + 1);
+	//create a 2 part long with the CTE as reference then point to is in 2 different byte
+
 	
     /*
      * e(t) = r(t) - u(t) Error signal (this part needed?)
@@ -147,51 +116,48 @@ bool PDcontroller_Update(void)
     /*
      * Kp*error proptional part of pd controller
      */
-    volatile int16_t proportional = g_pdKp * CTE;
-	pdpaket.bytes[1] = (proportional) & 0xFF;
-	pdpaket.bytes[2] = (proportional >> 8) & 0xFF;
+    int16_t proportional = round(CTE * g_pdKp);
+
 	
     /*
-     * Kp*derivative error is the dervitave part of the pd controller
+     * Kp*derivative error is the derivative part of the pd controller
      */
-    volatile int16_t derivative = g_pdKd * ( CTE - g_PrevCTE );
-	pdpaket.bytes[3] = (derivative) & 0xFF;
-	pdpaket.bytes[4] = (derivative >> 8) & 0xFF;
-	
+    int16_t derivative = round(( CTE - g_PrevCTE )*g_pdKd);
+
+    send_debug_2(proportional, derivative, 0xFF);
 
     /*
      * U(out) = proportional part + derivative part
      */
-    volatile double out = proportional + derivative;
+    int16_t out = proportional + derivative;
     g_PrevCTE = CTE;
 
     g_wheelDirectionRight = DIR_FORWARD;
     g_wheelDirectionLeft = DIR_FORWARD;
-
-    if (out < -0.1 )
+    
+    //TODO: this one shouldn't really happen much anymore, but
+    //should be handled in better ways
+    if (abs(out) > MAX_SPEED)
+    {
+        send_debug(0, 0);
+        g_wheelSpeedLeft = 0;
+        g_wheelSpeedRight = 0;
+        out = MAX_SPEED;
+        return true;
+    }
+    if (out < 0)
     {
         // out is negative
         g_wheelSpeedRight = MAX_SPEED;
-        g_wheelSpeedLeft = MAX_SPEED-out;
+        g_wheelSpeedLeft = MAX_SPEED+out;
     }
-	else if ( out > 0.1 )
+	else
 	{
-		// out is negative
+		// out is positive
 		g_wheelSpeedRight = MAX_SPEED-out;
 		g_wheelSpeedLeft = MAX_SPEED;
 	}
-    else
-    {
-        g_wheelSpeedLeft = MAX_SPEED;
-        g_wheelSpeedRight = MAX_SPEED;
-    }
-	
-	Uart_Send_0(&pdpaket);
-	Uart_Send_0(&posPaket);
-	Uart_Send_0(&GoalPaket);
-	Uart_Send_0(&refPaket);
-	Uart_Send_0(&headingpaket)
-	
+
     return false;
 }
 

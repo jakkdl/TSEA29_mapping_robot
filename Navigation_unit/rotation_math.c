@@ -95,6 +95,7 @@ uint16_t radian_to_heading(double angle)
 // calculate new heading, using only the odometers
 int16_t odo_heading_change(struct sensor_data* data)
 {
+    //TODO: account for wheels spinning on the spot
     int16_t arc_length;
     int16_t res;
     if (g_wheelDirectionLeft != g_wheelDirectionRight)
@@ -127,7 +128,6 @@ int8_t calculate_heading_and_position(struct sensor_data* data)
     int16_t  distance;
     int16_t heading_change;
     static struct data_packet packet;
-    packet.byte_count = 2;
 
     // overflow handles modulo for us
 
@@ -182,9 +182,13 @@ int8_t calculate_heading_and_position(struct sensor_data* data)
 
         g_currentPosX += round(cos(headingAvg) * distance);
         g_currentPosY += round(sin(headingAvg) * distance);
+		
         packet.address = POSITION;
-        packet.bytes[0] = MmToGrid(g_currentPosX);
-        packet.bytes[1] = MmToGrid(g_currentPosY);
+        packet.byte_count = 4;
+		packet.bytes[0] = Uint16ToByte0(g_currentPosX);
+		packet.bytes[1] = Uint16ToByte1(g_currentPosX);
+		packet.bytes[2] = Uint16ToByte0(g_currentPosY);
+		packet.bytes[3] = Uint16ToByte1(g_currentPosY);
         ComUnitSend(&packet);
 
     }
@@ -192,6 +196,7 @@ int8_t calculate_heading_and_position(struct sensor_data* data)
     {
         g_currentHeading += heading_change;
         packet.address = ADR_HEADING;
+        packet.byte_count = 2;
         packet.bytes[0] = Uint16ToByte0(g_currentHeading);
         packet.bytes[1] = Uint16ToByte1(g_currentHeading);
         ComUnitSend(&packet);
@@ -206,7 +211,7 @@ int8_t calculate_heading_and_position(struct sensor_data* data)
     return 0;
 }
 
-void adjust_heading_and_position(struct sensor_data* data)
+/*void adjust_heading_and_position(struct sensor_data* data)
 {
     double headingRad = heading_to_radian(g_currentHeading);
 
@@ -219,7 +224,7 @@ void adjust_heading_and_position(struct sensor_data* data)
     }
     //adjust_heading(data);
     //adjust_position(data);
-}
+}*/
 /*
 int8_t adjust_heading(struct sensor_data* sd, struct laser_data* ld)
 {

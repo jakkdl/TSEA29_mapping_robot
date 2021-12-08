@@ -4,7 +4,7 @@
 #include <avr/io.h>
 #include <stdbool.h>
 #include <util/delay.h>
-extern uint16_t g_angle;
+extern int16_t g_angle;
 int16_t MLXGyroVal();
 void MeasureMLX();
 #endif

@@ -98,6 +98,7 @@ int8_t navigate_forward(uint8_t dir)
 {
     switch (dir)
     {
+// TODO: John: write better maths
         case 0:
             g_navigationGoalX = GridToMm(MmToGrid(g_currentPosX) + 1);
             g_navigationGoalY = g_currentPosY;

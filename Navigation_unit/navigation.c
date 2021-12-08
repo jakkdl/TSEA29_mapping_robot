@@ -121,7 +121,7 @@ void init_wall_follow()
     }
 }
 
-void wall_follow()
+bool wall_follow()
 {
     uint8_t dir = get_heading();
 
@@ -152,13 +152,15 @@ void wall_follow()
     }
 
     // wall follow complete
-    /*if (at_start_pos())
+    if (at_start_pos())
     {
         if (unexplored_cells_exist())
         {
-            // sample_search();
+            return false;
         }
-    }*/
+        return true;
+    }
+    return false;
 }
 
 // Path finding algorithm that might not work as expected. Can probably be

@@ -10,8 +10,8 @@
 enum NavigationMode g_navigationMode = MANUAL;
 
 // PD-constants
-volatile uint8_t g_pdKd = 1;
-volatile uint8_t g_pdKp = 1;
+volatile uint8_t g_pdKd = 0;
+volatile uint8_t g_pdKp = 100;
 
 // Current heading, specified as a fraction of the maximal value (FULL_TURN) for
 // the equivalent fraction around a full turn. So e.g. 1/3 of FULL_TURN is 1/3
@@ -24,10 +24,10 @@ volatile uint8_t g_pdKp = 1;
 // competition
 uint16_t g_currentHeading = FULL_TURN / 4;
 
-// Current position in millimetre, relative to bottom left
+// Current position in millimeter, relative to bottom left
 // We assume we start in the middle (square 24) in the X direction.
 uint16_t volatile g_currentPosX = GridToMm(24);
-uint16_t volatile g_currentPosY = 0;
+uint16_t volatile g_currentPosY = GridToMm(0);
 
 // We can either use bool + unsigned
 enum Direction g_wheelDirectionLeft  = DIR_FORWARD;
@@ -58,5 +58,18 @@ void send_debug(uint16_t value, int8_t type)
     data.bytes[0] = type;
     data.bytes[1] = Uint16ToByte0(value);
     data.bytes[2] = Uint16ToByte1(value);
+    Uart_Send_0(&data);
+}
+
+void send_debug_2(uint16_t value_1, uint16_t value_2, int8_t type)
+{
+    static struct data_packet data;
+    data.address = ADR_DEBUG;
+    data.byte_count = 5;
+    data.bytes[0] = type;
+    data.bytes[1] = Uint16ToByte0(value);
+    data.bytes[2] = Uint16ToByte1(value);
+    data.bytes[3] = Uint16ToByte0(value);
+    data.bytes[4] = Uint16ToByte1(value);
     Uart_Send_0(&data);
 }

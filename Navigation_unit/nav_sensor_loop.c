@@ -35,11 +35,10 @@ int8_t handle_sensor_data(struct data_packet* data)
             return -1;
         }
     }
-    // Check for parity error?
-    // TODO Forward to com unit
 
     // Save the data
     sensor_count++;
+    // TODO: Do pointer magic instead of this
     switch (data->address)
     {
         case LIDAR_FORWARD:
@@ -60,18 +59,16 @@ int8_t handle_sensor_data(struct data_packet* data)
         case IR_RIGHTBACK:
             next_sensor_data->ir_rightback = BYTES_TO_UINT16(data);
             break;
-        case ODOMETER:
-            next_sensor_data->odometer_left  = data->bytes[0];
-            next_sensor_data->odometer_right = data->bytes[1];
-            break;
         case GYRO:
             next_sensor_data->gyro = BYTES_TO_UINT16(data);
+            break;
+        case ODOMETER:
+            next_sensor_data->odometer_right = data->bytes[1];
+            next_sensor_data->odometer_left  = data->bytes[0];
             break;
         default:
             return -1;
     }
-
-
 
 
     // Check if we've received all data
@@ -102,7 +99,7 @@ void send_sensor_data(struct sensor_data* data)
     packet.byte_count = 2;
 
     uint16_t* value = (uint16_t*) data;
-    for (int i=0; i < 7; ++i)
+    for (int i=0; i < 8; ++i)
     {
         packet.address = i;
         packet.bytes[0] = Uint16ToByte0(*value);
@@ -110,10 +107,10 @@ void send_sensor_data(struct sensor_data* data)
         Uart_Send_0(&packet);
         ++value;
     }
-    packet.address = ODOMETER;
+    /*packet.address = ODOMETER;
     packet.bytes[0] = data->odometer_left;
     packet.bytes[1] = data->odometer_right;
-    Uart_Send_0(&packet);
+    Uart_Send_0(&packet);*/
 }
 
 int8_t nav_main(void)
@@ -135,6 +132,7 @@ int8_t nav_main(void)
         // have we arrived at the navigation goal?
         if (PDcontroller_Update())
         {
+            send_debug(0, 100);
             // clear navigation goal
             g_navigationGoalSet = false;
         }
@@ -145,13 +143,19 @@ int8_t nav_main(void)
     // which if there's updates, sends them to com-unit
     update_map(data);
 
+    
     // Check if we should run nav algo
     if (g_navigationMode == AUTONOMOUS && !g_navigationGoalSet)
     {
         // run navigation algorithm
         // sets g_navigationGoal
         // and calls PDcontroller_NewGoal()
-        wall_follow();
+        if (wall_follow())
+        {
+            // stop navigation if reached the goal
+            g_navigationMode = MANUAL;
+            g_navigationGoalSet = false;
+        }
     }
 
     return 0;

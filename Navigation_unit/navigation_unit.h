@@ -15,6 +15,7 @@
 // Send a debug value to the display-unit, type is used to differentiate
 // between different types of values being sent for debugging
 void send_debug(uint16_t value, int8_t type);
+void send_debug_2(uint16_t value_1, uint16_t value_2, int8_t type)
 
 enum NavigationMode
 {
@@ -41,8 +42,8 @@ extern enum NavigationMode g_navigationMode; // = MANUAL;
 
 // PD-constants
 // default values for global variables are set in c-file
-extern volatile uint8_t g_pdKd; // = 1;
-extern volatile uint8_t g_pdKp; // = 1;
+extern volatile uint8_t g_pdKd;
+extern volatile uint8_t g_pdKp;
 
 // Current heading, specified as a fraction of the maximal value (FULL_TURN) for
 // the equivalent fraction around a full turn. So e.g. 1/3 of FULL_TURN is 1/3
@@ -55,7 +56,7 @@ extern volatile uint8_t g_pdKp; // = 1;
 // competition
 extern uint16_t g_currentHeading; // = FULL_TURN/4;
 
-// Current position in millimetre, relative to bottom left
+// Current position in millimeter, relative to bottom left
 // We assume we start in the middle (square 24) in the X direction.
 extern volatile uint16_t g_currentPosX; // = grid_to_mm(24);
 extern volatile uint16_t g_currentPosY; // = 0;

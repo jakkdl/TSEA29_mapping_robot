@@ -12,8 +12,8 @@ struct sensor_data
     uint16_t ir_rightfront;
     uint16_t ir_rightback;
     int16_t gyro;
-    uint8_t  odometer_left;
-    uint8_t  odometer_right;
+    uint8_t odometer_right;
+    uint8_t odometer_left;
 };
 
 // these don't strictly have to be defined here, but since it's required
