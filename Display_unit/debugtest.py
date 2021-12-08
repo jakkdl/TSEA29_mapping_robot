@@ -92,6 +92,10 @@ def consolOut():
                     nrOut = nrOut + " \nReference Pos Y: " + str(g_output[0][6] << 8 | g_output[0][5])
                 elif g_output[0][2] == 252:
                     nrOut = nrOut + " \nNavigationGoalHeading: " + str(g_output[0][4] << 8 | g_output[0][3])
+                elif 42 <= g_output[0][2] <= 46:
+                     nrOut = str(g_output[0][2]) + " " + str(uint16_to_int16(g_output[0][4] << 8 | g_output[0][3]))
+                elif g_output[0][2] == 100:
+                     nrOut = "\n"*10
                 elif len(g_output[0]) == 5:
                     nrOut = str(g_output[0][2]) + " " + str(g_output[0][4] << 8 | g_output[0][3])
                 else:
@@ -223,16 +227,16 @@ def main():
                                 args=("command", [4])).start()
 
         elif val == 5:
-            threading.Thread(target=packageMaker,
+  args          threading.Thread(target=packageMaker,
                                 args=("command", [5])).start()
                                 
         elif val == 6:
             threading.Thread(target=packageMaker,
                                 args=("command", [6])).start()
-        elif val == 10:      
-            g_timeout = 30
-            consolOut()
-            g_timeout = 0.5
+        elif val == 7:
+            threading.Thread(target=packageMaker,
+                                args=("command", [7])).start()
+
     
         elif val == 13:
             kp = int(input("Enter kp"))
