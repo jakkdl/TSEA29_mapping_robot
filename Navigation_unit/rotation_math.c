@@ -28,11 +28,31 @@ double g_sinHeading;
 
 const double COS_QUARTERS[] = { 1.0, 0, -1.0, 0 };
 const double SIN_QUARTERS[] = { 0, 1, 0, -1 };
+struct laser_data
+{
+    int16_t startX;
+    int16_t startY;
+    int16_t endX;
+    int16_t endY;
+
+    // which side of a cell are we hitting
+    // 0 left, 1 bottom, 2 right, 3 top
+    // -1 if invalid data
+    int8_t collision_type;
+
+    // end - (round(end/400)*400)
+    int16_t offset;
+};
+struct laser_data g_laser_data[6];
 
 int8_t laser_positive_x(uint16_t x, uint16_t y, uint8_t end_x_coord, double delta_y);
 int8_t laser_negative_x(uint16_t x, uint16_t y, uint8_t end_x_coord, double delta_y);
 int8_t laser_positive_y(uint16_t x, uint16_t y, uint8_t end_y_coord, double delta_x);
 int8_t laser_negative_y(uint16_t x, uint16_t y, uint8_t end_y_coord, double delta_x);
+bool calculate_laser_data(
+        struct sensor_data* sd,
+        struct laser_data* ld,
+        uint8_t sensor_id);
 
 int8_t laser_loop(uint8_t  max_steps,
         uint8_t  a_0,
@@ -192,15 +212,15 @@ void adjust_heading_and_position(struct sensor_data* data)
 
     g_cosHeading = cos(headingRad);
     g_sinHeading = sin(headingRad);
-
+    //struct laser_data ld;
     for (int8_t i = 0; i < 6; ++i)
     {
-        calculate_laser_data(data, &g_laser_data[i]);
+        //calculate_laser_data(data, &ld, i);
     }
-    adjust_heading(data);
-    adjust_position(data);
+    //adjust_heading(data);
+    //adjust_position(data);
 }
-
+/*
 int8_t adjust_heading(struct sensor_data* sd, struct laser_data* ld)
 {
     int8_t angle_change;
@@ -208,7 +228,8 @@ int8_t adjust_heading(struct sensor_data* sd, struct laser_data* ld)
     for (int8_t i = 0; i < 6; ++i)
     {
     }
-}
+    return false;
+}*/
 
 // the largest sensor difference that's taken into consideration
 #define MAX_ADJUST 50
@@ -218,7 +239,7 @@ int8_t adjust_heading(struct sensor_data* sd, struct laser_data* ld)
 
 // assumes heading is correct, and calibrates the robots position
 // according to the distance to the walls
-int8_t adjust_position(struct sensor_data* data)
+/*int8_t adjust_position(struct sensor_data* data)
 {
     int16_t offset[2];
     int16_t adjust_sum[2];
@@ -272,7 +293,8 @@ int8_t adjust_position(struct sensor_data* data)
     packet.bytes[0] = MmToGrid(g_currentPosX);
     packet.bytes[1] = MmToGrid(g_currentPosY);
     ComUnitSend(&packet);
-}
+    return true;
+}*/
 
 int8_t update_map(struct sensor_data* data)
 {
@@ -295,22 +317,6 @@ int8_t update_map(struct sensor_data* data)
     return 0;
 }
 
-struct laser_data g_laser_data[6];
-struct laser_data
-{
-    int16_t startX;
-    int16_t startY;
-    int16_t endX;
-    int16_t endY;
-
-    // which side of a cell are we hitting
-    // 0 left, 1 bottom, 2 right, 3 top
-    // -1 if invalid data
-    int8_t collision_type;
-
-    // end - (round(end/400)*400)
-    int16_t offset;
-}
 
 #define GRID_SIZE 400
 int8_t calculate_dif(int16_t pos)
@@ -319,14 +325,14 @@ int8_t calculate_dif(int16_t pos)
     {
         return -pos;
     }
-    int8_t res = pos % GRID_SIZE;
+    uint8_t res = pos % GRID_SIZE;
     if (res > GRID_SIZE/2)
     {
         return GRID_SIZE-res;
     }
-    return res;
+    return (int8_t)res;
 }
-
+/*
 bool calculate_laser_data(
         struct sensor_data* sd,
         struct laser_data* ld,
@@ -335,44 +341,44 @@ bool calculate_laser_data(
     int8_t laser_x = LASER_POSITION_X[sensor_id];
     int8_t laser_y = LASER_POSITION_X[sensor_id];
     int8_t laser_dir = LASER_DIRECTION[sensor_id];
-    uint16_t distance = (uint16_t*)data + sensor_id;
+    uint16_t distance = (uint16_t*)sd + sensor_id;
 
     if (distance == 0 || distance == UINT16_MAX)
     {
-        ld.collision = -1;
+        ld->collision_type = -1;
         return false;
     }
     // lidar
     if (sensor_id < 2 && (distance < 300 || distance > 10000))
     {
-        ld.collision = -1;
+        ld->collision_type = -1;
         return false;
     }
     // IR
     else if ((sensor_id & 0x6) && (distance < 80 || distance > 800))
     {
-        ld.collision = -1;
+        ld->collision_type = -1;
         return false;
     }
 
     // extra: calculate if the laser *should* hit a wall we're sure about
     // that it's not hitting, and if so throw out that value
 
-    double cos = laser_cos(sensor_direction);
-    double sin = laser_sin(sensor_direction);
+    double cos = laser_cos(laser_dir);
+    double sin = laser_sin(laser_dir);
 
-    ld.startX = g_currentPosX + g_cosHeading * laser_x + laser_cos(1) * laser_y;
-    ld.startY = g_currentPosY + g_sinHeading * laser_y + laser_sin(1) * laser_x;
+    ld->startX = g_currentPosX + g_cosHeading * laser_x + laser_cos(1) * laser_y;
+    ld->startY = g_currentPosY + g_sinHeading * laser_y + laser_sin(1) * laser_x;
 
-    ld.endX = start_x + cos * distance;
-    ld.endY = start_y + sin * distance;
+    ld->endX = ld->startX + cos * distance;
+    ld->endY = ld->startY + sin * distance;
 
-    int8_t x_dif = calculate_dif(ld.endX);
-    int8_t y_dif = calculate_dif(ld.endX);
+    int8_t x_dif = calculate_dif(ld->endX);
+    int8_t y_dif = calculate_dif(ld->endX);
 
     // in which quadrant is the laser pointing
     uint8_t quadrant_heading =
-        ((g_currentHeading >> 14) + sensor_direction) & 3;
+        ((g_currentHeading >> 14) + laser_dir) & 3;
 
     if (x_dif < y_dif)
     {
@@ -380,16 +386,16 @@ bool calculate_laser_data(
         {
             return false;
         }
-        ld.offset = x_dif;
+        ld->offset = x_dif;
         if (quadrant_heading == 1 || quadrant_heading == 2)
         {
             // left
-            ld.collision_type = 0;
+            ld->collision_type = 0;
         }
         else
         {
             // right
-            ld.collision_type = 2;
+            ld->collision_type = 2;
         }
     }
     else
@@ -399,20 +405,20 @@ bool calculate_laser_data(
             return false;
         }
         //Extra: if y_dif < CORNER, set -1
-        ld.offset = y_dif;
+        ld->offset = y_dif;
         // if in the 3rd or 4th quadrant, we're hitting the top
         if (quadrant_heading & 0x2)
         {
-            ld.collision_type = 3;
+            ld->collision_type = 3;
         }
         else
         {
             // bottom
-            ld.collision_type = 1;
+            ld->collision_type = 1;
         }
     }
     return true;
-}
+}*/
 
 int8_t draw_laser_line(int8_t  laser_x,
         int8_t  laser_y,
