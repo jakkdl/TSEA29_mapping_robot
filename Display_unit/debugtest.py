@@ -71,11 +71,31 @@ def consolOut():
 
             #debug
             if g_output[0][0] == 12:
-                if len(g_output[0]) == 5:
+                    #pd paket
+                if g_output[0][3] == 0xFF:
+                    nrOut = "/nPropotional: " + str(g_output[0][5] << 8 | g_output[0][4])
+                    nrOut = nrOut + " /nDerivative Y: " + str(g_output[0][7] << 8 | g_output[0][6])
+                    nrOut = nrOut + " /nCTE: " + str( float(g_output[0][8] << 8 | g_output[0][9]) )
+                    #postison paket
+                elif g_output[0][3] == 0xFE:
+                    nrOut = "/nPospaket X: " + str(g_output[0][5] << 8 | g_output[0][4])
+                    nrOut = nrOut + " /nPospaket Y: " + str(g_output[0][7] << 8 | g_output[0][6])
+                    #Navigation goal paket
+                elif g_output[0][3] == 0xFD:
+                    nrOut = "/nNavigationGoal X: " + str(g_output[0][5] << 8 | g_output[0][4])
+                    nrOut = nrOut + " /nNavigationGoal Y: " + str(g_output[0][7] << 8 | g_output[0][6])
+                    #reference palet
+                elif g_output[0][3] == 0xFC:
+                    nrOut = "/nReference Pos X: " + str(g_output[0][5] << 8 | g_output[0][4])
+                    nrOut = nrOut + " /nReference PosX Y: " + str(g_output[0][7] << 8 | g_output[0][6])
+                elif g_output[0][3] == 0xFB:
+                    nrOut = "/nCurrentHeading: " + str(g_output[0][5] << 8 | g_output[0][4])
+                    nrOut = nrOut + " /nNavigationGoalHeading: " + str(g_output[0][7] << 8 | g_output[0][6])
+                elif len(g_output[0]) == 5:
                     nrOut = str(g_output[0][2]) + " " + str(g_output[0][4] << 8 | g_output[0][3])
                 else:
                     nrOut = str(g_output[0])
-                nrOut = "DEBUG: " + nrOut
+                nrOut = "DEBUG: /n" + nrOut
 
             #lidar forward
             elif g_output[0][0] == 0:

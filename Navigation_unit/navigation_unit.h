@@ -41,8 +41,8 @@ extern enum NavigationMode g_navigationMode; // = MANUAL;
 
 // PD-constants
 // default values for global variables are set in c-file
-extern uint8_t g_pdKd; // = 1;
-extern uint8_t g_pdKp; // = 1;
+extern volatile uint8_t g_pdKd; // = 1;
+extern volatile uint8_t g_pdKp; // = 1;
 
 // Current heading, specified as a fraction of the maximal value (FULL_TURN) for
 // the equivalent fraction around a full turn. So e.g. 1/3 of FULL_TURN is 1/3
@@ -57,8 +57,8 @@ extern uint16_t g_currentHeading; // = FULL_TURN/4;
 
 // Current position in millimetre, relative to bottom left
 // We assume we start in the middle (square 24) in the X direction.
-extern uint16_t g_currentPosX; // = grid_to_mm(24);
-extern uint16_t g_currentPosY; // = 0;
+extern volatile uint16_t g_currentPosX; // = grid_to_mm(24);
+extern volatile uint16_t g_currentPosY; // = 0;
 
 // We can either use bool + unsigned
 extern enum Direction g_wheelDirectionLeft;  // = dir_forward;
