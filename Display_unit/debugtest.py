@@ -24,8 +24,8 @@ g_time_sample = 1 #time before we print out g_output
 g_time_delay = 0.5 #delay after the stop has ben sent to when we read all info in g_output
 
 """glboal static vars"""
-g_output = [] #will contian all pakets in following format [addres, byte count, paket, ... , paket] up to 7 pakets
-g_dict = {"command": 0xB2, "kd": 0xD2, "kp": 0xE2} #this has the header should not be change unless you know what you are doing
+g_output = [] #will contian all pakets in following format [addres, byte count, paket0, ... , paket6] up to 7 pakets
+g_dict = {"command": 0xB2, "kd": 0xE2, "kp": 0xD2} #this has the header should not be change unless you know what you are doing
 
 def listener():
     global g_output
@@ -55,6 +55,11 @@ def listener():
             i += 1
         g_output.append(out)
 
+def uint16_to_int16(value):
+    if (value > 32768):
+        return value - 65536
+    return value
+
 def consolOut():
     """
     this funtion reads the incomming data from the port that is saved to
@@ -72,30 +77,25 @@ def consolOut():
             #debug
             if g_output[0][0] == 12:
                     #pd paket
-                if g_output[0][3] == 0xFF:
-                    nrOut = "/nPropotional: " + str(g_output[0][5] << 8 | g_output[0][4])
-                    nrOut = nrOut + " /nDerivative Y: " + str(g_output[0][7] << 8 | g_output[0][6])
-                    nrOut = nrOut + " /nCTE: " + str( float(g_output[0][8] << 8 | g_output[0][9]) )
-                    #postison paket
-                elif g_output[0][3] == 0xFE:
-                    nrOut = "/nPospaket X: " + str(g_output[0][5] << 8 | g_output[0][4])
-                    nrOut = nrOut + " /nPospaket Y: " + str(g_output[0][7] << 8 | g_output[0][6])
+                if g_output[0][2] == 255:
+                    nrOut = "\nPropotional: " + str(uint16_to_int16(g_output[0][4] << 8 | g_output[0][3]))
+                    nrOut = nrOut + " \nDerivative: " + str(uint16_to_int16(g_output[0][6] << 8 | g_output[0][5]))
+                    #nrOut = nrOut + " \nCTE: " + str( float(g_output[0][8] << 8 | g_output[0][9]) )
+                    
                     #Navigation goal paket
-                elif g_output[0][3] == 0xFD:
-                    nrOut = "/nNavigationGoal X: " + str(g_output[0][5] << 8 | g_output[0][4])
-                    nrOut = nrOut + " /nNavigationGoal Y: " + str(g_output[0][7] << 8 | g_output[0][6])
+                elif g_output[0][2] == 254:
+                    nrOut = "\nNavigationGoal X: " + str(g_output[0][4] << 8 | g_output[0][3])
+                    nrOut = nrOut + " \nNavigationGoal Y: " + str(g_output[0][6] << 8 | g_output[0][5])
                     #reference palet
-                elif g_output[0][3] == 0xFC:
-                    nrOut = "/nReference Pos X: " + str(g_output[0][5] << 8 | g_output[0][4])
-                    nrOut = nrOut + " /nReference PosX Y: " + str(g_output[0][7] << 8 | g_output[0][6])
-                elif g_output[0][3] == 0xFB:
-                    nrOut = "/nCurrentHeading: " + str(g_output[0][5] << 8 | g_output[0][4])
-                    nrOut = nrOut + " /nNavigationGoalHeading: " + str(g_output[0][7] << 8 | g_output[0][6])
+                elif g_output[0][2] == 253:
+                    nrOut = "\nReference Pos X: " + str(g_output[0][4] << 8 | g_output[0][3])
+                    nrOut = nrOut + " \nReference Pos Y: " + str(g_output[0][6] << 8 | g_output[0][5])
+                elif g_output[0][2] == 252:
+                    nrOut = nrOut + " \nNavigationGoalHeading: " + str(g_output[0][4] << 8 | g_output[0][3])
                 elif len(g_output[0]) == 5:
                     nrOut = str(g_output[0][2]) + " " + str(g_output[0][4] << 8 | g_output[0][3])
                 else:
                     nrOut = str(g_output[0])
-                nrOut = "DEBUG: /n" + nrOut
 
             #lidar forward
             elif g_output[0][0] == 0:
@@ -139,8 +139,9 @@ def consolOut():
 
                 # position
             elif g_output[0][0] == 8:
-                nrOut = g_output[0][3] << 8 | g_output[0][2]
-                nrOut = "Position: " + str(nrOut)
+                nrOut = "\nPositionX: " + str(g_output[0][3] << 8 | g_output[0][2])
+                nrOut += "\nPositionY: " + str(g_output[0][5] << 8 | g_output[0][4])
+                
 
                 # direction
             elif g_output[0][0] == 9:
@@ -234,14 +235,14 @@ def main():
             g_timeout = 0.5
     
         elif val == 13:
-            kp = input("Enter kp")
+            kp = int(input("Enter kp"))
             threading.Thread(target=packageMaker,
-                                args=("Kp", [kp])).start()
+                                args=("kp", [kp])).start()
                                 
         elif val == 14:
-            kd = input("Enter Kd")
+            kd = int(input("Enter Kd"))
             threading.Thread(target=packageMaker,
-                                args=("Kd", [Kd])).start()
+                                args=("kd", [kd])).start()
         
         time.sleep(g_time_delay)
         
