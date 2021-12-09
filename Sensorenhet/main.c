@@ -117,7 +117,7 @@ ISR(ADC_vect)
 		}
 		else
 		{
-			data.gyro = MLXGyroVal() - g_gyroFault;
+			data.gyro = MLXGyroVal();
 			g_readingDone = true;
 		}
     }

@@ -16,8 +16,8 @@ int16_t MLXGyroVal()
     */
     // convert ADC to degrees/second, then to our angle format/second, then
     // multiply with update time to get angle change in fractions of UINT16_MAX.
-    //return (int16_t)round( ((double) (ADC-g_gyroFault) / 1024  * 750 - 375) / 360 * 65536 * TIME_BETWEEN_SEND / 1000);
-	return ADC - g_gyroFault;
+    return (int16_t)round( ((double) (ADC-g_gyroFault) / 1024  * 750 - 375) / 360 * 65536 * TIME_BETWEEN_SEND / 1000);
+	//return ADC - g_gyroFault;
 }
 
 void MeasureMLX()
@@ -31,7 +31,7 @@ void GyroInit(void)
 {
 	sei();
 	g_gyroFault = 0;
-	_delay_ms(10);
+	_delay_ms(10);   
 	for(int i = 0; i < SAMPLES; i++)
 	{
 		MeasureMLX();

@@ -13,7 +13,8 @@
 // coordinate it corresponds to. So we throw out all values too close
 // to the corners.
 #define CORNER_SENSITIVITY 30
-#define SPIN_RATIO 0.64
+//#define SPIN_RATIO 0.708
+#define SPIN_RATIO 0
 
 // map update throws out an update if a wall is too far from where it can be
 #define MAX_ERROR 50
@@ -24,8 +25,8 @@
 #define USE_ODO_FOR_HEADING 1
 #define M_TAU (2 * M_PI)
 #define min(x, y) x < y ? x : y
-double g_cosHeading;
-double g_sinHeading;
+double g_cosHeading = 0;
+double g_sinHeading = 1;
 
 const double COS_QUARTERS[] = { 1.0, 0, -1.0, 0 };
 const double SIN_QUARTERS[] = { 0, 1, 0, -1 };
@@ -104,7 +105,7 @@ int16_t odo_heading_change(struct sensor_data* data)
         // from the formula of circle sector
         // see image rotate_on_the_spot_heading_update.jpg
         arc_length = (data->odometer_right + data->odometer_left) / 2;
-        res = radian_to_heading((double) arc_length * 17/24 / MID_TO_WHEEL_CENTER);
+        res = radian_to_heading((double) arc_length * SPIN_RATIO / MID_TO_WHEEL_CENTER);
     }
     else
     {
@@ -304,7 +305,7 @@ int8_t adjust_heading(struct sensor_data* sd, struct laser_data* ld)
 
 int8_t update_map(struct sensor_data* data)
 {
-
+	
     draw_laser_line(LaserPositionX(data, data->lidar_forward),
             LaserPositionY(data, data->lidar_forward),
             LaserDirection(data, data->lidar_forward),
@@ -467,8 +468,8 @@ int8_t draw_laser_line(int8_t  laser_x,
         cot = fabs(cos / sin);
     }
 
-    uint16_t start_x = g_currentPosX + g_cosHeading * laser_x + laser_cos(1) * laser_y;
-    uint16_t start_y = g_currentPosY + g_sinHeading * laser_y + laser_sin(1) * laser_x;
+    uint16_t start_x = g_currentPosX;// + g_cosHeading * laser_x + laser_cos(1) * laser_y;
+    uint16_t start_y = g_currentPosY;// + g_sinHeading * laser_y + laser_sin(1) * laser_x;
 
     // Calculate X, Y for endpoint when laser hits wall -> end_x, end_y
     // given the distance.
