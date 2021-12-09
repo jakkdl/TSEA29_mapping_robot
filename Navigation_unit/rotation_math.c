@@ -536,6 +536,11 @@ int8_t draw_laser_line(int8_t  laser_x,
         {
             send_map_update(end_x_coord, end_y_coord, 0);
         }
+        else
+        {
+            send_map_update(end_x_coord, end_y_coord,
+                    g_navigationMap[end_x_coord][end_y_coord]);
+        }
     }
 
     // TODO: throw out values that are incorrect due to the wall being
@@ -679,6 +684,7 @@ int8_t mark_empty(uint8_t x, uint8_t y)
     else if (g_navigationMap[x][y] != INT8_MAX)
     {
         g_navigationMap[x][y] += 1;
+        send_map_update(x, y, g_navigationMap[x][y]);
     }
     else
     {
