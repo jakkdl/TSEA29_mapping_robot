@@ -13,7 +13,6 @@
 // coordinate it corresponds to. So we throw out all values too close
 // to the corners.
 #define CORNER_SENSITIVITY 30
-#define SPIN_RATIO 1/6
 
 // map update throws out an update if a wall is too far from where it can be
 #define MAX_ERROR 50
@@ -104,7 +103,7 @@ int16_t odo_heading_change(struct sensor_data* data)
         // from the formula of circle sector
         // see image rotate_on_the_spot_heading_update.jpg
         arc_length = (data->odometer_right + data->odometer_left) / 2;
-        res = radian_to_heading((double) arc_length / MID_TO_WHEEL_CENTER * SPIN_RATIO);
+        res = radian_to_heading((double) arc_length * 17/24 / MID_TO_WHEEL_CENTER);
     }
     else
     {

@@ -99,7 +99,7 @@ void send_sensor_data(struct sensor_data* data)
     packet.byte_count = 2;
 
     uint16_t* value = (uint16_t*) data;
-    for (int i=0; i < 8; ++i)
+    for (int i=0; i < 2; ++i)
     {
         packet.address = i;
         packet.bytes[0] = Uint16ToByte0(*(value+i));
