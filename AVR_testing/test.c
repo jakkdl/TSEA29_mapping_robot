@@ -172,6 +172,8 @@ bool check_reset_map(void)
 // Run through all the tests
 void Test_runall(void)
 {
+    uint8_t oldKd = g_pdKd;
+    uint8_t oldKp = g_pdKp;
     // Print to UART, which simavr for some reason
     // prints?
     stdout = &mystdout;
@@ -223,11 +225,11 @@ void Test_runall(void)
         //printf("%s\n", m_Test_activeTest->name);
 #if __NAVIGATION_UNIT__
         test_reset_global(g_navigationMode, MANUAL)
-        test_reset_global(g_pdKd, 1)
-        test_reset_global(g_pdKp, 1)
+        test_reset_global(g_pdKd, oldKd)
+        test_reset_global(g_pdKp, oldKp)
         test_reset_global(g_currentHeading, FULL_TURN/4)
         test_reset_global(g_currentPosX, GridToMm(24))
-        test_reset_global(g_currentPosY, 0)
+        test_reset_global(g_currentPosY, 200)
         test_reset_global(g_wheelDirectionLeft, DIR_FORWARD)
         test_reset_global(g_wheelDirectionRight, DIR_FORWARD)
         test_reset_global(g_wheelSpeedLeft, 0)
