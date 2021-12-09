@@ -309,10 +309,26 @@ int8_t update_map(struct sensor_data* data)
             LaserPositionY(data, data->lidar_forward),
             LaserDirection(data, data->lidar_forward),
             data->lidar_forward);
-	draw_laser_line(LaserPositionX(data, data->lidar_backward),
-			LaserPositionY(data, data->lidar_backward),
-			LaserDirection(data, data->lidar_backward),
-			data->lidar_backward);
+    draw_laser_line(LaserPositionX(data, data->lidar_backward),
+            LaserPositionY(data, data->lidar_backward),
+            LaserDirection(data, data->lidar_backward),
+            data->lidar_backward);
+    draw_laser_line(LaserPositionX(data, data->ir_leftfront),
+            LaserPositionY(data, data->ir_leftfront),
+            LaserDirection(data, data->ir_leftfront),
+            data->ir_leftfront);
+    draw_laser_line(LaserPositionX(data, data->ir_leftback),
+            LaserPositionY(data, data->ir_leftback),
+            LaserDirection(data, data->ir_leftback),
+            data->ir_leftback);
+    draw_laser_line(LaserPositionX(data, data->ir_rightfront),
+            LaserPositionY(data, data->ir_rightfront),
+            LaserDirection(data, data->ir_rightfront),
+            data->ir_rightfront);
+    draw_laser_line(LaserPositionX(data, data->ir_rightback),
+            LaserPositionY(data, data->ir_rightback),
+            LaserDirection(data, data->ir_rightback),
+            data->ir_rightback);
     // lidar backward
     // throw out <300
 
