@@ -13,6 +13,7 @@
 // coordinate it corresponds to. So we throw out all values too close
 // to the corners.
 #define CORNER_SENSITIVITY 30
+#define SPIN_RATIO 1/6
 
 // map update throws out an update if a wall is too far from where it can be
 #define MAX_ERROR 50
@@ -103,7 +104,7 @@ int16_t odo_heading_change(struct sensor_data* data)
         // from the formula of circle sector
         // see image rotate_on_the_spot_heading_update.jpg
         arc_length = (data->odometer_right + data->odometer_left) / 2;
-        res = radian_to_heading((double) arc_length / MID_TO_WHEEL_CENTER);
+        res = radian_to_heading((double) arc_length / MID_TO_WHEEL_CENTER * SPIN_RATIO);
     }
     else
     {
@@ -308,6 +309,10 @@ int8_t update_map(struct sensor_data* data)
             LaserPositionY(data, data->lidar_forward),
             LaserDirection(data, data->lidar_forward),
             data->lidar_forward);
+	draw_laser_line(LaserPositionX(data, data->lidar_backward),
+			LaserPositionY(data, data->lidar_backward),
+			LaserDirection(data, data->lidar_backward),
+			data->lidar_backward);
     // lidar backward
     // throw out <300
 

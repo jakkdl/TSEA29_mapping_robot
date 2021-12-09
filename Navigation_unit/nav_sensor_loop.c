@@ -102,11 +102,12 @@ void send_sensor_data(struct sensor_data* data)
     for (int i=0; i < 8; ++i)
     {
         packet.address = i;
-        packet.bytes[0] = Uint16ToByte0(*value);
-        packet.bytes[1] = Uint16ToByte1(*value);
+        packet.bytes[0] = Uint16ToByte0(*(value+i));
+        packet.bytes[1] = Uint16ToByte1(*(value+i));
         Uart_Send_0(&packet);
-        ++value;
     }
+
+
     /*packet.address = ODOMETER;
     packet.bytes[0] = data->odometer_left;
     packet.bytes[1] = data->odometer_right;
@@ -126,6 +127,10 @@ int8_t nav_main(void)
     {
         return -1;
     }
+	/*g_wheelDirectionLeft = DIR_FORWARD;
+	g_wheelDirectionRight = DIR_BACKWARD;
+	g_wheelSpeedLeft = 0x40;
+	g_wheelSpeedRight = 0x40;*/
 
     if (g_navigationGoalSet)
     {

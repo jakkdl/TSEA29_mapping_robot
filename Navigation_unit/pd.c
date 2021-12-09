@@ -59,9 +59,9 @@ void turnToHeading()
 // is responsible for setting wheelSpeed and wheelDirection
 bool PDcontroller_Update(void)
 {	
-    send_debug_2(g_navigationGoalX, g_navigationGoalY, 0xFE);
+    /*send_debug_2(g_navigationGoalX, g_navigationGoalY, 0xFE);
     send_debug_2(g_referencePosX, g_referencePosY, 0xFD);
-    send_debug(g_navigationGoalHeading, 0xFC);
+    send_debug(g_navigationGoalHeading, 0xFC);*/
 
     int16_t temp = abs((int16_t) g_currentHeading - g_navigationGoalHeading);
 
@@ -95,7 +95,7 @@ bool PDcontroller_Update(void)
 	
     /* cross track error for current iteration */
     double CTE = ((double)( RY*deltaX - RX*deltaY )) / ( deltaX*deltaX + deltaY*deltaY );
-	send_debug((int16_t)CTE, 42);
+	/*send_debug((int16_t)CTE, 42);
     send_debug((int16_t)RX & 0xFFFF, 43);
     send_debug((int16_t)((RX>>8)& 0xFFFF) , 43);
     send_debug((int16_t)RY& 0xFFFF, 44);
@@ -103,7 +103,7 @@ bool PDcontroller_Update(void)
     send_debug((int16_t)deltaX& 0xFFFF, 45);
     send_debug((int16_t)(deltaX>>8)& 0xFFFF, 45);
     send_debug((int16_t)deltaY& 0xFFFF, 46);
-    send_debug((int16_t)(deltaY>>8)& 0xFFFF, 46);
+    send_debug((int16_t)(deltaY>>8)& 0xFFFF, 46);*/
 
 	//i have no idea what this is but works but pointer magic?
 	//create a 2 part long with the CTE as reference then point to is in 2 different byte
@@ -124,7 +124,7 @@ bool PDcontroller_Update(void)
      */
     int16_t derivative = round(( CTE - g_PrevCTE )*g_pdKd);
 
-    send_debug_2(proportional, derivative, 0xFF);
+    //send_debug_2(proportional, derivative, 0xFF);
 
     /*
      * U(out) = proportional part + derivative part

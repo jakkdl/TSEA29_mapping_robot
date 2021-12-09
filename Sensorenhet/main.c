@@ -22,13 +22,8 @@ bool g_sendData = false;
 #define WHEEL_DIAMETER 62
 
 struct sensor_data data;
-/*
- * TODO:
- * implement communication with other devices
- * move around functions to correct positions
- * testing functionality:
- * MLX gyro
- */
+
+//TODO: testing functionality: MLX gyro
 
 void StartReading()
 {
@@ -59,11 +54,14 @@ void PinInit()
 int main(void)
 {
     PinInit();
-    TimerInit();
-    ExtInterruptInit();
+	AdcInit();
+	GyroInit();
+	ExtInterruptInit();
     Uart_Init();
+	TimerInit();
     MsTimerInit();
-    sei();
+	sei();
+    
     StartReading();
     while (1)
     {
@@ -110,12 +108,18 @@ void ConvertOdo()
 
 ISR(ADC_vect)
 {
-    //if ((ADMUX & (1 << PORTB3)) && (ADMUX & 1 << PORTB2)) // reading from MLX
     if (ADMUX == 0x45)
     {
-        g_angle = MLXGyroVal();
-        data.gyro = g_angle;
-        g_readingDone = true;
+		if(g_startup)
+		{
+			int16_t temp = ADC - 512;
+			g_gyroFault += temp;
+		}
+		else
+		{
+			data.gyro = MLXGyroVal() - g_gyroFault;
+			g_readingDone = true;
+		}
     }
     else // reading from IR
     {

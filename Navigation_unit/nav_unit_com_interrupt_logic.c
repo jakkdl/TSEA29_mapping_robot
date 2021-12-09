@@ -119,6 +119,7 @@ int8_t navigate_forward(uint8_t dir)
             return -1;
     }
     g_navigationGoalHeading = dir * FULL_TURN / 4;
+	
     return 0;
 }
 

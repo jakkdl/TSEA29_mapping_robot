@@ -67,9 +67,9 @@ void send_debug_2(uint16_t value_1, uint16_t value_2, int8_t type)
     data.address = ADR_DEBUG;
     data.byte_count = 5;
     data.bytes[0] = type;
-    data.bytes[1] = Uint16ToByte0(value);
-    data.bytes[2] = Uint16ToByte1(value);
-    data.bytes[3] = Uint16ToByte0(value);
-    data.bytes[4] = Uint16ToByte1(value);
+    data.bytes[1] = Uint16ToByte0(value_1);
+    data.bytes[2] = Uint16ToByte1(value_1);
+    data.bytes[3] = Uint16ToByte0(value_2);
+    data.bytes[4] = Uint16ToByte1(value_2);
     Uart_Send_0(&data);
 }
