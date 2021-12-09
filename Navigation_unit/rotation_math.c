@@ -13,8 +13,7 @@
 // coordinate it corresponds to. So we throw out all values too close
 // to the corners.
 #define CORNER_SENSITIVITY 30
-//#define SPIN_RATIO 0.708
-#define SPIN_RATIO 0
+#define SPIN_RATIO 0.708
 
 // map update throws out an update if a wall is too far from where it can be
 #define MAX_ERROR 50
