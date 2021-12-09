@@ -265,10 +265,10 @@ class Console(LabelFrame):
                     if len(g_output[0]) == 6:
                         nrOut = "\nPositionX: " + str(g_output[0][3] << 8 | g_output[0][2])
                         nrOut += "\nPositionY: " + str(g_output[0][5] << 8 | g_output[0][4])
-                        g_pos_x = g_output[0][3] << 8 | g_output[0][2]
-                        g_pos_y = g_output[0][5] << 8 | g_output[0][4]
-                        g_infromation_update = True
-                        g_pos_update = True
+                        #g_pos_x = g_output[0][3] << 8 | g_output[0][2]
+                        #g_pos_y = g_output[0][5] << 8 | g_output[0][4]
+                        #g_infromation_update = True
+                        #g_pos_update = True
                     else:
                         nrOut = "Position paket miss match " + str(g_output[0])
 
@@ -284,20 +284,20 @@ class Console(LabelFrame):
                 elif g_output[0][0] == 10:
                     if len(g_output[0]) == 5:
                         nrOut = "Map update: " + str(g_output[0][2]) + " " + str(g_output[0][3]) + " " + str( uint8_to_int8( g_output[0][4] ) )
-                        g_x = g_output[0][2]
-                        g_y = g_output[0][3]
-                        if uint8_to_int8( g_output[0][4] ) < 0:
-                            g_color = "blue"
-                        else:
-                            g_color = "green"
-                        g_map_update = True
+                        #g_x = g_output[0][2]
+                        #g_y = g_output[0][3]
+                        #if uint8_to_int8( g_output[0][4] ) < 0:
+                        #    g_color = "blue"
+                        #else:
+                        #    g_color = "green"
+                        #g_map_update = True
                     else:
                         nrOut = "Map update paket miss match " + str(g_output[0])
 
                     #last case should never happen
                 else:
                     nrOut = "Unknow paket we should never be here check code: " + str(g_output[0])
-                    
+
                 g_output.pop(0)
 
             if g_output:
