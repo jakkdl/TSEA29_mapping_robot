@@ -1,8 +1,9 @@
+#include <math.h>
 #include "nav_unit_com_interrupt_logic.h"
 #include "../AVR_common/robot.h"
 #include "navigation_unit.h"
 #include "pd.h"
-#include <stdio.h>
+
 
 // assumes data is not corrupt, does not check parity
 int8_t communication_unit_interrupt(struct data_packet* data)
@@ -98,27 +99,27 @@ int8_t navigate_forward(uint8_t dir)
 {
     switch (dir)
     {
-// TODO: John: write better maths
         case 0:
             g_navigationGoalX = GridToMm(MmToGrid(g_currentPosX) + 1);
-            g_navigationGoalY = g_currentPosY;
+            g_navigationGoalY = RoundToGrid(g_currentPosY);
             break;
         case 1:
-            g_navigationGoalX = g_currentPosX;
+            g_navigationGoalX = RoundToGrid(g_currentPosX);
             g_navigationGoalY = GridToMm(MmToGrid(g_currentPosY) + 1);
             break;
         case 2:
             g_navigationGoalX = GridToMm(MmToGrid(g_currentPosX) - 1);
-            g_navigationGoalY = g_currentPosY;
+            g_navigationGoalY = RoundToGrid(g_currentPosY);
             break;
         case 3:
-            g_navigationGoalX = g_currentPosX;
+            g_navigationGoalX = RoundToGrid(g_currentPosX);
             g_navigationGoalY = GridToMm(MmToGrid(g_currentPosY) - 1);
             break;
         default:
             return -1;
     }
-    g_navigationGoalHeading = dir * FULL_TURN / 4;
+    //g_navigationGoalHeading = dir * FULL_TURN / 4;
+	g_navigationGoalHeading = atan2f(g_navigationGoalY - g_currentPosY, g_navigationGoalX - g_currentPosX) / (2*M_PI) * FULL_TURN;
 	
     return 0;
 }

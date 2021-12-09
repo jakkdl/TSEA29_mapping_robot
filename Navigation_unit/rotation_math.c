@@ -327,8 +327,6 @@ int8_t update_map(struct sensor_data* data)
     return 0;
 }
 
-
-#define GRID_SIZE 400
 int8_t calculate_dif(int16_t pos)
 {
     if (pos < 0)
