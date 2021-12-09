@@ -344,7 +344,7 @@ class Map(LabelFrame):
         self.canvas.pack(side=LEFT)
 
     def updateMap(self):
-        #if g_map_update has been reciver from console out and update the grid
+        """if g_map_update has been reciver from console out and update the grid"""
         global g_map_update
         if g_map_update:
             square = self.canvas.find_withtag(
@@ -361,6 +361,7 @@ class Map(LabelFrame):
 
 
 def menu():
+    """menu function that prints the menu so you dont need to rember stuff"""
     global g_dict
     while True:
         #you can do this part in one print but this also works
