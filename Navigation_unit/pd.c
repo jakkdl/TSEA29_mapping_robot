@@ -28,7 +28,7 @@ uint16_t g_referencePosY;
 
 void turnToHeading()
 {
-    // Extra: if the robot's position is shifting, 
+    // Extra: if the robot's position is shifting,
     if (g_currentHeading == g_navigationGoalHeading)
     {
         return;
@@ -58,10 +58,10 @@ void turnToHeading()
 // returns true when it is close enough, false otherwise
 // is responsible for setting wheelSpeed and wheelDirection
 bool PDcontroller_Update(void)
-{	
+{
     /*send_debug_2(g_navigationGoalX, g_navigationGoalY, 0xFE);
-    send_debug_2(g_referencePosX, g_referencePosY, 0xFD);
-    send_debug(g_navigationGoalHeading, 0xFC);*/
+      send_debug_2(g_referencePosX, g_referencePosY, 0xFD);
+      send_debug(g_navigationGoalHeading, 0xFC);*/
 
     int16_t temp = abs((int16_t) g_currentHeading - g_navigationGoalHeading);
 
@@ -82,33 +82,33 @@ bool PDcontroller_Update(void)
     /* calculate the dot product between reference node one and target node with respect to current pos */
     int32_t RX = ((int32_t) g_currentPosX) - g_navigationGoalX;
     int32_t RY = ((int32_t) g_currentPosY) - g_navigationGoalY;
-	
+
     if (abs(RX) < POS_SENSITIVITY && abs(RY) < POS_SENSITIVITY)
     {
         g_wheelSpeedLeft = 0;
         g_wheelSpeedRight = 0;
         return true;
     }
-	
+
     int32_t deltaX = ((int32_t) g_navigationGoalX) - g_referencePosX;
     int32_t deltaY = ((int32_t) g_navigationGoalY) - g_referencePosY;
-	
+
     /* cross track error for current iteration */
     double CTE = ((double)( RY*deltaX - RX*deltaY )) / ( deltaX*deltaX + deltaY*deltaY );
-	/*send_debug((int16_t)CTE, 42);
-    send_debug((int16_t)RX & 0xFFFF, 43);
-    send_debug((int16_t)((RX>>8)& 0xFFFF) , 43);
-    send_debug((int16_t)RY& 0xFFFF, 44);
-    send_debug((int16_t)(RY>>8)& 0xFFFF, 44);
-    send_debug((int16_t)deltaX& 0xFFFF, 45);
-    send_debug((int16_t)(deltaX>>8)& 0xFFFF, 45);
-    send_debug((int16_t)deltaY& 0xFFFF, 46);
-    send_debug((int16_t)(deltaY>>8)& 0xFFFF, 46);*/
+    /*send_debug((int16_t)CTE, 42);
+      send_debug((int16_t)RX & 0xFFFF, 43);
+      send_debug((int16_t)((RX>>8)& 0xFFFF) , 43);
+      send_debug((int16_t)RY& 0xFFFF, 44);
+      send_debug((int16_t)(RY>>8)& 0xFFFF, 44);
+      send_debug((int16_t)deltaX& 0xFFFF, 45);
+      send_debug((int16_t)(deltaX>>8)& 0xFFFF, 45);
+      send_debug((int16_t)deltaY& 0xFFFF, 46);
+      send_debug((int16_t)(deltaY>>8)& 0xFFFF, 46);*/
 
-	//i have no idea what this is but works but pointer magic?
-	//create a 2 part long with the CTE as reference then point to is in 2 different byte
+    //i have no idea what this is but works but pointer magic?
+    //create a 2 part long with the CTE as reference then point to is in 2 different byte
 
-	
+
     /*
      * e(t) = r(t) - u(t) Error signal (this part needed?)
      */
@@ -118,7 +118,7 @@ bool PDcontroller_Update(void)
      */
     int16_t proportional = round(CTE * g_pdKp);
 
-	
+
     /*
      * Kp*derivative error is the derivative part of the pd controller
      */
@@ -134,7 +134,7 @@ bool PDcontroller_Update(void)
 
     g_wheelDirectionRight = DIR_FORWARD;
     g_wheelDirectionLeft = DIR_FORWARD;
-    
+
     //TODO: this one shouldn't really happen much anymore, but
     //should be handled in better ways
     if (abs(out) > MAX_SPEED)
@@ -151,12 +151,12 @@ bool PDcontroller_Update(void)
         g_wheelSpeedRight = MAX_SPEED;
         g_wheelSpeedLeft = MAX_SPEED+out;
     }
-	else
-	{
-		// out is positive
-		g_wheelSpeedRight = MAX_SPEED-out;
-		g_wheelSpeedLeft = MAX_SPEED;
-	}
+    else
+    {
+        // out is positive
+        g_wheelSpeedRight = MAX_SPEED-out;
+        g_wheelSpeedLeft = MAX_SPEED;
+    }
 
     return false;
 }
@@ -288,23 +288,22 @@ Test_test(Test, PDcontroller_Update)
 
     PDcontroller_Update();
     Test_assertEquals(g_wheelSpeedLeft, MAX_SPEED);
-    Test_assertEquals(g_wheelSpeedRight, MAX_SPEED-18);
+    Test_assertEquals(g_wheelSpeedRight, MAX_SPEED-19);
 
     g_currentPosX += 100;
     g_currentPosY -= 50;
 
     // POS_SENSITIVITY so high it stops by here
-    /*PDcontroller_Update();
-    Test_assertEquals(g_wheelSpeedLeft, MAX_SPEED);
-    Test_assertEquals(g_wheelSpeedRight, MAX_SPEED);
-
-    g_currentPosX += 100;
-    g_currentPosY -= 50;
-
     PDcontroller_Update();
-    Test_assertEquals(g_wheelSpeedLeft, MAX_SPEED-6);
-    Test_assertEquals(g_wheelSpeedRight, MAX_SPEED);
-    */
+      Test_assertEquals(g_wheelSpeedLeft, MAX_SPEED);
+      Test_assertEquals(g_wheelSpeedRight, MAX_SPEED);
+
+      g_currentPosX += 100;
+      g_currentPosY -= 50;
+
+      /*PDcontroller_Update();
+      Test_assertEquals(g_wheelSpeedLeft, MAX_SPEED-6);
+      Test_assertEquals(g_wheelSpeedRight, MAX_SPEED);*/
 
     g_wheelDirectionLeft = oldDirLeft;
     g_wheelDirectionRight = oldDirRight;
