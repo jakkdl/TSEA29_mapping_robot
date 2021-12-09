@@ -12,15 +12,15 @@ enum Address
     LIDAR_FORWARD, //0
     LIDAR_BACKWARD,
     IR_LEFTFRONT,
-    IR_LEFTBACK, // 4
+    IR_LEFTBACK, // 3
     IR_RIGHTFRONT,
     IR_RIGHTBACK,
     GYRO,
-    ODOMETER, // 8
+    ODOMETER, // 7
     POSITION,
     ADR_HEADING,
     MAP_UPDATE,
-    COMMAND, // 12
+    COMMAND, // 11
     ADR_DEBUG,
     PD_KP, //13
     PD_KD, //14

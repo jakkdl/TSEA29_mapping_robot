@@ -15,7 +15,7 @@
 // Send a debug value to the display-unit, type is used to differentiate
 // between different types of values being sent for debugging
 void send_debug(uint16_t value, int8_t type);
-void send_debug_2(uint16_t value_1, uint16_t value_2, int8_t type)
+void send_debug_2(uint16_t value_1, uint16_t value_2, int8_t type);
 
 enum NavigationMode
 {
@@ -30,10 +30,12 @@ enum Direction
 };
 
 #define FULL_TURN 65536 // 1 << 16
+#define GRID_SIZE 400
 
 // This broke with {}'s, unsure why /john
-#define GridToMm(coord) (coord) * 400 + 200
-#define MmToGrid(coord) (coord) / 400
+#define GridToMm(coord) (coord) * GRID_SIZE + GRID_SIZE/2
+#define MmToGrid(coord) (coord) / GRID_SIZE
+#define RoundToGrid(coord) (coord) % GRID_SIZE + ( ((coord) % 400 > 200) ? 400 : 0)
 
 /* GLOBAL VARIABLES */
 

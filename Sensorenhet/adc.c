@@ -12,7 +12,6 @@ void AdcInit()
 
 void StartAdc()
 {
-	g_IRDone = false;
 	ADCSRA |= (1 << ADSC);
 }
 
@@ -32,7 +31,7 @@ void NextInputPin()
 void MeasureIR()
 {
 	cli();
-	AdcInit();
+	ADMUX = 0x40;
 	sei();
 	StartAdc();
 	_delay_ms(1);

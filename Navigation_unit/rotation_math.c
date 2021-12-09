@@ -13,6 +13,7 @@
 // coordinate it corresponds to. So we throw out all values too close
 // to the corners.
 #define CORNER_SENSITIVITY 30
+#define SPIN_RATIO 0.708
 
 // map update throws out an update if a wall is too far from where it can be
 #define MAX_ERROR 50
@@ -23,8 +24,8 @@
 #define USE_ODO_FOR_HEADING 1
 #define M_TAU (2 * M_PI)
 #define min(x, y) x < y ? x : y
-double g_cosHeading;
-double g_sinHeading;
+double g_cosHeading = 0;
+double g_sinHeading = 1;
 
 const double COS_QUARTERS[] = { 1.0, 0, -1.0, 0 };
 const double SIN_QUARTERS[] = { 0, 1, 0, -1 };
@@ -103,7 +104,7 @@ int16_t odo_heading_change(struct sensor_data* data)
         // from the formula of circle sector
         // see image rotate_on_the_spot_heading_update.jpg
         arc_length = (data->odometer_right + data->odometer_left) / 2;
-        res = radian_to_heading((double) arc_length / MID_TO_WHEEL_CENTER);
+        res = radian_to_heading((double) arc_length * SPIN_RATIO / MID_TO_WHEEL_CENTER);
     }
     else
     {
@@ -182,7 +183,7 @@ int8_t calculate_heading_and_position(struct sensor_data* data)
 
         g_currentPosX += round(cos(headingAvg) * distance);
         g_currentPosY += round(sin(headingAvg) * distance);
-		
+
         packet.address = POSITION;
         packet.byte_count = 4;
 		packet.bytes[0] = Uint16ToByte0(g_currentPosX);
@@ -303,11 +304,31 @@ int8_t adjust_heading(struct sensor_data* sd, struct laser_data* ld)
 
 int8_t update_map(struct sensor_data* data)
 {
-
+	
     draw_laser_line(LaserPositionX(data, data->lidar_forward),
             LaserPositionY(data, data->lidar_forward),
             LaserDirection(data, data->lidar_forward),
             data->lidar_forward);
+    draw_laser_line(LaserPositionX(data, data->lidar_backward),
+            LaserPositionY(data, data->lidar_backward),
+            LaserDirection(data, data->lidar_backward),
+            data->lidar_backward);
+    draw_laser_line(LaserPositionX(data, data->ir_leftfront),
+            LaserPositionY(data, data->ir_leftfront),
+            LaserDirection(data, data->ir_leftfront),
+            data->ir_leftfront);
+    draw_laser_line(LaserPositionX(data, data->ir_leftback),
+            LaserPositionY(data, data->ir_leftback),
+            LaserDirection(data, data->ir_leftback),
+            data->ir_leftback);
+    draw_laser_line(LaserPositionX(data, data->ir_rightfront),
+            LaserPositionY(data, data->ir_rightfront),
+            LaserDirection(data, data->ir_rightfront),
+            data->ir_rightfront);
+    draw_laser_line(LaserPositionX(data, data->ir_rightback),
+            LaserPositionY(data, data->ir_rightback),
+            LaserDirection(data, data->ir_rightback),
+            data->ir_rightback);
     // lidar backward
     // throw out <300
 
@@ -322,8 +343,6 @@ int8_t update_map(struct sensor_data* data)
     return 0;
 }
 
-
-#define GRID_SIZE 400
 int8_t calculate_dif(int16_t pos)
 {
     if (pos < 0)
@@ -448,8 +467,8 @@ int8_t draw_laser_line(int8_t  laser_x,
         cot = fabs(cos / sin);
     }
 
-    uint16_t start_x = g_currentPosX + g_cosHeading * laser_x + laser_cos(1) * laser_y;
-    uint16_t start_y = g_currentPosY + g_sinHeading * laser_y + laser_sin(1) * laser_x;
+    uint16_t start_x = g_currentPosX;// + g_cosHeading * laser_x + laser_cos(1) * laser_y;
+    uint16_t start_y = g_currentPosY;// + g_sinHeading * laser_y + laser_sin(1) * laser_x;
 
     // Calculate X, Y for endpoint when laser hits wall -> end_x, end_y
     // given the distance.
@@ -527,11 +546,16 @@ int8_t draw_laser_line(int8_t  laser_x,
         // if the cell state changed, send update to com-unit
         if (g_navigationMap[end_x_coord][end_y_coord] == -1)
         {
-            send_map_update(end_x_coord, end_y_coord, WALL);
+            send_map_update(end_x_coord, end_y_coord, -1);
         }
         else if (g_navigationMap[end_x_coord][end_y_coord] == 0)
         {
-            send_map_update(end_x_coord, end_y_coord, UNKNOWN);
+            send_map_update(end_x_coord, end_y_coord, 0);
+        }
+        else
+        {
+            send_map_update(end_x_coord, end_y_coord,
+                    g_navigationMap[end_x_coord][end_y_coord]);
         }
     }
 
@@ -676,6 +700,7 @@ int8_t mark_empty(uint8_t x, uint8_t y)
     else if (g_navigationMap[x][y] != INT8_MAX)
     {
         g_navigationMap[x][y] += 1;
+        send_map_update(x, y, g_navigationMap[x][y]);
     }
     else
     {
@@ -739,14 +764,14 @@ Test_test(Test, calc_heading_and_pos)
     data.gyro = 16384; // FULL_TURN / 4
 #else
     // split into two eigth turns
-    data.odometer_left = MID_TO_WHEEL_CENTER * M_TAU / 8; //157
-    data.odometer_right = MID_TO_WHEEL_CENTER * M_TAU / 8;
+    data.odometer_left = round((double)MID_TO_WHEEL_CENTER * M_TAU / 8 /SPIN_RATIO); //157
+    data.odometer_right = data.odometer_left;
     g_wheelDirectionLeft = DIR_BACKWARD;
     Test_assertEquals(calculate_heading_and_position(&data), 0);
     Test_assertEquals(g_currentPosX, 0);
     Test_assertEquals(g_currentPosY, 0);
     //Test_assertEquals(g_currentHeading, 8137); // 0.3 degree error
-    Test_assertEquals(g_currentHeading, 8155); // if assuming straight line
+    Test_assertEquals(g_currentHeading, 8193); // if assuming straight line
     g_currentHeading = 8192;
 #endif
 
@@ -757,7 +782,7 @@ Test_test(Test, calc_heading_and_pos)
     Test_assertEquals(g_currentHeading, 16384);
 #else
     //Test_assertEquals(g_currentHeading, 16329);
-    Test_assertEquals(g_currentHeading, 16347);
+    Test_assertEquals(g_currentHeading, 16385);
 #endif
 
 #if !USE_ODO_FOR_HEADING
@@ -765,8 +790,8 @@ Test_test(Test, calc_heading_and_pos)
     data.gyro = -8192; // FULL_TURN / 8
 #else
     // split into two eigth turns
-    data.odometer_left = MID_TO_WHEEL_CENTER * M_TAU / 8; //157
-    data.odometer_right = MID_TO_WHEEL_CENTER * M_TAU / 8;
+    data.odometer_left = round((double)MID_TO_WHEEL_CENTER * M_TAU / 8 / SPIN_RATIO); //157
+    data.odometer_right = data.odometer_left;
     g_wheelDirectionLeft = DIR_FORWARD;
     g_wheelDirectionRight = DIR_BACKWARD;
 #endif
