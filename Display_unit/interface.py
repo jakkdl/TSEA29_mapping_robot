@@ -15,11 +15,23 @@ ser = serial.Serial(
 )
 
 g_output = []
+g_output_debug = []
 nrOut = ""
-g_dict = {"command": 0xB2, "kd": 0xD2, "kp": 0xE2}
+g_dict = {"command": 0xB2, "kd": 0xE2, "kp": 0xD2}
 
 g_file_raw = False #out put raw paket data to file
-g_file = False #out put console date to file
+g_file = True #out put console date to file
+
+g_x = -1
+g_y = -1
+g_infromation_update = False
+g_color = "red"
+
+g_pos_x = -1
+g_pos_y = -1
+g_infromation_update = False
+g_pos_update = False
+
 
 class Constants:
 
@@ -64,32 +76,29 @@ class Map(LabelFrame):
         self.canvas.pack(side=LEFT)
 
     def updateMap(self):
-        global g_output
-        if g_output:
-            if g_output[0][0] == 10:
-                if g_output[0][4] == 1:
-                    square = self.canvas.find_withtag(
-                        str(g_output[0][2]) + "," + str(g_output[0][3]))
-                    self.canvas.itemconfig(square, fill='blue')
-                g_output.pop(0)
+        """if g_map_update has been reciver from console out and update the grid"""
+        global g_infromation_update
+        if g_infromation_update:
+            square = self.canvas.find_withtag(
+                        str( g_x ) + "," + str( g_y ))
+            self.canvas.itemconfig(square, fill=g_color)
+            self.after(Constants.DELAY, self.onTimer)
+            g_infromation_update = False
 
     def moveRobot(self):
-        '''animates the robot's movement'''
-        global g_output
-        if g_output:
-            if g_output[0][0] == 8:
-                if len(g_output[0]) == 6:
-                    x = g_output[0][3] << 8 | g_output[0][2]
-                    y = g_output[0][5] << 8 | g_output[0][4]
-                    robot = self.canvas.find_withtag('robot')
-                    self.canvas.move(robot, x, y)
-                else:
-                    print("paket error supposed to be 6 long not ", len(g_output[0]) )
-                g_output.pop(0)
+        """animates the robot's movement"""
+        global g_pos_update
+        if g_pos_update:
+            global g_pos_x
+            global g_pos_y
+            x = g_pos_x
+            y = g_pos_y
+            robot = self.canvas.find_withtag('robot')
+            self.canvas.move(robot, x, y)
 
     def onTimer(self):
         '''creates a cycle each timer event'''
-        self.moveRobot()
+        #self.moveRobot() this logic does not work with this implemetation
         self.updateMap()
         self.after(Constants.DELAY, self.onTimer)
 
@@ -128,119 +137,180 @@ class Console(LabelFrame):
         global g_output
         global nrOut
         # lidar forward
-        if g_output:
-            #print("Length of g_output: ", len(g_output[0]))
-            if g_output[0][0] == 0:
-                nrOut = g_output[0][3] << 8 | g_output[0][2]
-                nrOut = "Lidar Forward: " + str(nrOut)
-                g_output.pop(0)
+        global g_output
 
-            # lidar backwards
-            elif g_output[0][0] == 1:
-                nrOut = g_output[0][3] << 8 | g_output[0][2]
-                nrOut = "Lidar Backwards: " + str(nrOut)
-                g_output.pop(0)
+        while True:
+            if g_output:
+                nrOut = ""
 
-                # IR front left
-            elif g_output[0][0] == 2:
-                nrOut = g_output[0][3] << 8 | g_output[0][2]
-                nrOut = "IR Front Left: " + str(nrOut)
-                g_output.pop(0)
-
-                # IR back left
-            elif g_output[0][0] == 3:
-                nrOut = g_output[0][3] << 8 | g_output[0][2]
-                nrOut = "IR Back Left: " + str(nrOut)
-                g_output.pop(0)
-
-                # IR right front
-            elif g_output[0][0] == 4:
-                nrOut = g_output[0][3] << 8 | g_output[0][2]
-                nrOut = "IR Front Right: " + str(nrOut)
-                g_output.pop(0)
-
-                # IR right back
-            elif g_output[0][0] == 5:
-                nrOut = g_output[0][3] << 8 | g_output[0][2]
-                nrOut = "IR Back Right: " + str(nrOut)
-                g_output.pop(0)
-
-                # gyro
-            elif g_output[0][0] == 6:
-                nrOut = g_output[0][3] << 8 | g_output[0][2]
-                nrOut = "Gyro: " + str(nrOut)
-                g_output.pop(0)
-
-                # odometer
-            elif g_output[0][0] == 7:
-                nrOut = g_output[0][3] << 8 | g_output[0][2]
-                nrOut = "Odometer: " + str(nrOut)
-                g_output.pop(0)
-
-                # direction
-            elif g_output[0][0] == 9:
-                nrOut = g_output[0][3] << 8 | g_output[0][2]
-                nrOut = "Direction: " + str(nrOut)
-                g_output.pop(0)
-
-                # debug
-            elif g_output[0][0] == 12:
-                if len(g_output[0]) == 5:
-                    nrOut = str(g_output[0][2]) + " " + str(g_output[0][4] << 8 | g_output[0][3])
-                else:
-                    nrOut = str(g_output[0])
-                nrOut = "DEBUG: " + nrOut
-                """
-                this part can parse debug pakets from the pd.c
-
-                 #debug
+                #debug
                 if g_output[0][0] == 12:
-                    #pd paket
-                if g_output[0][3] == 0xFF:
-                    nrOut = "/nPropotional: " + str(g_output[0][5] << 8 | g_output[0][4])
-                    nrOut = nrOut + " /nDerivative Y: " + str(g_output[0][7] << 8 | g_output[0][6])
-                    nrOut = nrOut + " /nCTE: " + str( float(g_output[0][8] << 8 | g_output[0][9]) )
-                    #postison paket
-                elif g_output[0][3] == 0xFE:
-                    nrOut = "/nPospaket X: " + str(g_output[0][5] << 8 | g_output[0][4])
-                    nrOut = nrOut + " /nPospaket Y: " + str(g_output[0][7] << 8 | g_output[0][6])
-                    #Navigation goal paket
-                elif g_output[0][3] == 0xFD:
-                    nrOut = "/nNavigationGoal X: " + str(g_output[0][5] << 8 | g_output[0][4])
-                    nrOut = nrOut + " /nNavigationGoal Y: " + str(g_output[0][7] << 8 | g_output[0][6])
-                    #reference palet
-                elif g_output[0][3] == 0xFC:
-                    nrOut = "/nReference Pos X: " + str(g_output[0][5] << 8 | g_output[0][4])
-                    nrOut = nrOut + " /nReference PosX Y: " + str(g_output[0][7] << 8 | g_output[0][6])
-                elif g_output[0][3] == 0xFB:
-                    nrOut = "/nCurrentHeading: " + str(g_output[0][5] << 8 | g_output[0][4])
-                    nrOut = nrOut + " /nNavigationGoalHeading: " + str(g_output[0][7] << 8 | g_output[0][6])
-                elif len(g_output[0]) == 5:
-                    nrOut = str(g_output[0][2]) + " " + str(g_output[0][4] << 8 | g_output[0][3])
-                else:
-                    nrOut = str(g_output[0])
-                nrOut = "DEBUG: /n" + nrOut
-                
-                
-                """
-                g_output.pop(0)
-            
-            if g_file:
-                f0 = open("debug.txt", "a")
-                f0.write(nrOut + "\n")
-                f0.close()
+                        #pd paket
+                    if g_output[0][2] == 255:
+                        if len(g_output[0]) == 7:
+                            nrOut = "\nPropotional: " + str(uint16_to_int16(g_output[0][4] << 8 | g_output[0][3]))
+                            nrOut = nrOut + " \nDerivative: " + str(uint16_to_int16(g_output[0][6] << 8 | g_output[0][5]))
+                            #nrOut = nrOut + " \nCTE: " + str( float(g_output[0][8] << 8 | g_output[0][9]) )
+                        else:
+                            nrOut = "paket miss match: " + str(g_output[0])
 
-        if g_output:
-            self.index += 1
-            if self.index % 100 == 0:
-                print("----- DESTROYING CONSOLE CONTENT -----")
-                for widget in self.frame.winfo_children():
-                    widget.destroy()
-            Label(self.frame, text=nrOut,
-                  bg='black', fg='white').grid(row=self.index, sticky=W)
-            self.updateScollRegion()
-        if Constants.AUTO_SCROLL:
-            self.canvas.yview_moveto(1)
+                        #Navigation goal paket
+                    elif g_output[0][2] == 254:
+                        if len(g_output[0]) == 7:
+                            nrOut = "\nNavigationGoal X: " + str(g_output[0][4] << 8 | g_output[0][3])
+                            nrOut = nrOut + " \nNavigationGoal Y: " + str(g_output[0][6] << 8 | g_output[0][5])
+                        else:
+                            nrOut = "paket miss match: " + str(g_output[0])
+
+                        #reference palet
+                    elif g_output[0][2] == 253:
+                        if len(g_output[0]) == 7:
+                            nrOut = "\nReference Pos X: " + str(g_output[0][4] << 8 | g_output[0][3])
+                            nrOut = nrOut + " \nReference Pos Y: " + str(g_output[0][6] << 8 | g_output[0][5])
+                        else:
+                            nrOut = "paket miss match: " + str(g_output[0])
+
+                        #nav goal heading paket
+                    elif g_output[0][2] == 252:
+                        if len(g_output[0]) == 5:
+                            nrOut = nrOut + " \nNavigationGoalHeading: " + str(g_output[0][4] << 8 | g_output[0][3])
+                        else:
+                            nrOut = "paket miss match: " + str(g_output[0])
+
+                        #debugs id followed by int 16
+                    elif 42 <= g_output[0][2] <= 46:
+                        if len(g_output[0]) == 5:
+                            nrOut = str(g_output[0][2]) + " " + str(uint16_to_int16(g_output[0][4] << 8 | g_output[0][3]))
+                        else:
+                            nrOut = "paket miss match: " + str(g_output[0])
+                        
+                        #break paket end of pd loop
+                    elif g_output[0][2] == 100:
+                        nrOut = "\n"*10
+
+                        #generic debug id + uint 16
+                    elif len(g_output[0]) == 5:
+                        nrOut = "Debug: " + str(g_output[0][2]) + " " + str(g_output[0][4] << 8 | g_output[0][3])
+                        
+                        #debug with unknow id and none generic
+                    else:
+                        nrOut = "unknow debug: " + str(g_output[0])
+
+                #lidar forward
+                elif g_output[0][0] == 0:
+                    if len(g_output[0]) == 4:
+                        nrOut = g_output[0][3] << 8 | g_output[0][2]
+                        nrOut = "Lidar Forward: " + str(nrOut)
+                    else:
+                        nrOut = "Lidar Forward paket miss match " + str(g_output[0])
+                    
+                # lidar backwards
+                elif g_output[0][0] == 1:
+                    if len(g_output[0]) == 4:
+                        nrOut = g_output[0][3] << 8 | g_output[0][2]
+                        nrOut = "Lidar Backwards: " + str(nrOut)
+                    else:
+                        nrOut = "Lidar Backwards paket miss match " + str(g_output[0]) 
+
+                    # IR front left
+                elif g_output[0][0] == 2:
+                    if len(g_output[0]) == 4:
+                        nrOut = g_output[0][3] << 8 | g_output[0][2]
+                        nrOut = "IR Front Left: " + str(nrOut)
+                    else:
+                        nrOut = "IR Front Left paket miss match " + str(g_output[0])
+
+                    # IR back left
+                elif g_output[0][0] == 3:
+                    if len(g_output[0]) == 4:
+                        nrOut = g_output[0][3] << 8 | g_output[0][2]
+                        nrOut = "IR Back Left: " + str(nrOut)
+                    else:
+                        nrOut = "IR Back Left paket miss match " + str(g_output[0])
+
+                    # IR right front
+                elif g_output[0][0] == 4:
+                    if len(g_output[0]) == 4:
+                        nrOut = g_output[0][3] << 8 | g_output[0][2]
+                        nrOut = "IR Front Right: " + str(nrOut)
+                    else:
+                        nrOut = "IR Front Right paket miss match " + str(g_output[0])
+
+                    # IR right back
+                elif g_output[0][0] == 5:
+                    if len(g_output[0]) == 4:
+                        nrOut = g_output[0][3] << 8 | g_output[0][2]
+                        nrOut = "IR Back Right: " + str(nrOut)
+                    else:
+                        nrOut = "IR Back Right paket miss match " + str(g_output[0])
+
+                    # gyro
+                elif g_output[0][0] == 6:
+                    if len(g_output[0]) == 4:
+                        nrOut = uint16_to_int16( g_output[0][3] << 8 | g_output[0][2] )
+                        nrOut = "Gyro: " + str(nrOut)
+                    else:
+                        nrOut = "Gyro paket miss match " + str(g_output[0])
+
+                    # odometer
+                elif g_output[0][0] == 7:
+                    if len(g_output[0]) == 4:
+                        nrOut = "L: " + str(g_output[0][3]) + " R: " + str(g_output[0][2])
+                        nrOut = "Odometer: " + str(nrOut)
+                    else:
+                        nrOut = "Odometer paket miss match " + str(g_output[0])
+
+                    # position
+                elif g_output[0][0] == 8:
+                    if len(g_output[0]) == 6:
+                        nrOut = "\nPositionX: " + str(g_output[0][3] << 8 | g_output[0][2])
+                        nrOut += "\nPositionY: " + str(g_output[0][5] << 8 | g_output[0][4])
+                        g_pos_x = g_output[0][3] << 8 | g_output[0][2]
+                        g_pos_y = g_output[0][5] << 8 | g_output[0][4]
+                        g_infromation_update = True
+                        g_pos_update = True
+                    else:
+                        nrOut = "Position paket miss match " + str(g_output[0])
+
+                    # direction
+                elif g_output[0][0] == 9:
+                    if len(g_output[0]) == 4:
+                        nrOut = g_output[0][3] << 8 | g_output[0][2]
+                        nrOut = "Direction: " + str(nrOut)
+                    else:
+                        nrOut = "Direction paket miss match " + str(g_output[0])
+
+                    # map update
+                elif g_output[0][0] == 10:
+                    if len(g_output[0]) == 5:
+                        nrOut = "Map update: " + str(g_output[0][2]) + " " + str(g_output[0][3]) + " " + str( uint8_to_int8( g_output[0][4] ) )
+                        g_x = g_output[0][2]
+                        g_y = g_output[0][3]
+                        if uint8_to_int8( g_output[0][4] ) < 0:
+                            g_color = "blue"
+                        else:
+                            g_color = "green"
+                        g_map_update = True
+                    else:
+                        nrOut = "Map update paket miss match " + str(g_output[0])
+
+                    #last case should never happen
+                else:
+                    nrOut = "Unknow paket we should never be here check code: " + str(g_output[0])
+                    
+                g_output.pop(0)
+
+            if g_output:
+                self.index += 1
+                if self.index % 100 == 0:
+                    print("----- DESTROYING CONSOLE CONTENT -----")
+                    for widget in self.frame.winfo_children():
+                        widget.destroy()
+                Label(self.frame, text=nrOut,
+                        bg='black', fg='white').grid(row=self.index, sticky=W)
+                self.updateScollRegion()
+            if Constants.AUTO_SCROLL:
+                self.canvas.yview_moveto(1)
 
     def onTimer(self):
         '''creates a cycle each timer event'''
@@ -411,61 +481,74 @@ class Information(LabelFrame):
         self.canvas.pack(side=LEFT)
 
     def updateInforamation(self):
-        '''updates the console'''
-        global g_output
+        """updates the console"""
         mode = self.canvas.find_withtag("mode_text")
         pos = self.canvas.find_withtag("position_text")
         if(Constants.AUTONOMOUS):
             self.canvas.itemconfig(mode, text="Mode: AUTONOMOUS")
         else:
             self.canvas.itemconfig(mode, text="Mode: MANUAL")
-        if g_output:
-            if g_output[0][0] == 8:
-                x = g_output[0][2] << 8 | g_output[0][3]
-                y = g_output[0][4] << 8 | g_output[0][5]
-                xy = str(x) + " , " + str(y)
-                self.canvas.itemconfig(pos, text="Position: " + xy)
+
+        global g_infromation_update
+        if g_infromation_update:
+            global g_pos_x
+            global g_pos_y
+            x = g_pos_x
+            y = g_pos_y
+            xy = str(x) + " , " + str(y)
+            self.canvas.itemconfig(pos, text="Position: " + xy)
+            g_infromation_update = False
 
     def onTimer(self):
         '''creates a cycle each timer event'''
         self.updateInforamation()
         self.after(Constants.DELAY, self.onTimer)
 
-
+def valid_header(header):
+    """
+    this function returns true if we recive a valid header
+    last bit is 0
+    4 last bits are a valid address
+    3 first bit are a value of 0 to 7
+    """
+    return ( not( ( header ) & 0x01) ) and ( 0x0 <= ( ( header >> 4 ) & 0x0F ) <= 0xF ) and ( 0 <= ( ( header >> 1 ) & 0x07 ) <= 7)
+  
 def listener():
     print("----- LISTENING FOR BLUETOOTH INPUT -----")
     global g_output
+    if g_file:
+        global g_output_debug
+
     while True:
         while not ser.in_waiting:
             pass
 
         out = []
         temp = ser.read()[0]
+        if valid_header(temp):
+            # bitshift right and mask away everything that is not part of the 4-bit address
+            addr = ((temp >> 4) & 0x0F)
+            # bitshift right and mask away everything that is not part of the 3-bit byte count
+            count = ((temp >> 1) & 0x07)
 
-        # bitshift right and mask away everything that is not part of the 4-bit address
-        addr = ((temp >> 4) & 0x0F)
-        # bitshift right and mask away everything that is not part of the 3-bit byte count
-        count = ((temp >> 1) & 0x07)
-
-        # out.append(temp)
-        out.append(addr)
-        out.append(count)
-        i = 0
-        while(i < count):
-            temp = ser.read()
-            if len(temp):
-                result = temp[0]
-            else:
-                print(temp)
-                break
-            out.append(result)
-            i += 1
-        #print("OUT: ", out)
-        g_output.append(out)
-        if g_file_raw:
-            f1 = open("debugraw.txt", "a")
-            f1.write(nrOut + "\n")
-            f1.close()
+            # out.append(temp)
+            out.append(addr)
+            out.append(count)
+            i = 0
+            while(i < count):
+                temp = ser.read()
+                if len(temp):
+                    result = temp[0]
+                else:
+                    break
+                out.append(result)
+                i += 1
+            g_output.append(out)
+            if g_file:
+                g_output_debug.append(out)
+            
+        else:
+            print("In valid header recived not printe to file: ", temp)
 
 
 def packageMaker(operation, byteList):
@@ -500,6 +583,10 @@ def main():
     t1 = threading.Thread(target=listener) 
     t1.start()
 
+    t2 = threading.Thread(target=graphic)
+    t2.start()
+
+def graphic():
     # graphics
     root = Tk()
     navMap = Map(root).grid(row=0, column=0, padx=5, pady=5)
@@ -509,6 +596,196 @@ def main():
     root.geometry("1445x840")
     root.title("Gudrid Interface")
     root.mainloop()
+
+
+def uint16_to_int16(value):
+    """
+    convert from an unsigned 16 bit to signed bit 16
+    """
+    if (value > 32768):
+        return value - 65536
+    return value
+
+def uint8_to_int8(value):
+    """
+    convert from an unsigned 8 bit to signed bit 8
+    """
+    if (value > 128):
+        return value - 256
+    return value
+
+
+
+def consolOut():
+    """
+    this funtion reads the incomming data from the port that is saved to
+    g_output. Each packet are a list in g_output where index 0 is the
+    address and 1 is the byte count and index 2-6 is the byte.
+
+    uint16_t are sent with lower part first.
+    """
+    global g_output_debug
+
+    while True:
+        if g_output_debug:
+            nrOut = ""
+
+            #debug
+            if g_output_debug[0][0] == 12:
+                    #pd paket
+                if g_output_debug[0][2] == 255:
+                    if len(g_output_debug[0]) == 7:
+                        nrOut = "\nPropotional: " + str(uint16_to_int16(g_output_debug[0][4] << 8 | g_output_debug[0][3]))
+                        nrOut = nrOut + " \nDerivative: " + str(uint16_to_int16(g_output_debug[0][6] << 8 | g_output_debug[0][5]))
+                        #nrOut = nrOut + " \nCTE: " + str( float(g_output[0][8] << 8 | g_output[0][9]) )
+                    else:
+                        nrOut = "paket miss match: " + str(g_output_debug[0])
+
+                    #Navigation goal paket
+                elif g_output_debug[0][2] == 254:
+                    if len(g_output_debug[0]) == 7:
+                        nrOut = "\nNavigationGoal X: " + str(g_output_debug[0][4] << 8 | g_output_debug[0][3])
+                        nrOut = nrOut + " \nNavigationGoal Y: " + str(g_output_debug[0][6] << 8 | g_output_debug[0][5])
+                    else:
+                        nrOut = "paket miss match: " + str(g_output_debug[0])
+
+                    #reference palet
+                elif g_output_debug[0][2] == 253:
+                    if len(g_output_debug[0]) == 7:
+                        nrOut = "\nReference Pos X: " + str(g_output_debug[0][4] << 8 | g_output_debug[0][3])
+                        nrOut = nrOut + " \nReference Pos Y: " + str(g_output_debug[0][6] << 8 | g_output[0][5])
+                    else:
+                        nrOut = "paket miss match: " + str(g_output_debug[0])
+
+                    #nav goal heading paket
+                elif g_output_debug[0][2] == 252:
+                    if len(g_output_debug[0]) == 5:
+                        nrOut = nrOut + " \nNavigationGoalHeading: " + str(g_output_debug[0][4] << 8 | g_output_debug[0][3])
+                    else:
+                        nrOut = "paket miss match: " + str(g_output_debug[0])
+
+                    #debugs id followed by int 16
+                elif 42 <= g_output_debug[0][2] <= 46:
+                    if len(g_output_debug[0]) == 5:
+                        nrOut = str(g_output_debug[0][2]) + " " + str(uint16_to_int16(g_output_debug[0][4] << 8 | g_output_debug[0][3]))
+                    else:
+                        nrOut = "paket miss match: " + str(g_output_debug[0])
+                    
+                    #break paket end of pd loop
+                elif g_output_debug[0][2] == 100:
+                     nrOut = "\n"*10
+
+                    #generic debug id + uint 16
+                elif len(g_output_debug[0]) == 5:
+                    nrOut = "Debug: " + str(g_output_debug[0][2]) + " " + str(g_output_debug[0][4] << 8 | g_output_debug[0][3])
+                    
+                    #debug with unknow id and none generic
+                else:
+                    nrOut = "unknow debug: " + str(g_output_debug[0])
+
+            #lidar forward
+            elif g_output_debug[0][0] == 0:
+                if len(g_output_debug[0]) == 4:
+                    nrOut = g_output_debug[0][3] << 8 | g_output_debug[0][2]
+                    nrOut = "Lidar Forward: " + str(nrOut)
+                else:
+                    nrOut = "Lidar Forward paket miss match " + str(g_output_debug[0])
+                
+            # lidar backwards
+            elif g_output_debug[0][0] == 1:
+                if len(g_output_debug[0]) == 4:
+                    nrOut = g_output_debug[0][3] << 8 | g_output_debug[0][2]
+                    nrOut = "Lidar Backwards: " + str(nrOut)
+                else:
+                    nrOut = "Lidar Backwards paket miss match " + str(g_output_debug[0]) 
+
+                # IR front left
+            elif g_output_debug[0][0] == 2:
+                if len(g_output_debug[0]) == 4:
+                    nrOut = g_output_debug[0][3] << 8 | g_output_debug[0][2]
+                    nrOut = "IR Front Left: " + str(nrOut)
+                else:
+                    nrOut = "IR Front Left paket miss match " + str(g_output_debug[0])
+
+                # IR back left
+            elif g_output_debug[0][0] == 3:
+                if len(g_output_debug[0]) == 4:
+                    nrOut = g_output_debug[0][3] << 8 | g_output_debug[0][2]
+                    nrOut = "IR Back Left: " + str(nrOut)
+                else:
+                    nrOut = "IR Back Left paket miss match " + str(g_output_debug[0])
+
+                # IR right front
+            elif g_output_debug[0][0] == 4:
+                if len(g_output_debug[0]) == 4:
+                    nrOut = g_output_debug[0][3] << 8 | g_output_debug[0][2]
+                    nrOut = "IR Front Right: " + str(nrOut)
+                else:
+                    nrOut = "IR Front Right paket miss match " + str(g_output_debug[0])
+
+                # IR right back
+            elif g_output_debug[0][0] == 5:
+                if len(g_output_debug[0]) == 4:
+                    nrOut = g_output_debug[0][3] << 8 | g_output_debug[0][2]
+                    nrOut = "IR Back Right: " + str(nrOut)
+                else:
+                    nrOut = "IR Back Right paket miss match " + str(g_output_debug[0])
+
+                # gyro
+            elif g_output_debug[0][0] == 6:
+                if len(g_output_debug[0]) == 4:
+                    nrOut = uint16_to_int16( g_output_debug[0][3] << 8 | g_output_debug[0][2] )
+                    nrOut = "Gyro: " + str(nrOut)
+                else:
+                    nrOut = "Gyro paket miss match " + str(g_output_debug[0])
+
+                # odometer
+            elif g_output_debug[0][0] == 7:
+                if len(g_output_debug[0]) == 4:
+                    nrOut = "L: " + str(g_output_debug[0][3]) + " R: " + str(g_output_debug[0][2])
+                    nrOut = "Odometer: " + str(nrOut)
+                else:
+                    nrOut = "Odometer paket miss match " + str(g_output_debug[0])
+
+                # position
+            elif g_output_debug[0][0] == 8:
+                if len(g_output_debug[0]) == 6:
+                    nrOut = "\nPositionX: " + str(g_output_debug[0][3] << 8 | g_output_debug[0][2])
+                    nrOut += "\nPositionY: " + str(g_output_debug[0][5] << 8 | g_output_debug[0][4])
+                else:
+                    nrOut = "Position paket miss match " + str(g_output_debug[0])
+
+                # direction
+            elif g_output_debug[0][0] == 9:
+                if len(g_output_debug[0]) == 4:
+                    nrOut = g_output_debug[0][3] << 8 | g_output_debug[0][2]
+                    nrOut = "Direction: " + str(nrOut)
+                else:
+                    nrOut = "Direction paket miss match " + str(g_output_debug[0])
+
+                # map update
+            elif g_output[0][0] == 10:
+                if len(g_output[0]) == 5:
+                    nrOut = "Map update: " + str(g_output_debug[0][2]) + " " + str(g_output_debug[0][3]) + " " + str( uint8_to_int8( g_output_debug[0][4] ) )
+                    g_x = g_output_debug[0][2]
+                    g_y = g_output_debug[0][3]
+                    if uint8_to_int8( g_output_debug[0][4] ) < 0:
+                        g_color = "blue"
+                    else:
+                        g_color = "green"
+                    g_map_update = True
+                else:
+                    nrOut = "Map update paket miss match " + str(g_output_debug[0])
+
+                #last case should never happen
+            else:
+                nrOut = "Unknow paket we should never be here check code: " + str(g_output_debug[0])
+            
+            #add the current nrout which is our output to debug file
+            f = open("debug.txt", "a")
+            f.write(nrOut + "\n")
+            f.close()
+            g_output_debug.pop(0)
 
 
 if __name__ == '__main__':
