@@ -41,7 +41,7 @@ struct laser_data
     // -1 if invalid data
     int8_t collision_type;
 
-    // end - (round(end/400)*400)
+    // end - (round(end/GRID_SIZE)*GRID_SIZE)
     int16_t offset;
 };
 struct laser_data g_laser_data[6];
@@ -73,7 +73,7 @@ void send_map_update(uint8_t x, uint8_t y, int8_t value);
 // using the trigonometric addition formulas
 double laser_cos(uint8_t direction)
 {
-    return g_cosHeading * COS_QUARTERS[direction] +
+    return g_cosHeading * COS_QUARTERS[direction] -
         g_sinHeading * SIN_QUARTERS[direction];
 }
 double laser_sin(uint8_t direction)
@@ -96,7 +96,6 @@ uint16_t radian_to_heading(double angle)
 // calculate new heading, using only the odometers
 int16_t odo_heading_change(struct sensor_data* data)
 {
-    //TODO: account for wheels spinning on the spot
     int16_t arc_length;
     int16_t res;
     if (g_wheelDirectionLeft != g_wheelDirectionRight)
@@ -271,10 +270,10 @@ int8_t adjust_heading(struct sensor_data* sd, struct laser_data* ld)
             }
             else
             {
-                diff = offsets[j] % 400;
+                diff = offsets[j] % GRID_SIZE;
                 if (diff > 200)
                 {
-                    diff -= 400;
+                    diff -= GRID_SIZE;
                 }
             }
             if (abs(diff) > MAX_ADJUST)
@@ -304,7 +303,6 @@ int8_t adjust_heading(struct sensor_data* sd, struct laser_data* ld)
 
 int8_t update_map(struct sensor_data* data)
 {
-	
     draw_laser_line(LaserPositionX(data, data->lidar_forward),
             LaserPositionY(data, data->lidar_forward),
             LaserDirection(data, data->lidar_forward),
@@ -444,6 +442,15 @@ bool calculate_laser_data(
     return true;
 }*/
 
+void calculate_sensor_position(int8_t x, int8_t y,
+        uint16_t* start_x, uint16_t* start_y)
+{
+    *start_x = g_currentPosX + round(
+            g_cosHeading * x + laser_cos(1) * y);
+    *start_y = g_currentPosY + round(
+            g_sinHeading * x + laser_sin(1) * y);
+}
+
 int8_t draw_laser_line(int8_t  laser_x,
         int8_t  laser_y,
         uint8_t  sensor_direction,
@@ -466,9 +473,11 @@ int8_t draw_laser_line(int8_t  laser_x,
         tan = fabs(sin / cos);
         cot = fabs(cos / sin);
     }
+    uint16_t start_x;
+    uint16_t start_y;
+    calculate_sensor_position(laser_x, laser_y,
+            &start_x, &start_y);
 
-    uint16_t start_x = g_currentPosX;// + g_cosHeading * laser_x + laser_cos(1) * laser_y;
-    uint16_t start_y = g_currentPosY;// + g_sinHeading * laser_y + laser_sin(1) * laser_x;
 
     // Calculate X, Y for endpoint when laser hits wall -> end_x, end_y
     // given the distance.
@@ -481,7 +490,7 @@ int8_t draw_laser_line(int8_t  laser_x,
     }
     else
     {
-        end_x_coord = round((double) end_x / 400);
+        end_x_coord = round((double) end_x / GRID_SIZE);
     }
     if (end_y > UINT16_MAX - MAX_ERROR)
     {
@@ -489,7 +498,7 @@ int8_t draw_laser_line(int8_t  laser_x,
     }
     else
     {
-        end_y_coord = round((double) end_y / 400);
+        end_y_coord = round((double) end_y / GRID_SIZE);
     }
 
     if (end_x_coord > MAP_X_MAX || end_y_coord > MAP_Y_MAX)
@@ -497,8 +506,8 @@ int8_t draw_laser_line(int8_t  laser_x,
         return -1;
     }
 
-    uint16_t x_dif = abs((int16_t)(end_x - end_x_coord * 400));
-    uint16_t y_dif = abs((int16_t)(end_y - end_y_coord * 400));
+    uint16_t x_dif = abs((int16_t)(end_x - end_x_coord * GRID_SIZE));
+    uint16_t y_dif = abs((int16_t)(end_y - end_y_coord * GRID_SIZE));
 
     if (x_dif > MAX_ERROR && y_dif > MAX_ERROR)
     {
@@ -515,7 +524,7 @@ int8_t draw_laser_line(int8_t  laser_x,
     {
         // we're hitting the left or right side of the wall
         // to get the proper y coordinate we should round it down
-        end_y_coord = end_y / 400;
+        end_y_coord = end_y / GRID_SIZE;
 
         // bit magic to check if we're in 2nd or 3rd quadrant
         // if so we're hitting the right side, and should subtract one
@@ -527,7 +536,7 @@ int8_t draw_laser_line(int8_t  laser_x,
     else
     {
         // top or bottom
-        end_x_coord = end_x / 400;
+        end_x_coord = end_x / GRID_SIZE;
 
         // if in the 3rd or 4th quadrant, we're hitting the top
         // and should subtract one from the y coordinate.
@@ -609,8 +618,8 @@ int8_t draw_laser_line(int8_t  laser_x,
 
 int8_t laser_positive_x(uint16_t x, uint16_t y, uint8_t end_x_coord, double delta_y)
 {
-    uint8_t  x_0       = x % 400 ? x / 400 + 1 : x / 400; // ceil
-    uint16_t y_0       = y + delta_y * (x_0 - (double) x / 400);
+    uint8_t  x_0       = x % GRID_SIZE ? x / GRID_SIZE + 1 : x / GRID_SIZE; // ceil
+    uint16_t y_0       = y + delta_y * (x_0 - (double) x / GRID_SIZE);
     uint8_t  max_steps = end_x_coord - x_0;
     if (max_steps > MAP_X_MAX)
     {
@@ -621,8 +630,8 @@ int8_t laser_positive_x(uint16_t x, uint16_t y, uint8_t end_x_coord, double delt
 
 int8_t laser_negative_x(uint16_t x, uint16_t y, uint8_t end_x_coord, double delta_y)
 {
-    uint8_t  x_0       = x / 400 - 1; // integer division == floor
-    uint16_t y_0       = y + delta_y * ((double) x / 400 - x_0 + 1);
+    uint8_t  x_0       = x / GRID_SIZE - 1; // integer division == floor
+    uint16_t y_0       = y + delta_y * ((double) x / GRID_SIZE - x_0 + 1);
     uint8_t  max_steps = x_0 - end_x_coord;
     if (max_steps > MAP_X_MAX)
     {
@@ -633,8 +642,8 @@ int8_t laser_negative_x(uint16_t x, uint16_t y, uint8_t end_x_coord, double delt
 
 int8_t laser_positive_y(uint16_t x, uint16_t y, uint8_t end_y_coord, double delta_x)
 {
-    uint8_t  y_0       = y % 400 ? y / 400 + 1 : y / 400; // ceil
-    uint16_t x_0       = x + delta_x * (y_0 - (double) y / 400);
+    uint8_t  y_0       = y % GRID_SIZE ? y / GRID_SIZE + 1 : y / GRID_SIZE; // ceil
+    uint16_t x_0       = x + delta_x * (y_0 - (double) y / GRID_SIZE);
     uint8_t  max_steps = end_y_coord - y_0;
     if (max_steps > MAP_Y_MAX)
     {
@@ -645,8 +654,8 @@ int8_t laser_positive_y(uint16_t x, uint16_t y, uint8_t end_y_coord, double delt
 
 int8_t laser_negative_y(uint16_t x, uint16_t y, uint8_t end_y_coord, double delta_x)
 {
-    uint8_t  y_0       = y / 400 - 1; // integer division == floor
-    uint16_t x_0       = x + delta_x * ((double) y / 400 - y_0 + 1);
+    uint8_t  y_0       = y / GRID_SIZE - 1; // integer division == floor
+    uint16_t x_0       = x + delta_x * ((double) y / GRID_SIZE - y_0 + 1);
     uint8_t  max_steps = y_0 - end_y_coord;
     if (max_steps > MAP_Y_MAX)
     {
@@ -666,10 +675,10 @@ int8_t laser_loop(uint8_t  max_steps,
     double raw_b;
     for (uint8_t steps = 0; steps < max_steps; ++steps)
     {
-        raw_b = (b_0 + steps * delta_b * 400);
-        if (abs(raw_b - round(raw_b / 400)*400) > CORNER_SENSITIVITY)
+        raw_b = (b_0 + steps * delta_b * GRID_SIZE);
+        if (abs(raw_b - round(raw_b / GRID_SIZE)*GRID_SIZE) > CORNER_SENSITIVITY)
         {
-            res += (*f)(a, floor(raw_b / 400));
+            res += (*f)(a, floor(raw_b / GRID_SIZE));
         }
         a += delta_a;
     }
@@ -724,6 +733,79 @@ void send_map_update(uint8_t x, uint8_t y, int8_t value)
 
 #if __TEST__
 
+Test_test(Test, calc_sensor_pos)
+{
+    uint16_t x, y;
+    uint16_t oldPosX = g_currentPosX;
+    uint16_t oldPosY = g_currentPosY;
+    uint16_t oldHeading = g_currentHeading;
+
+    g_currentPosX = 100;
+    g_currentPosY = 90;
+    g_currentHeading = 0;
+    double headingRad = heading_to_radian(g_currentHeading);
+    g_cosHeading = cos(headingRad);
+    g_sinHeading = sin(headingRad);
+
+    calculate_sensor_position(50, 45, &x, &y);
+    Test_assertEquals(x, 150);
+    Test_assertEquals(y, 135);
+
+    calculate_sensor_position(-50, 45, &x, &y);
+    Test_assertEquals(x, 50);
+    Test_assertEquals(y, 135);
+
+    calculate_sensor_position(50, -45, &x, &y);
+    Test_assertEquals(x, 150);
+    Test_assertEquals(y, 45);
+
+    calculate_sensor_position(-50, -45, &x, &y);
+    Test_assertEquals(x, 50);
+    Test_assertEquals(y, 45);
+
+    g_currentHeading = 16384;
+    headingRad = heading_to_radian(g_currentHeading);
+    g_cosHeading = cos(headingRad);
+    g_sinHeading = sin(headingRad);
+    Test_assertEquals(laser_cos(1), -1);
+
+    calculate_sensor_position(50, 45, &x, &y);
+    Test_assertEquals(x, 55);
+    Test_assertEquals(y, 140);
+
+    calculate_sensor_position(-50, 45, &x, &y);
+    Test_assertEquals(x, 55);
+    Test_assertEquals(y, 40);
+
+    calculate_sensor_position(50, -45, &x, &y);
+    Test_assertEquals(x, 145);
+    Test_assertEquals(y, 140);
+
+    calculate_sensor_position(-50, -45, &x, &y);
+    Test_assertEquals(x, 145);
+    Test_assertEquals(y, 40);
+
+    g_currentHeading = 32768;
+    headingRad = heading_to_radian(g_currentHeading);
+    g_cosHeading = cos(headingRad);
+    g_sinHeading = sin(headingRad);
+    calculate_sensor_position(50, 45, &x, &y);
+    Test_assertEquals(x, 50);
+    Test_assertEquals(y, 45);
+
+    g_currentHeading = 49152;
+    headingRad = heading_to_radian(g_currentHeading);
+    g_cosHeading = cos(headingRad);
+    g_sinHeading = sin(headingRad);
+    calculate_sensor_position(50, 45, &x, &y);
+    Test_assertEquals(x, 145);
+    Test_assertEquals(y, 40);
+
+    g_currentPosX = oldPosX;
+    g_currentPosY = oldPosY;
+    g_currentHeading = oldHeading;
+}
+
 Test_test(Test, heading_to_radian)
 {
     Test_assertFloatEquals(heading_to_radian(0), 0.0);
@@ -771,7 +853,9 @@ Test_test(Test, calc_heading_and_pos)
     Test_assertEquals(g_currentPosX, 0);
     Test_assertEquals(g_currentPosY, 0);
     //Test_assertEquals(g_currentHeading, 8137); // 0.3 degree error
-    Test_assertEquals(g_currentHeading, 8193); // if assuming straight line
+    //rounding error due to odometer data being crude and being rounded
+    //after accounting for spin ratio
+    Test_assertEquals(g_currentHeading, 8190);
     g_currentHeading = 8192;
 #endif
 
@@ -782,8 +866,9 @@ Test_test(Test, calc_heading_and_pos)
     Test_assertEquals(g_currentHeading, 16384);
 #else
     //Test_assertEquals(g_currentHeading, 16329);
-    Test_assertEquals(g_currentHeading, 16385);
+    Test_assertEquals(g_currentHeading, 16382);
 #endif
+    g_currentHeading = 16384;
 
 #if !USE_ODO_FOR_HEADING
     // then one eight to the right
@@ -799,7 +884,12 @@ Test_test(Test, calc_heading_and_pos)
     Test_assertEquals(calculate_heading_and_position(&data), 0);
     Test_assertEquals(g_currentPosX, 0);
     Test_assertEquals(g_currentPosY, 0);
+#if !USE_ODO_FOR_HEADING
     Test_assertEquals(g_currentHeading, 8192);
+#else
+    Test_assertEquals(g_currentHeading, 8194);
+    g_currentHeading = 8192;
+#endif
 
     // now forward 100mm
     data.gyro           = 0;
@@ -929,13 +1019,13 @@ Test_test(Test, laser_loop_4)
 Test_test(Test, laser_loop_5)
 {
     // 1/8 turn laser, hitting corners so nothing should be updated
-    Test_assertEquals(laser_loop(10, 1, 400, 1, 1.0, mark_empty), 0);
+    Test_assertEquals(laser_loop(10, 1, GRID_SIZE, 1, 1.0, mark_empty), 0);
 }
 
 Test_test(Test, laser_loop_6)
 {
     // 1/8 turn laser, starting in (200,0) and hitting the first x-wall
-    // at (400, 200).
+    // at (GRID_SIZE, 200).
     Test_assertEquals(laser_loop(5, 1, 200, 1, 1.0, mark_empty), 0);
 
     Test_assertEquals(g_navigationMap[1][0], 1);
@@ -954,7 +1044,7 @@ Test_test(Test, laser_loop_6)
 Test_test(Test, laser_loop_7)
 {
     // 5/16 laser, starting in (,0) and hitting the first x-wall
-    // at (400, 200).
+    // at (GRID_SIZE, 200).
     Test_assertEquals(laser_loop(4, 4, 200, -1, 2.4142135, mark_empty), 0);
 
     Test_assertEquals(g_navigationMap[4][0], 1);
@@ -971,7 +1061,7 @@ Test_test(Test, laser_loop_7)
 Test_test(Test, laser_loop_8)
 {
     // 11/16 laser, hitting the first wall at (1600,3400)
-    Test_assertEquals(laser_loop(4, 4, 8*400+200, -1, -2.41421356, mark_empty), 0);
+    Test_assertEquals(laser_loop(4, 4, 8*GRID_SIZE+200, -1, -2.41421356, mark_empty), 0);
 
     Test_assertEquals(g_navigationMap[4][8], 1);
     Test_assertEquals(g_navigationMap[3][6], 1);
@@ -987,7 +1077,7 @@ Test_test(Test, laser_loop_8)
 Test_test(Test, laser_loop_9)
 {
     // 25/32 laser, hitting the first wall at (1600,3400)
-    Test_assertEquals(laser_loop(4, 8, (MAP_Y_MAX-1)*400+200, 1,
+    Test_assertEquals(laser_loop(4, 8, (MAP_Y_MAX-1)*GRID_SIZE+200, 1,
                 -5.02733949, mark_empty), 0);
 
     Test_assertEquals(g_navigationMap[8][24], 1);
@@ -1157,9 +1247,6 @@ Test_test(Test, draw_laser_line)
 
 
 
-
-
-
     g_currentPosX = oldPosX;
     g_currentPosY = oldPosY;
     g_currentHeading = oldHeading;
@@ -1179,11 +1266,20 @@ Test_test(Test, draw_laser_line_2)
     g_sinHeading = sin(headingRad);
 
     g_currentPosX = GridToMm(24);
-    g_currentPosY = GridToMm(12);
+    g_currentPosY = GridToMm(12)+100;
 
     Test_assertEquals(g_currentPosX, 9800);
-    Test_assertEquals(g_currentPosY, 5000);
+    Test_assertEquals(g_currentPosY, 5100);
 
+    // posX = 9800
+    // posY = 5100
+    // distance = 5012
+    // laser_x = 100
+    // heading = 48392
+    // cosHeading = -0.0728
+    // sinHeading = -0.9973
+    // start_x = 9793
+    // start_y = 5000
     Test_assertEquals(draw_laser_line(100, 0, 0, 5012), 0);
 
     Test_assertEquals(g_navigationMap[24][11], 1);
@@ -1237,6 +1333,76 @@ Test_test(Test, draw_laser_line_2)
     g_currentPosX = oldPosX;
     g_currentPosY = oldPosY;
     g_currentHeading = oldHeading;
+}
+
+Test_test(Test, draw_laser_line_3)
+{
+    uint16_t oldPosX = g_currentPosX;
+    uint16_t oldPosY = g_currentPosY;
+    uint16_t oldHeading = g_currentHeading;
+
+    g_currentPosX = GridToMm(24);
+    g_currentPosY = GridToMm(0);
+    g_currentHeading = FULL_TURN/4;
+
+    double headingRad = heading_to_radian(g_currentHeading);
+    g_cosHeading = cos(headingRad);
+    g_sinHeading = sin(headingRad);
+
+    // a laser positioned 120 ahead of the robot
+    // pointing to the right
+    // detects a wall at 880 distance
+    Test_assertEquals(draw_laser_line(120, 0, 0, 880), 0);
+
+    Test_assertEquals(g_navigationMap[24][1], 1);
+    Test_assertEquals(g_navigationMap[24][2], 1);
+    Test_assertEquals(g_navigationMap[24][3], -1);
+
+    g_navigationMap[24][1] = 0;
+    g_navigationMap[24][2] = 0;
+    g_navigationMap[24][3] = 0;
+
+    // a laser positioned 85 behind the robot and 70 to the side
+    // i.e. ir_leftback detects a wall at 130
+    Test_assertEquals(draw_laser_line(-85, 70, 1, 130), 0);
+    // currentX = 9800
+    // currentY = 200
+    // currentHeading = 16384
+    // cos = 0
+    // sinHeading = 1
+    // cosHeading+1 = -1
+    // sinHeading-1 = 0
+    // start_x = 9800 + 0*-85 + 1*70 = 9870
+    // start_y = 200 + 1*-85 + 0*70 = 115
+    // end_x = 9870
+
+    Test_assertEquals(g_navigationMap[23][0], -1);
+
+    g_navigationMap[23][0] = 0;
+
+    // ir_rightfront detects a wall at 130
+    Test_assertEquals(draw_laser_line(85, -70, 3, 130), 0);
+    // currentX = 9800
+    // currentY = 200
+    // currentHeading = 16384
+    // cosHeading = 0
+    // sinHeading = 1
+    // cosHeading+1 = -1
+    // sinHeading-1 = 0
+    // start_x = 9800 + 0*85 + 1*-70 = 9870
+    // start_y = 200 + 1*85 + 0*70 = 115
+    // end_x = 9870
+
+    Test_assertEquals(g_navigationMap[25][0], -1);
+
+    g_navigationMap[25][0] = 0;
+
+
+
+    g_currentPosX = oldPosX;
+    g_currentPosY = oldPosY;
+    g_currentHeading = oldHeading;
+
 }
 
 // test corner sensitivity

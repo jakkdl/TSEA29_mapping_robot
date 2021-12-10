@@ -54,11 +54,17 @@ def listener():
             print("In valid header recived not printe to file: ", temp)
  
 def uint16_to_int16(value):
+    """
+    convert from an unsigned 16 bit to signed bit 16
+    """
     if (value > 32768):
         return value - 65536
     return value
 
 def uint8_to_int8(value):
+    """
+    convert from an unsigned 8 bit to signed bit 8
+    """
     if (value > 128):
         return value - 256
     return value
@@ -297,19 +303,30 @@ def main():
 
      
 def graphic():
+    """
+    this function start the the graphic map function
+    """
     # graphics
     root = Tk()
     navMap = Map(root).grid(row=0, column=0, padx=5, pady=5)
     root.title("Gudrid Interface")
     root.mainloop()
 
+
+
 class Constants:
+    """
+    class that have all the constant for the graphics
+    """
     DELAY = 300
     CELL_SIZE = 20
 
-class Map(LabelFrame):
 
-    """Graphical representation of the robot's movement and the room"""
+
+class Map(LabelFrame):
+    """
+    graphical representation of the room class
+    """
 
     def __init__(self, parent):
         """Constructor"""
@@ -332,7 +349,8 @@ class Map(LabelFrame):
                                              (x + 1)*CELL_SIZE, (y + 1)*CELL_SIZE, fill='gray', width=0, tags=tag)
         self.canvas.pack(side=LEFT)
 
-    def onTimer(self):
+    def updateMap(self):
+        """if g_map_update has been reciver from console out and update the grid"""
         global g_map_update
         if g_map_update:
             self.updateMap()
@@ -349,9 +367,15 @@ class Map(LabelFrame):
         self.after(Constants.DELAY, self.onTimer)
         g_map_update = False
 
+    def onTimer(self):
+        '''creates a cycle each timer event'''
+        self.updateMap()
+        self.after(Constants.DELAY, self.onTimer)
+
 
 
 def menu():
+    """menu function that prints the menu so you dont need to rember stuff"""
     global g_dict
     while True:
         #you can do this part in one print but this also works
