@@ -21,7 +21,7 @@
 #define AXLE_WIDTH 170          // must be measured
 #define MID_TO_WHEEL_CENTER 110 // must be measured
 
-#define USE_ODO_FOR_HEADING 1
+#define USE_ODO_FOR_HEADING 0
 #define M_TAU (2 * M_PI)
 #define min(x, y) x < y ? x : y
 double g_cosHeading = 0;
