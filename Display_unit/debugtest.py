@@ -350,13 +350,6 @@ class Map(LabelFrame):
         self.canvas.pack(side=LEFT)
 
     def updateMap(self):
-        """if g_map_update has been reciver from console out and update the grid"""
-        global g_map_update
-        if g_map_update:
-            self.updateMap()
-        self.after(Constants.DELAY, self.onTimer)
-
-    def updateMap(self):
         global g_map_update
         global g_x
         global g_y
@@ -369,7 +362,8 @@ class Map(LabelFrame):
 
     def onTimer(self):
         '''creates a cycle each timer event'''
-        self.updateMap()
+        if g_map_update:
+            self.updateMap()
         self.after(Constants.DELAY, self.onTimer)
 
 
