@@ -43,6 +43,8 @@ class Constants:
     PADDING = 10
     AUTO_SCROLL = True
     AUTONOMOUS = True
+    ROBOT_X = 24
+    ROBOT_Y = 24
     ROBOT_COLOR = "red"
     WALL_COLOR = "blue"
 
@@ -648,6 +650,19 @@ def consoleOut():
                         nrOut = nrOut + " \nNavigationGoal Y: " + \
                             str(g_output_debug[0][6] <<
                                 8 | g_output_debug[0][5])
+
+                        x,y = mm_to_grid( (g_output_debug[0][4] <<
+                                8 | g_output_debug[0][3]) , (g_output_debug[0][6] <<
+                                8 | g_output_debug[0][5]))
+
+                        global g_map_update
+                        global g_color
+                        global g_y
+                        global g_x
+                        g_color = "pink"
+                        g_x = x
+                        g_y = y
+                        g_map_update = True
                     else:
                         nrOut = "Package miss match: " + str(g_output_debug[0])
 
@@ -843,6 +858,8 @@ def main():
     t1 = threading.Thread(target=listener)
     t1.start()
 
+def mm_to_grid(x, y):
+    return int(x / 400), int(y/400)
 
 if __name__ == '__main__':
     main()
