@@ -12,7 +12,7 @@ void PDcontroller_Set_RefNode();
 #define MIN_SPEED 0x40
 
 #define MAX_SPEED 0x80
-#define TURN_SENSITIVITY FULL_TURN/64
+#define TURN_SENSITIVITY FULL_TURN/256
 
 // robot will stop when the middle of the robot is within this many mm of
 // the middle of the target square along both the x and y axis
@@ -47,9 +47,15 @@ void turnToHeading()
 
     // TODO determine speed according to remaining left to turn
     // mostly needed if increasing update rate doesn't fix oscillating behavior
-    g_wheelSpeedLeft = MAX_SPEED;
-    g_wheelSpeedRight = MAX_SPEED;
-
+	if(abs(g_currentHeading-g_navigationGoalHeading)<TURN_SENSITIVITY*2)
+	{
+		g_wheelSpeedLeft = g_wheelSpeedRight = MAX_SPEED/2;
+	}
+	else
+	{
+		g_wheelSpeedLeft = MAX_SPEED;
+		g_wheelSpeedRight = MAX_SPEED;
+	}
 }
 
 
@@ -59,9 +65,9 @@ void turnToHeading()
 // is responsible for setting wheelSpeed and wheelDirection
 bool PDcontroller_Update(void)
 {
-    /*send_debug_2(g_navigationGoalX, g_navigationGoalY, 0xFE);
-      send_debug_2(g_referencePosX, g_referencePosY, 0xFD);
-      send_debug(g_navigationGoalHeading, 0xFC);*/
+    send_debug_2(g_navigationGoalX, g_navigationGoalY, 0xFE);
+    send_debug_2(g_referencePosX, g_referencePosY, 0xFD);
+    send_debug(g_navigationGoalHeading, 0xFC);
 
     int16_t temp = abs((int16_t) g_currentHeading - g_navigationGoalHeading);
 
@@ -104,7 +110,8 @@ bool PDcontroller_Update(void)
       send_debug((int16_t)(deltaX>>8)& 0xFFFF, 45);
       send_debug((int16_t)deltaY& 0xFFFF, 46);
       send_debug((int16_t)(deltaY>>8)& 0xFFFF, 46);*/
-
+	  send_debug((uint16_t)TURN_SENSITIVITY, 47);
+	  send_debug((int16_t)temp, 48);
     //i have no idea what this is but works but pointer magic?
     //create a 2 part long with the CTE as reference then point to is in 2 different byte
 
