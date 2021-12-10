@@ -19,7 +19,7 @@ g_output_debug = []
 nrOut = ""
 g_dict = {"command": 0xB2, "kd": 0xE2, "kp": 0xD2}
 
-g_file_raw = False  # out put raw paket data to file
+g_file_raw = False  # out put raw package data to file
 g_file = False  # out put console date to file
 
 g_x = -1
@@ -37,14 +37,14 @@ class Constants:
 
     FRAME_WIDTH = 1445
     FRAME_HEIGHT = 1000
-    DELAY = 300
+    DELAY = 50
     ONE_STEP = 20
     CELL_SIZE = 20
     PADDING = 10
-    ROBOT_X = 24
-    ROBOT_Y = 24
     AUTO_SCROLL = True
     AUTONOMOUS = True
+    ROBOT_COLOR = "red"
+    WALL_COLOR = "blue"
 
 
 class Map(LabelFrame):
@@ -81,7 +81,7 @@ class Map(LabelFrame):
         if g_infromation_update:
             square = self.canvas.find_withtag(
                 str(g_x) + "," + str(g_y))
-            self.canvas.itemconfig(square, fill=g_color)
+            self.canvas.itemconfig(square, fill=Constants.WALL_COLOR)
             self.after(Constants.DELAY, self.onTimer)
             g_infromation_update = False
 
@@ -143,7 +143,7 @@ class Console(LabelFrame):
 
             # debug
             if g_output[0][0] == 12:
-                # pd paket
+                # pd package
                 if g_output[0][2] == 255:
                     if len(g_output[0]) == 7:
                         nrOut = "\nPropotional: " + \
@@ -154,9 +154,9 @@ class Console(LabelFrame):
                                 g_output[0][6] << 8 | g_output[0][5]))
                         #nrOut = nrOut + " \nCTE: " + str( float(g_output[0][8] << 8 | g_output[0][9]) )
                     else:
-                        nrOut = "paket miss match: " + str(g_output[0])
+                        nrOut = "Package miss match: " + str(g_output[0])
 
-                    # Navigation goal paket
+                    # Navigation goal package
                 elif g_output[0][2] == 254:
                     if len(g_output[0]) == 7:
                         nrOut = "\nNavigationGoal X: " + \
@@ -164,9 +164,9 @@ class Console(LabelFrame):
                         nrOut = nrOut + " \nNavigationGoal Y: " + \
                             str(g_output[0][6] << 8 | g_output[0][5])
                     else:
-                        nrOut = "paket miss match: " + str(g_output[0])
+                        nrOut = "Paket miss match: " + str(g_output[0])
 
-                    # reference palet
+                    # reference package
                 elif g_output[0][2] == 253:
                     if len(g_output[0]) == 7:
                         nrOut = "\nReference Pos X: " + \
@@ -174,15 +174,15 @@ class Console(LabelFrame):
                         nrOut = nrOut + " \nReference Pos Y: " + \
                             str(g_output[0][6] << 8 | g_output[0][5])
                     else:
-                        nrOut = "paket miss match: " + str(g_output[0])
+                        nrOut = "Package miss match: " + str(g_output[0])
 
-                    # nav goal heading paket
+                    # nav goal heading package
                 elif g_output[0][2] == 252:
                     if len(g_output[0]) == 5:
                         nrOut = nrOut + " \nNavigationGoalHeading: " + \
                             str(g_output[0][4] << 8 | g_output[0][3])
                     else:
-                        nrOut = "paket miss match: " + str(g_output[0])
+                        nrOut = "Package miss match: " + str(g_output[0])
 
                     # debugs id followed by int 16
                 elif 42 <= g_output[0][2] <= 46:
@@ -190,9 +190,9 @@ class Console(LabelFrame):
                         nrOut = str(
                             g_output[0][2]) + " " + str(uint16_to_int16(g_output[0][4] << 8 | g_output[0][3]))
                     else:
-                        nrOut = "paket miss match: " + str(g_output[0])
+                        nrOut = "Package miss match: " + str(g_output[0])
 
-                    # break paket end of pd loop
+                    # break package end of pd loop
                 elif g_output[0][2] == 100:
                     nrOut = "\n"*10
 
@@ -212,7 +212,7 @@ class Console(LabelFrame):
                     nrOut = g_output[0][3] << 8 | g_output[0][2]
                     nrOut = "Lidar Forward: " + str(nrOut)
                 else:
-                    nrOut = "Lidar Forward paket miss match " + \
+                    nrOut = "Lidar Forward package miss match " + \
                         str(g_output[0])
 
             # lidar backwards
@@ -221,7 +221,7 @@ class Console(LabelFrame):
                     nrOut = g_output[0][3] << 8 | g_output[0][2]
                     nrOut = "Lidar Backwards: " + str(nrOut)
                 else:
-                    nrOut = "Lidar Backwards paket miss match " + \
+                    nrOut = "Lidar Backwards package miss match " + \
                         str(g_output[0])
 
                 # IR front left
@@ -230,7 +230,7 @@ class Console(LabelFrame):
                     nrOut = g_output[0][3] << 8 | g_output[0][2]
                     nrOut = "IR Front Left: " + str(nrOut)
                 else:
-                    nrOut = "IR Front Left paket miss match " + \
+                    nrOut = "IR Front Left package miss match " + \
                         str(g_output[0])
 
                 # IR back left
@@ -239,7 +239,7 @@ class Console(LabelFrame):
                     nrOut = g_output[0][3] << 8 | g_output[0][2]
                     nrOut = "IR Back Left: " + str(nrOut)
                 else:
-                    nrOut = "IR Back Left paket miss match " + \
+                    nrOut = "IR Back Left package miss match " + \
                         str(g_output[0])
 
                 # IR right front
@@ -248,7 +248,7 @@ class Console(LabelFrame):
                     nrOut = g_output[0][3] << 8 | g_output[0][2]
                     nrOut = "IR Front Right: " + str(nrOut)
                 else:
-                    nrOut = "IR Front Right paket miss match " + \
+                    nrOut = "IR Front Right package miss match " + \
                         str(g_output[0])
 
                 # IR right back
@@ -257,7 +257,7 @@ class Console(LabelFrame):
                     nrOut = g_output[0][3] << 8 | g_output[0][2]
                     nrOut = "IR Back Right: " + str(nrOut)
                 else:
-                    nrOut = "IR Back Right paket miss match " + \
+                    nrOut = "IR Back Right package miss match " + \
                         str(g_output[0])
 
                 # gyro
@@ -267,7 +267,7 @@ class Console(LabelFrame):
                         g_output[0][3] << 8 | g_output[0][2])
                     nrOut = "Gyro: " + str(nrOut)
                 else:
-                    nrOut = "Gyro paket miss match " + str(g_output[0])
+                    nrOut = "Gyro package miss match " + str(g_output[0])
 
                 # odometer
             elif g_output[0][0] == 7:
@@ -276,7 +276,7 @@ class Console(LabelFrame):
                         str(g_output[0][3]) + " R: " + str(g_output[0][2])
                     nrOut = "Odometer: " + str(nrOut)
                 else:
-                    nrOut = "Odometer paket miss match " + str(g_output[0])
+                    nrOut = "Odometer package miss match " + str(g_output[0])
 
                 # position
             elif g_output[0][0] == 8:
@@ -290,7 +290,7 @@ class Console(LabelFrame):
                     #g_infromation_update = True
                     #g_pos_update = True
                 else:
-                    nrOut = "Position paket miss match " + str(g_output[0])
+                    nrOut = "Position package miss match " + str(g_output[0])
 
                 # direction
             elif g_output[0][0] == 9:
@@ -298,7 +298,7 @@ class Console(LabelFrame):
                     nrOut = g_output[0][3] << 8 | g_output[0][2]
                     nrOut = "Direction: " + str(nrOut)
                 else:
-                    nrOut = "Direction paket miss match " + \
+                    nrOut = "Direction package miss match " + \
                         str(g_output[0])
 
                 # map update
@@ -314,12 +314,12 @@ class Console(LabelFrame):
                     #    g_color = "green"
                     #g_map_update = True
                 else:
-                    nrOut = "Map update paket miss match " + \
+                    nrOut = "Map update package miss match " + \
                         str(g_output[0])
 
                 # last case should never happen
             else:
-                nrOut = "Unknow paket we should never be here check code: " + \
+                nrOut = "Unknow package we should never be here check code: " + \
                     str(g_output[0])
 
             g_output.pop(0)
@@ -626,7 +626,7 @@ def consoleOut():
 
             # debug
             if g_output_debug[0][0] == 12:
-                # pd paket
+                # pd package
                 if g_output_debug[0][2] == 255:
                     if len(g_output_debug[0]) == 7:
                         nrOut = "\nPropotional: " + \
@@ -637,9 +637,9 @@ def consoleOut():
                                 g_output_debug[0][6] << 8 | g_output_debug[0][5]))
                         #nrOut = nrOut + " \nCTE: " + str( float(g_output[0][8] << 8 | g_output[0][9]) )
                     else:
-                        nrOut = "paket miss match: " + str(g_output_debug[0])
+                        nrOut = "Package miss match: " + str(g_output_debug[0])
 
-                    # Navigation goal paket
+                    # Navigation goal package
                 elif g_output_debug[0][2] == 254:
                     if len(g_output_debug[0]) == 7:
                         nrOut = "\nNavigationGoal X: " + \
@@ -649,9 +649,9 @@ def consoleOut():
                             str(g_output_debug[0][6] <<
                                 8 | g_output_debug[0][5])
                     else:
-                        nrOut = "paket miss match: " + str(g_output_debug[0])
+                        nrOut = "Package miss match: " + str(g_output_debug[0])
 
-                    # reference palet
+                    # reference package
                 elif g_output_debug[0][2] == 253:
                     if len(g_output_debug[0]) == 7:
                         nrOut = "\nReference Pos X: " + \
@@ -660,16 +660,16 @@ def consoleOut():
                         nrOut = nrOut + " \nReference Pos Y: " + \
                             str(g_output_debug[0][6] << 8 | g_output[0][5])
                     else:
-                        nrOut = "paket miss match: " + str(g_output_debug[0])
+                        nrOut = "Package miss match: " + str(g_output_debug[0])
 
-                    # nav goal heading paket
+                    # nav goal heading package
                 elif g_output_debug[0][2] == 252:
                     if len(g_output_debug[0]) == 5:
                         nrOut = nrOut + " \nNavigationGoalHeading: " + \
                             str(g_output_debug[0][4] <<
                                 8 | g_output_debug[0][3])
                     else:
-                        nrOut = "paket miss match: " + str(g_output_debug[0])
+                        nrOut = "Package miss match: " + str(g_output_debug[0])
 
                     # debugs id followed by int 16
                 elif 42 <= g_output_debug[0][2] <= 46:
@@ -677,9 +677,9 @@ def consoleOut():
                         nrOut = str(g_output_debug[0][2]) + " " + str(
                             uint16_to_int16(g_output_debug[0][4] << 8 | g_output_debug[0][3]))
                     else:
-                        nrOut = "paket miss match: " + str(g_output_debug[0])
+                        nrOut = "Package miss match: " + str(g_output_debug[0])
 
-                    # break paket end of pd loop
+                    # break package end of pd loop
                 elif g_output_debug[0][2] == 100:
                     nrOut = "\n"*10
 
@@ -699,7 +699,7 @@ def consoleOut():
                     nrOut = g_output_debug[0][3] << 8 | g_output_debug[0][2]
                     nrOut = "Lidar Forward: " + str(nrOut)
                 else:
-                    nrOut = "Lidar Forward paket miss match " + \
+                    nrOut = "Lidar Forward package miss match " + \
                         str(g_output_debug[0])
 
             # lidar backwards
@@ -708,7 +708,7 @@ def consoleOut():
                     nrOut = g_output_debug[0][3] << 8 | g_output_debug[0][2]
                     nrOut = "Lidar Backwards: " + str(nrOut)
                 else:
-                    nrOut = "Lidar Backwards paket miss match " + \
+                    nrOut = "Lidar Backwards package miss match " + \
                         str(g_output_debug[0])
 
                 # IR front left
@@ -717,7 +717,7 @@ def consoleOut():
                     nrOut = g_output_debug[0][3] << 8 | g_output_debug[0][2]
                     nrOut = "IR Front Left: " + str(nrOut)
                 else:
-                    nrOut = "IR Front Left paket miss match " + \
+                    nrOut = "IR Front Left package miss match " + \
                         str(g_output_debug[0])
 
                 # IR back left
@@ -726,7 +726,7 @@ def consoleOut():
                     nrOut = g_output_debug[0][3] << 8 | g_output_debug[0][2]
                     nrOut = "IR Back Left: " + str(nrOut)
                 else:
-                    nrOut = "IR Back Left paket miss match " + \
+                    nrOut = "IR Back Left package miss match " + \
                         str(g_output_debug[0])
 
                 # IR right front
@@ -735,7 +735,7 @@ def consoleOut():
                     nrOut = g_output_debug[0][3] << 8 | g_output_debug[0][2]
                     nrOut = "IR Front Right: " + str(nrOut)
                 else:
-                    nrOut = "IR Front Right paket miss match " + \
+                    nrOut = "IR Front Right package miss match " + \
                         str(g_output_debug[0])
 
                 # IR right back
@@ -744,7 +744,7 @@ def consoleOut():
                     nrOut = g_output_debug[0][3] << 8 | g_output_debug[0][2]
                     nrOut = "IR Back Right: " + str(nrOut)
                 else:
-                    nrOut = "IR Back Right paket miss match " + \
+                    nrOut = "IR Back Right package miss match " + \
                         str(g_output_debug[0])
 
                 # gyro
@@ -754,7 +754,7 @@ def consoleOut():
                         g_output_debug[0][3] << 8 | g_output_debug[0][2])
                     nrOut = "Gyro: " + str(nrOut)
                 else:
-                    nrOut = "Gyro paket miss match " + str(g_output_debug[0])
+                    nrOut = "Gyro package miss match " + str(g_output_debug[0])
 
                 # odometer
             elif g_output_debug[0][0] == 7:
@@ -764,7 +764,7 @@ def consoleOut():
                         " R: " + str(g_output_debug[0][2])
                     nrOut = "Odometer: " + str(nrOut)
                 else:
-                    nrOut = "Odometer paket miss match " + \
+                    nrOut = "Odometer package miss match " + \
                         str(g_output_debug[0])
 
                 # position
@@ -775,7 +775,7 @@ def consoleOut():
                     nrOut += "\nPositionY: " + \
                         str(g_output_debug[0][5] << 8 | g_output_debug[0][4])
                 else:
-                    nrOut = "Position paket miss match " + \
+                    nrOut = "Position package miss match " + \
                         str(g_output_debug[0])
 
                 # direction
@@ -784,7 +784,7 @@ def consoleOut():
                     nrOut = g_output_debug[0][3] << 8 | g_output_debug[0][2]
                     nrOut = "Direction: " + str(nrOut)
                 else:
-                    nrOut = "Direction paket miss match " + \
+                    nrOut = "Direction package miss match " + \
                         str(g_output_debug[0])
 
                 # map update
@@ -800,12 +800,12 @@ def consoleOut():
                         g_color = "green"
                     g_map_update = True
                 else:
-                    nrOut = "Map update paket miss match " + \
+                    nrOut = "Map update package miss match " + \
                         str(g_output_debug[0])
 
                 # last case should never happen
             else:
-                nrOut = "Unknow paket we should never be here check code: " + \
+                nrOut = "Unknow package we should never be here check code: " + \
                     str(g_output_debug[0])
 
             # add the current nrout which is our output to debug file
@@ -822,13 +822,13 @@ def main():
         f0.write("")
         f0.close()
 
-    # reset raw paket data
+    # reset raw package data
     if g_file_raw:
         f1 = open("debugraw.txt", "w")
         f1.write("")
         f1.close()
 
-    # paket listener thread
+    # package listener thread
 
     root = Tk()
     navMap = Map(root).grid(row=0, column=0, padx=5, pady=5)
@@ -838,8 +838,10 @@ def main():
     root.geometry("1445x840")
     root.title("Gudrid Interface")
     root.mainloop()
-    #t1 = threading.Thread(target=listener)
-    # t1.start()
+
+    # Create thread for incoming bluetooth stream
+    t1 = threading.Thread(target=listener)
+    t1.start()
 
 
 if __name__ == '__main__':
