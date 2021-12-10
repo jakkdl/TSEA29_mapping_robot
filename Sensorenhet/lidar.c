@@ -29,8 +29,11 @@ uint16_t MeasureLidarFront()
 				PWMTime -= firstTime;
 			}
 			lidarF = PWMTime / 2;
-			lidarF -= 55;
 		}
+	}
+	if(lidarF > 1000)
+	{
+		lidarF += 35;
 	}
 	sei();
 	return lidarF;
@@ -64,8 +67,11 @@ uint16_t MeasureLidarBack()
 				PWMTime -= firstTime;
 			}
 			lidarB= PWMTime / 2;
-			lidarB -= 55;
 		}
+	}
+	if (lidarB > 1000)
+	{
+		lidarB += 35;
 	}
 	sei();
 	return lidarB;
