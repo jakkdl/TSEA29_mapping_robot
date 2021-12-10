@@ -4,6 +4,12 @@
 #include "navigation_unit.h"
 #include "pd.h"
 
+int8_t handle_command(enum directionID id);
+int8_t resend(uint8_t adress);
+int8_t set_pd_kd(uint8_t kd);
+int8_t set_pd_kp(uint8_t kp);
+int8_t command_stop();
+int8_t command_start();
 
 // assumes data is not corrupt, does not check parity
 int8_t communication_unit_interrupt(struct data_packet* data)
@@ -96,32 +102,37 @@ int8_t command_start()
     return 0;
 }
 
+uint16_t nav_goal_same_square(uint16_t pos)
+{
+    return pos - (pos % GRID_SIZE) + GRID_SIZE/2;
+}
 int8_t navigate_forward(uint8_t dir)
 {
     switch (dir)
     {
         case 0:
             g_navigationGoalX = GridToMm(MmToGrid(g_currentPosX) + 1);
-            g_navigationGoalY = g_currentPosY - (g_currentPosY % GRID_SIZE) + GRID_SIZE/2;
+            g_navigationGoalY = nav_goal_same_square(g_currentPosY);
             break;
         case 1:
-            g_navigationGoalX = g_currentPosX - (g_currentPosX % GRID_SIZE) + GRID_SIZE/2;
+            g_navigationGoalX = nav_goal_same_square(g_currentPosX);
             g_navigationGoalY = GridToMm(MmToGrid(g_currentPosY) + 1);
             break;
         case 2:
             g_navigationGoalX = GridToMm(MmToGrid(g_currentPosX) - 1);
-            g_navigationGoalY = g_currentPosY - g_currentPosY % GRID_SIZE + GRID_SIZE/2;
+            g_navigationGoalY = nav_goal_same_square(g_currentPosY);
             break;
         case 3:
-            g_navigationGoalX = g_currentPosX - (g_currentPosX % GRID_SIZE) + GRID_SIZE/2;
+            g_navigationGoalX = nav_goal_same_square(g_currentPosX);
             g_navigationGoalY = GridToMm(MmToGrid(g_currentPosY) - 1);
             break;
         default:
             return -1;
     }
-    g_navigationGoalHeading = dir * FULL_TURN / 4;
-    /*g_navigationGoalHeading = round(atan2(g_navigationGoalY - g_currentPosY,
-            g_navigationGoalX - g_currentPosX) / (2*M_PI) * FULL_TURN);*/
+    g_navigationGoalHeading = round(atan2(
+                (int32_t)g_navigationGoalY - g_currentPosY,
+                (int32_t)g_navigationGoalX - g_currentPosX)
+            / (2*M_PI) * FULL_TURN);
 
     return 0;
 }
@@ -309,7 +320,7 @@ Test_test(Test, forward)
     Test_assertEquals(g_navigationGoalSet, true);
     Test_assertEquals(g_navigationGoalX, GridToMm(24));
     Test_assertEquals(g_navigationGoalY, GridToMm(1));
-    Test_assertEquals(g_navigationGoalHeading, FULL_TURN/4);
+    Test_assertEquals(g_navigationGoalHeading, 19740);
 
     g_currentHeading = FULL_TURN / 2;
 
@@ -320,7 +331,7 @@ Test_test(Test, forward)
     Test_assertEquals(g_navigationGoalSet, true);
     Test_assertEquals(g_navigationGoalX, GridToMm(23));
     Test_assertEquals(g_navigationGoalY, GridToMm(0));
-    Test_assertEquals(g_navigationGoalHeading, FULL_TURN/4);
+    Test_assertEquals(g_navigationGoalHeading, 29412);
 
     g_currentPosX    = GridToMm(24) + 100;
     g_currentPosY    = 300;
@@ -329,7 +340,7 @@ Test_test(Test, forward)
     Test_assertEquals(g_navigationGoalSet, true);
     Test_assertEquals(g_navigationGoalX, GridToMm(23));
     Test_assertEquals(g_navigationGoalY, GridToMm(0));
-    Test_assertEquals(g_navigationGoalHeading, FULL_TURN/4);
+    Test_assertEquals(g_navigationGoalHeading, 34827);
 
     g_navigationGoalSet = oldGoalSet;
     g_navigationMode    = oldNavigationMode;
