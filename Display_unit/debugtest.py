@@ -4,7 +4,7 @@ import time
 from tkinter import *
 
 
-port defention dont changed things beside port
+#port defention dont changed things beside port
 ser = serial.Serial(
     port='/dev/rfcomm0', #this part is where you pu thr firefly port
     baudrate=115200,
@@ -17,8 +17,8 @@ ser = serial.Serial(
 """glboal static vars"""
 g_output = [] #will contian all pakets in following format [addres, byte count, paket0, ... , paket6] up to 7 pakets
 g_dict = {"command": 0xB2, "kd": 0xE2, "kp": 0xD2} #this has the header should not be change unless you know what you are doing
-g_x = -1
-g_y = -1
+g_x = 0
+g_y = 0
 g_map_update = False
 g_color = "red"
 
@@ -72,6 +72,10 @@ def consolOut():
     uint16_t are sent with lower part first.
     """
     global g_output
+    global g_map_update
+    global g_x 
+    global g_y
+    global g_color
 
     while True:
         if g_output:
@@ -216,10 +220,12 @@ def consolOut():
                     nrOut = "Map update: " + str(g_output[0][2]) + " " + str(g_output[0][3]) + " " + str( uint8_to_int8( g_output[0][4] ) )
                     g_x = g_output[0][2]
                     g_y = g_output[0][3]
+
                     if uint8_to_int8( g_output[0][4] ) < 0:
                         g_color = "blue"
                     else:
                         g_color = "green"
+
                     g_map_update = True
                 else:
                     nrOut = "Map update paket miss match " + str(g_output[0])
@@ -329,11 +335,19 @@ class Map(LabelFrame):
     def onTimer(self):
         global g_map_update
         if g_map_update:
-            square = self.canvas.find_withtag(
+            self.updateMap()
+        self.after(Constants.DELAY, self.onTimer)
+
+    def updateMap(self):
+        global g_map_update
+        global g_x
+        global g_y
+        square = self.canvas.find_withtag(
                         str( g_x ) + "," + str( g_y ))
-            self.canvas.itemconfig(square, fill=g_color)
-            self.after(Constants.DELAY, self.onTimer)
-            g_map_update = False
+        self.canvas.itemconfig(square, fill=g_color)
+        
+        self.after(Constants.DELAY, self.onTimer)
+        g_map_update = False
 
 
 
