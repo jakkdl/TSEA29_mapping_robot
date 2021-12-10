@@ -12,7 +12,7 @@ void PDcontroller_Set_RefNode();
 #define MIN_SPEED 0x40
 
 #define MAX_SPEED 0x80
-#define TURN_SENSITIVITY FULL_TURN / 64
+#define TURN_SENSITIVITY (FULL_TURN / 64)
 
 // robot will stop when the middle of the robot is within this many mm of
 // the middle of the target square along both the x and y axis
