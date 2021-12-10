@@ -295,8 +295,8 @@ def main():
         
     t3 = threading.Thread(target=menu)
     t3.start()
-
-    t4.start()
+    if  val == 1:
+        t4.start()
 
     t2.start()
     
