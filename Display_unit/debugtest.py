@@ -103,6 +103,9 @@ def consolOut():
                     if len(g_output[0]) == 7:
                         nrOut = "\nNavigationGoal X: " + str(g_output[0][4] << 8 | g_output[0][3])
                         nrOut = nrOut + " \nNavigationGoal Y: " + str(g_output[0][6] << 8 | g_output[0][5])
+                        g_x, g_y = mm_to_grid((g_output[0][4] << 8 | g_output[0][3]), (g_output[0][6] << 8 | g_output[0][5]))
+                        g_color = "pink"
+                        g_map_update = True
                     else:
                         nrOut = "paket miss match: " + str(g_output[0])
 
@@ -209,6 +212,9 @@ def consolOut():
                 if len(g_output[0]) == 6:
                     nrOut = "\nPositionX: " + str(g_output[0][3] << 8 | g_output[0][2])
                     nrOut += "\nPositionY: " + str(g_output[0][5] << 8 | g_output[0][4])
+                    g_x, g_y = mm_to_grid((g_output[0][3] << 8 | g_output[0][2]), (g_output[0][5] << 8 | g_output[0][4]))
+                    g_color = "red"
+                    g_map_update = True
                 else:
                     nrOut = "Position paket miss match " + str(g_output[0])
 
@@ -245,6 +251,10 @@ def consolOut():
             f.write(nrOut + "\n")
             f.close()
             g_output.pop(0)
+
+
+def mm_to_grid(x, y):
+    return int(x / 400), int(y / 400)
 
 
 def valid_header(header):
