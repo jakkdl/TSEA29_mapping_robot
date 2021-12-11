@@ -81,14 +81,17 @@ void DATA_Transmit(struct ring_buffer* rb, struct data_packet *packet)
 }
 
 #if __UART_TX_0__
+#if !__TEST__
 void Uart_Send_0(struct data_packet *packet)
 {
-#if !__TEST__
     DATA_Transmit(&g_uart_tx_0, packet);
 	// raise interrupt on data register empty
     UCSR0B |= 1 << UDRIE0;
-#endif
 }
+#else
+void Uart_Send_0(struct data_packet*)
+{ }
+#endif
 #endif
 
 #if __UART_TX_1__

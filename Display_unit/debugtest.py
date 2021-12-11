@@ -17,8 +17,8 @@ ser = serial.Serial(
 """glboal static vars"""
 g_output = [] #will contian all pakets in following format [addres, byte count, paket0, ... , paket6] up to 7 pakets
 g_dict = {"command": 0xB2, "kd": 0xE2, "kp": 0xD2} #this has the header should not be change unless you know what you are doing
-g_x = -1
-g_y = -1
+g_x = 0
+g_y = 0
 g_map_update = False
 g_color = "red"
 
@@ -78,6 +78,10 @@ def consolOut():
     uint16_t are sent with lower part first.
     """
     global g_output
+    global g_map_update
+    global g_x 
+    global g_y
+    global g_color
 
     while True:
         if g_output:
@@ -99,6 +103,9 @@ def consolOut():
                     if len(g_output[0]) == 7:
                         nrOut = "\nNavigationGoal X: " + str(g_output[0][4] << 8 | g_output[0][3])
                         nrOut = nrOut + " \nNavigationGoal Y: " + str(g_output[0][6] << 8 | g_output[0][5])
+                        g_x, g_y = mm_to_grid((g_output[0][4] << 8 | g_output[0][3]), (g_output[0][6] << 8 | g_output[0][5]))
+                        g_color = "pink"
+                        g_map_update = True
                     else:
                         nrOut = "paket miss match: " + str(g_output[0])
 
@@ -205,6 +212,9 @@ def consolOut():
                 if len(g_output[0]) == 6:
                     nrOut = "\nPositionX: " + str(g_output[0][3] << 8 | g_output[0][2])
                     nrOut += "\nPositionY: " + str(g_output[0][5] << 8 | g_output[0][4])
+                    g_x, g_y = mm_to_grid((g_output[0][3] << 8 | g_output[0][2]), (g_output[0][5] << 8 | g_output[0][4]))
+                    g_color = "red"
+                    g_map_update = True
                 else:
                     nrOut = "Position paket miss match " + str(g_output[0])
 
@@ -222,10 +232,12 @@ def consolOut():
                     nrOut = "Map update: " + str(g_output[0][2]) + " " + str(g_output[0][3]) + " " + str( uint8_to_int8( g_output[0][4] ) )
                     g_x = g_output[0][2]
                     g_y = g_output[0][3]
+
                     if uint8_to_int8( g_output[0][4] ) < 0:
                         g_color = "blue"
                     else:
                         g_color = "green"
+
                     g_map_update = True
                 else:
                     nrOut = "Map update paket miss match " + str(g_output[0])
@@ -239,6 +251,10 @@ def consolOut():
             f.write(nrOut + "\n")
             f.close()
             g_output.pop(0)
+
+
+def mm_to_grid(x, y):
+    return int(x / 400), int(y / 400)
 
 
 def valid_header(header):
@@ -289,8 +305,8 @@ def main():
         
     t3 = threading.Thread(target=menu)
     t3.start()
-
-    t4.start()
+    if  val == 1:
+        t4.start()
 
     t2.start()
     
@@ -344,18 +360,20 @@ class Map(LabelFrame):
         self.canvas.pack(side=LEFT)
 
     def updateMap(self):
-        """if g_map_update has been reciver from console out and update the grid"""
         global g_map_update
-        if g_map_update:
-            square = self.canvas.find_withtag(
+        global g_x
+        global g_y
+        square = self.canvas.find_withtag(
                         str( g_x ) + "," + str( g_y ))
-            self.canvas.itemconfig(square, fill=g_color)
-            self.after(Constants.DELAY, self.onTimer)
-            g_map_update = False
+        self.canvas.itemconfig(square, fill=g_color)
+        
+        self.after(Constants.DELAY, self.onTimer)
+        g_map_update = False
 
     def onTimer(self):
         '''creates a cycle each timer event'''
-        self.updateMap()
+        if g_map_update:
+            self.updateMap()
         self.after(Constants.DELAY, self.onTimer)
 
 
