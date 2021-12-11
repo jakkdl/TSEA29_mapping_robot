@@ -268,6 +268,40 @@ void send_heading(void)
     //adjust_position(data);
 }*/
 
+double calculate_wanted_heading(struct laser_data* ld, uint16_t distance)
+{
+    double wanted_heading_rad;
+    if (ld->collision_type & 0x1)
+    {
+        //y collision
+        double ratio = ((double)ld->endY - ld->offset - g_currentPosY) / distance;
+        if (abs(ratio) > 1)
+        {
+            return NAN;
+        }
+        wanted_heading_rad = asin(ratio);
+        if ((ld->quadrant == 1 || ld->quadrant == 2) && abs(ratio)< 1)
+        {
+            // mirror across y axis
+            wanted_heading_rad = M_PI - wanted_heading_rad;
+        }
+    }
+    else
+    {
+        double ratio = ((double)ld->endX - ld->offset - g_currentPosX) / distance;
+        if (abs(ratio) > 1)
+        {
+            return NAN;
+        }
+        wanted_heading_rad = acos(ratio);
+        if (ld->quadrant & 0x2 && abs(ratio) < 1)
+        {
+            // mirror across x axis
+            wanted_heading_rad = -wanted_heading_rad;
+        }
+    }
+    return wanted_heading_rad;
+}
 #include <stdio.h>
 #define MAX_HEADING_DIFF FULL_TURN/64
 int8_t adjust_heading(struct sensor_data* sd)
@@ -276,45 +310,31 @@ int8_t adjust_heading(struct sensor_data* sd)
     int16_t sum = 0;
     uint16_t wanted_heading;
     int16_t diff;
-    int8_t count;
+    int8_t count = 0;
     struct laser_data ld;
     uint16_t distance;
     double wanted_heading_rad;
-    double ratio;
     for (int8_t i = 0; i < 6; ++i)
     {
         if (!calculate_laser_data(sd, &ld, i))
         {
+            printf("%d\n", i);
             continue;
         }
         distance = ((uint16_t*)sd)[i];
-        if (ld.collision_type & 0x1)
+        if (LASER_DIRECTION[i] & 0x1)
         {
-            //y collision
-            ratio = ((double)ld.endY - ld.offset - ld.startY) / distance;
-            wanted_heading_rad = asin(ratio);
-            if (ld.quadrant & 0x1)
-            {
-                // mirror along y axis
-                wanted_heading_rad = M_TAU/2-wanted_heading_rad;
-            }
-            //wanted_heading = radian_to_heading( asin((((double)ld.endY - ld.offset - ld.startY)) / distance));
+            distance += abs(LASER_POSITION_Y[i]);
         }
         else
         {
-            //x collision
-            ratio = ((double)ld.endX - ld.offset - ld.startX) / distance;
-            wanted_heading_rad = acos(ratio);
-            if (ld.quadrant & 0x2)
-            {
-                // mirror along x axis
-                wanted_heading_rad = -wanted_heading_rad;
-            }
+            distance += abs(LASER_POSITION_X[i]);
         }
-        wanted_heading = radian_to_heading(wanted_heading_rad);
-        diff = (int16_t)(wanted_heading - g_currentHeading - LASER_DIRECTION[i]*FULL_TURN/4);
-        printf("%d: dist: %d, ratio: %f, whr: %f, wh: %u, diff: %d\n",
-                i, distance, ratio, wanted_heading_rad, wanted_heading, diff);
+        wanted_heading_rad = calculate_wanted_heading(&ld, distance);
+
+        wanted_heading = radian_to_heading(wanted_heading_rad) - LASER_DIRECTION[i]*FULL_TURN/4;
+        diff = (int16_t)(wanted_heading - g_currentHeading);
+        printf("%d %f %u %u\n", i, wanted_heading_rad, wanted_heading, diff);
         if (abs(diff) < MAX_HEADING_DIFF)
         {
             sum += diff;
@@ -332,6 +352,147 @@ int8_t adjust_heading(struct sensor_data* sd)
     return false;
 }
 
+#if __TEST__
+struct foo {
+    uint16_t arr[6];
+};
+Test_test(Test, calculate_wanted_heading_y)
+{
+    uint16_t oldPosY = g_currentPosY;
+    struct laser_data ld;
+    double res;
+
+    g_currentPosY = 4320;
+    ld.endY = 5598;
+    ld.offset = -2;
+    ld.collision_type = 1;
+    ld.quadrant = 1;
+    res = calculate_wanted_heading(&ld, 1280);
+    Test_assertEquals(radian_to_heading(res), FULL_TURN/4);
+
+    g_currentPosY = 4080;
+    ld.endY = 2802;
+    ld.offset = 2;
+    ld.collision_type = 3;
+    ld.quadrant = 3;
+    res = calculate_wanted_heading(&ld, 1280);
+    Test_assertEquals(radian_to_heading(res), FULL_TURN/4*3);
+
+    g_currentPosY = 0;
+    ld.endY = 1000;
+    ld.offset = 0;
+    ld.collision_type = 1;
+    ld.quadrant = 0;
+    res = calculate_wanted_heading(&ld, 2613);
+    Test_assertEquals(radian_to_heading(res), FULL_TURN/16);
+
+    res = calculate_wanted_heading(&ld, 1082);
+    //12288 in theory w/ no rounding on the distance
+    Test_assertEquals(radian_to_heading(res), 12297);
+
+    ld.quadrant = 1;
+    res = calculate_wanted_heading(&ld, 1082);
+    // 20480 in theory (FT/16 + FT/4)
+    Test_assertEquals(radian_to_heading(res), 20471);
+    res = calculate_wanted_heading(&ld, 2613);
+    Test_assertEquals(radian_to_heading(res), FULL_TURN/2 - FULL_TURN/16);
+
+    ld.collision_type = 3;
+    g_currentPosY = 1000;
+    ld.endY = 0;
+
+    ld.quadrant = 2;
+    res = calculate_wanted_heading(&ld, 1082);
+    // theory: 45056 = FT*3/4 - FT/16
+    Test_assertEquals(radian_to_heading(res), 45065);
+    res = calculate_wanted_heading(&ld, 2613);
+    Test_assertEquals(radian_to_heading(res), FULL_TURN/2 + FULL_TURN/16);
+
+    ld.quadrant = 3;
+    res = calculate_wanted_heading(&ld, 1082);
+    // theory: 53248 FULL_TURN*3/4 + FULL_TURN/16
+    Test_assertEquals(radian_to_heading(res), 53239);
+    res = calculate_wanted_heading(&ld, 2613);
+    Test_assertEquals(radian_to_heading(res), FULL_TURN - FULL_TURN/16);
+
+    g_currentPosY = oldPosY;
+}
+Test_test(Test, calculate_wanted_heading_x)
+{
+    uint16_t oldPosX = g_currentPosX;
+    struct laser_data ld;
+    double res;
+
+    g_currentPosX = 0;
+    ld.endX = 1000;
+    ld.offset = 0;
+    ld.collision_type = 0;
+
+    ld.quadrant = 0;
+
+    res = calculate_wanted_heading(&ld, 1082);
+    // theory: FULL_TURN/16 = 4096
+    Test_assertEquals(radian_to_heading(res), 4087);
+    res = calculate_wanted_heading(&ld, 2613);
+    Test_assertEquals(radian_to_heading(res), FULL_TURN/4 - FULL_TURN/16);
+
+    ld.quadrant = 3;
+    res = calculate_wanted_heading(&ld, 1082);
+    //theory: FULL_TURN - FULL_TURN/16 = 61440
+    Test_assertEquals(radian_to_heading(res), 61449);
+    res = calculate_wanted_heading(&ld, 2613);
+    Test_assertEquals(radian_to_heading(res), FULL_TURN/4*3 + FULL_TURN/16);
+
+    g_currentPosX = 1000;
+    ld.endX = 0;
+    ld.collision_type = 2;
+    ld.quadrant = 1;
+
+    res = calculate_wanted_heading(&ld, 1082);
+    // theory: FULL_TURN/2 - FULL_TURN/16 = 28672
+    Test_assertEquals(radian_to_heading(res), 28681);
+    res = calculate_wanted_heading(&ld, 2613);
+    Test_assertEquals(radian_to_heading(res), FULL_TURN/4 + FULL_TURN/16);
+
+    ld.quadrant = 2;
+
+    res = calculate_wanted_heading(&ld, 1082);
+    // theory: FULL_TURN/2 + FULL_TURN/16 = 36864
+    Test_assertEquals(radian_to_heading(res), 36855);
+    res = calculate_wanted_heading(&ld, 2613);
+    Test_assertEquals(radian_to_heading(res), FULL_TURN/4*3 - FULL_TURN/16);
+
+    g_currentPosX = oldPosX;
+}
+Test_test(Test, adjust_heading)
+{
+    uint16_t oldHeading = g_currentHeading;
+    uint16_t oldPosX = g_currentPosX;
+    uint16_t oldPosY = g_currentPosY;
+
+    g_currentHeading = FULL_TURN/4+FULL_TURN/128;
+    g_currentPosX = GridToMm(24);
+    g_currentPosY = GridToMm(10);
+    update_trig_cache();
+
+    struct foo sd = { .arr = {1280, 1280, 530, 530, 530, 530}};
+    Test_assertEquals(adjust_heading((struct sensor_data*) &sd), true);
+    Test_assertEquals(g_currentHeading, FULL_TURN/4);
+
+    g_currentHeading = FULL_TURN/16+FULL_TURN/128;
+    g_currentPosX = GridToMm(24);
+    g_currentPosY = GridToMm(10);
+    update_trig_cache();
+
+    sd = (struct foo){ .arr = {529, 529, 452, 452, 452, 452}};
+    Test_assertEquals(adjust_heading((struct sensor_data*) &sd), true);
+    Test_assertEquals(g_currentHeading, FULL_TURN/16);
+
+    g_currentHeading = oldHeading;
+    g_currentPosX = oldPosX;
+    g_currentPosY = oldPosY;
+}
+#endif //__test__
 
 // the largest sensor difference that's taken into consideration
 #define MAX_ADJUST 50
@@ -1513,9 +1674,6 @@ Test_test(Test, update_map)
     g_currentHeading = oldHeading;
 }
 
-struct foo {
-    uint16_t arr[6];
-};
 Test_test(Test, calculate_dif)
 {
     Test_assertEquals(calculate_dif(3590), -10);
@@ -1590,25 +1748,6 @@ Test_test(Test, adjust_position)
     g_currentPosX = oldPosX;
     g_currentPosY = oldPosY;
     g_currentHeading = oldHeading;
-}
-Test_test(Test, adjust_heading)
-{
-    uint16_t oldHeading = g_currentHeading;
-    uint16_t oldPosX = g_currentPosX;
-    uint16_t oldPosY = g_currentPosY;
-
-    g_currentHeading = FULL_TURN/4+FULL_TURN/128;
-    g_currentPosX = GridToMm(24);
-    g_currentPosY = GridToMm(10);
-    update_trig_cache();
-
-    struct foo sd = { .arr = {1280, 1280, 530, 530, 530, 530}};
-    Test_assertEquals(adjust_heading((struct sensor_data*) &sd), true);
-    Test_assertEquals(g_currentHeading, FULL_TURN/4);
-
-    g_currentHeading = oldHeading;
-    g_currentPosX = oldPosX;
-    g_currentPosY = oldPosY;
 }
 // test corner sensitivity
 // test max error
