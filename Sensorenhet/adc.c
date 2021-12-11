@@ -34,9 +34,9 @@ uint16_t ConvertVoltage(double ADCVoltage)
 	{
 		return 0;
 	}
-	else if (ADCVoltage < 0.4)
+	else if (ADCVoltage < 0.8)
 	{
-		return -1;
+		return 0xFFFF;
 	}
 	else if ((ADCVoltage <= 2.8) && (ADCVoltage > 2.3))
 	{
