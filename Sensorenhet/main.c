@@ -32,7 +32,7 @@ void StartReading()
     MeasureIR();
     data.lidar_forward = MeasureLidarFront();
     data.lidar_backward = MeasureLidarBack();
-    MeasureMLX();
+    ADCRead(0x05);
 }
 
 void PinInit()
@@ -106,6 +106,7 @@ void ConvertOdo()
     g_leftCount = 0;
 }
 
+#define VRef 4.79
 ISR(ADC_vect)
 {
     if (ADMUX == 0x45)
@@ -127,7 +128,7 @@ ISR(ADC_vect)
         uint16_t IRDistance = 0;
         uint8_t ADCLowBit = ADCL;
         double ADCRes = ADCH<<8 | ADCLowBit; // puts result of ADC in ADCRes
-        ADCRes = ADCRes * 5;
+        ADCRes = ADCRes * VRef;
         ADCVoltage = ADCRes / 1024;
         IRDistance = ConvertVoltage(ADCVoltage);
         switch (ADMUX)

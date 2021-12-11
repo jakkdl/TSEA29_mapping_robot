@@ -72,6 +72,17 @@ bool is_wall(uint8_t dir)
     return IsWall(x, y);
 }
 
+bool is_unknown(uint8_t dir)
+{
+	int x;
+	int y;
+
+	x = get_robot_adjacent_coord(dir % 4, 0);
+	y = get_robot_adjacent_coord(dir % 4, 1);
+	return x>=0 && x < MAP_X_MAX && y >= 0 && y < MAP_Y_MAX && abs(g_navigationMap[x][y]) < 10;
+	//return IsUnknown(x, y);
+}
+
 uint8_t get_heading()
 {
 
@@ -128,6 +139,10 @@ bool wall_follow()
     // left opening?
     if (!is_wall(dir + 1))
     {
+		if (is_unknown(dir+1))
+		{
+			return false;
+		}
         command_set_target_square(FW_LEFT);
     }
     else

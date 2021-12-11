@@ -20,12 +20,6 @@ int16_t MLXGyroVal()
 	//return ADC - g_gyroFault;
 }
 
-void MeasureMLX()
-{
-	ADMUX = 0x45; // enable ADC from MLX
-	StartAdc();
-}
-
 #define SAMPLES 100
 void GyroInit(void)
 {
@@ -34,8 +28,7 @@ void GyroInit(void)
 	_delay_ms(10);   
 	for(int i = 0; i < SAMPLES; i++)
 	{
-		MeasureMLX();
-		_delay_ms(1);
+		ADCRead(0x05);
 	}
 	if (g_gyroFault % SAMPLES > SAMPLES/2)
 	{
