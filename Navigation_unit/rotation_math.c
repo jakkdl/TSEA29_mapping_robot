@@ -57,6 +57,7 @@ int8_t laser_positive_x(uint16_t x, uint16_t y, uint8_t end_x_coord, double delt
 int8_t laser_negative_x(uint16_t x, uint16_t y, uint8_t end_x_coord, double delta_y);
 int8_t laser_positive_y(uint16_t x, uint16_t y, uint8_t end_y_coord, double delta_x);
 int8_t laser_negative_y(uint16_t x, uint16_t y, uint8_t end_y_coord, double delta_x);
+bool adjust_position(struct sensor_data* sd);
 bool calculate_laser_data(
         struct sensor_data* sd,
         struct laser_data* ld,
@@ -217,6 +218,7 @@ int8_t calculate_heading_and_position(struct sensor_data* data)
 
         g_currentPosX += round(cos(headingAvg) * distance);
         g_currentPosY += round(sin(headingAvg) * distance);
+		
         send_position();
 
 
@@ -237,6 +239,7 @@ int8_t calculate_heading_and_position(struct sensor_data* data)
         // cache cos & sin
         update_trig_cache();
     }
+	adjust_position(data);
     // TODO use lidar & IR to calibrate heading and position
     return 0;
 }
@@ -339,7 +342,7 @@ int8_t adjust_heading(struct sensor_data* sd)
 #define MAX_ADJUST 50
 
 // the minimum number of sensors within MAX_ADJUST in order to update position
-#define MIN_ADJUST_SENSORS 3
+#define MIN_ADJUST_SENSORS 2
 
 // assumes heading is correct, and calibrates the robots position
 // according to the distance to the walls
