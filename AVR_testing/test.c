@@ -166,8 +166,9 @@ bool check_reset_map(void)
         { \
             if (m_Test_activeTest->testResult == SUCCESS) \
             { \
-                printf("FAIL: %s after test\n    " #var " is %u and not reset to " #value "\n", \
+                printf("FAIL: %s in %s after test\n    " #var " is %u and not reset to " #value "\n", \
                         m_Test_activeTest->name, \
+                        m_Test_activeTest->file, \
                         var); \
                 m_Test_result.successCount--; \
                 m_Test_result.failureCount++; \
@@ -253,8 +254,9 @@ void Test_runall(void)
         test_reset_global(g_uart_rx_1.length, 0)
         if (!check_reset_map() && m_Test_activeTest->testResult == SUCCESS)
         {
-            printf("FAIL: \"%s\" left garbage in the map according to above\n",
-                    m_Test_activeTest->name);
+            printf("FAIL: \"%s\" in %s\n    left garbage in the map according to above\n",
+                    m_Test_activeTest->name,
+                    m_Test_activeTest->file);
             m_Test_result.successCount--;
             m_Test_result.failureCount++;
             m_Test_activeTest->testResult = FAILURE;

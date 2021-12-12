@@ -80,7 +80,7 @@ void Test_init(void) __attribute__((naked)) __attribute__((section(".init7")));
 void MODULE##_appendtest_##NAME(void) __attribute__((naked))               \
 __attribute__((section(".init8"))); /* declare mod_appendtest_name */      \
 Test_TestHolder m_##MODULE##_test_##NAME = {                               \
-#NAME, MODULE##_test_##NAME, __FILE__, 0, "", NOT_RUN, 0               \
+#NAME, MODULE##_test_##NAME, __FILE__, __LINE__, "", NOT_RUN, 0               \
 }; /* create struct m_mod_test_name*/                                      \
 void MODULE##_appendtest_##NAME(void)                                      \
 {                                                                          \
@@ -88,6 +88,8 @@ void MODULE##_appendtest_##NAME(void)                                      \
 };                              /*define mod_appendtest_name*/             \
 void MODULE##_test_##NAME(void) /*define mod_test_name*/
 
+#define SAVE(x) old_ ## x = x
+#define RESTORE(x) x = old_ ## x
 #define Test_assertTrue(condition)                                             \
     if (!Test_assertTrueLog((condition), __LINE__, __FILE__)) \
 { \

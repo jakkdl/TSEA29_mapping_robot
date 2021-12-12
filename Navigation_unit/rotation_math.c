@@ -21,6 +21,7 @@
 #define IR_MIN 80
 #define IR_MAX 350
 #define LIDAR_MIN 100
+#define LIDAR_MAX 10000
 
 // If the gyro is broken, we can exclusively use the odometers for heading
 // Long-term you maybe want to use a hybrid of them both though
@@ -60,13 +61,22 @@ struct laser_data
     int16_t offset;
     double cos;
     double sin;
+
+    // is the sensor operating within it's reliable limits
+    // 0 = yes, 1 = too short, 2 = too far
+    int8_t reliable;
+
+    // are we too close to the corner, so the coordinates are unreliable?
+    bool corner_error;
+    // are we too far from where a wall should possibly be?
+    bool offset_error;
 };
 struct laser_data g_laser_data[6];
 
-int8_t laser_positive_x(uint16_t x, uint16_t y, uint8_t end_x_coord, double delta_y);
-int8_t laser_negative_x(uint16_t x, uint16_t y, uint8_t end_x_coord, double delta_y);
-int8_t laser_positive_y(uint16_t x, uint16_t y, uint8_t end_y_coord, double delta_x);
-int8_t laser_negative_y(uint16_t x, uint16_t y, uint8_t end_y_coord, double delta_x);
+int8_t laser_positive_x(uint16_t x, uint16_t y, uint16_t end_x, double delta_y);
+int8_t laser_negative_x(uint16_t x, uint16_t y, uint16_t end_x, double delta_y);
+int8_t laser_positive_y(uint16_t x, uint16_t y, uint16_t end_y, double delta_x);
+int8_t laser_negative_y(uint16_t x, uint16_t y, uint16_t end_y, double delta_x);
 bool adjust_position(struct sensor_data* sd);
 bool calculate_laser_data(
         struct sensor_data* sd,
@@ -382,7 +392,7 @@ struct foo {
 };
 Test_test(Test, calculate_wanted_heading_y)
 {
-    uint16_t oldPosY = g_currentPosY;
+    uint16_t SAVE(g_currentPosY);
     struct laser_data ld;
     double res;
 
@@ -439,11 +449,11 @@ Test_test(Test, calculate_wanted_heading_y)
     res = calculate_wanted_heading(&ld, 2613);
     Test_assertEquals(radian_to_heading(res), FULL_TURN - FULL_TURN/16);
 
-    g_currentPosY = oldPosY;
+    RESTORE(g_currentPosY);
 }
 Test_test(Test, calculate_wanted_heading_x)
 {
-    uint16_t oldPosX = g_currentPosX;
+    uint16_t SAVE(g_currentPosX);
     struct laser_data ld;
     double res;
 
@@ -486,13 +496,13 @@ Test_test(Test, calculate_wanted_heading_x)
     res = calculate_wanted_heading(&ld, 2613);
     Test_assertEquals(radian_to_heading(res), FULL_TURN/4*3 - FULL_TURN/16);
 
-    g_currentPosX = oldPosX;
+    RESTORE(g_currentPosX);
 }
 Test_test(Test, adjust_heading)
 {
-    uint16_t oldHeading = g_currentHeading;
-    uint16_t oldPosX = g_currentPosX;
-    uint16_t oldPosY = g_currentPosY;
+    uint16_t SAVE(g_currentHeading);
+    uint16_t SAVE(g_currentPosX);
+    uint16_t SAVE(g_currentPosY);
 
     g_currentHeading = FULL_TURN/4+FULL_TURN/128;
     g_currentPosX = GridToMm(24);
@@ -513,9 +523,9 @@ Test_test(Test, adjust_heading)
     Test_assertEquals(adjust_heading((struct sensor_data*) &sd), true);
     //Test_assertEquals(g_currentHeading, FULL_TURN/16);
 
-    g_currentHeading = oldHeading;
-    g_currentPosX = oldPosX;
-    g_currentPosY = oldPosY;
+    RESTORE(g_currentHeading);
+    RESTORE(g_currentPosX);
+    RESTORE(g_currentPosY);
 }
 #endif //__test__
 
@@ -609,23 +619,8 @@ bool calculate_laser_data(
     int8_t laser_dir = LASER_DIRECTION[sensor_id];
     uint16_t distance = *((uint16_t*)sd + sensor_id);
 
-    if (distance == 0 || distance == UINT16_MAX)
-    {
-        ld->collision_type = -1;
-        return false;
-    }
-    // lidar
-    if (sensor_id < 2 && (distance < LIDAR_MIN || distance > 10000))
-    {
-        ld->collision_type = -1;
-        return false;
-    }
-    // IR
-    else if ((sensor_id & 0x6) && (distance < IR_MIN || distance > 800))
-    {
-        ld->collision_type = -1;
-        return false;
-    }
+    ld->corner_error = false;
+    ld->offset_error = false;
 
     // extra: calculate if the laser *should* hit a wall we're sure about
     // that it's not hitting, and if so throw out that value
@@ -635,6 +630,32 @@ bool calculate_laser_data(
 
     calculate_sensor_position(laser_x, laser_y,
             &(ld->startX), &(ld->startY));
+
+    // TODO: fancier stuff given more data
+    if (sensor_id < 2 && distance < LIDAR_MIN)
+    {
+        ld->reliable = 1;
+        distance = LIDAR_MIN;
+    }
+    else if (sensor_id < 2 && distance > LIDAR_MAX)
+    {
+        ld->reliable = 2;
+        distance = LIDAR_MAX;
+    }
+    else if (sensor_id & 0x6 && distance < IR_MIN)
+    {
+        ld->reliable = 1;
+        distance = IR_MIN;
+    }
+    else if (sensor_id & 0x6 && distance > IR_MAX)
+    {
+        ld->reliable = 2;
+        distance = IR_MAX;
+    }
+    else
+    {
+        ld->reliable = 0;
+    }
 
     ld->endX = ld->startX + round(ld->cos * distance);
     ld->endY = ld->startY + round(ld->sin * distance);
@@ -647,11 +668,6 @@ bool calculate_laser_data(
 
     if (abs(x_dif) < abs(y_dif))
     {
-        if (abs(y_dif) < CORNER_SENSITIVITY || abs(x_dif) > MAX_ERROR)
-        {
-            ld->collision_type = ld->quadrant = -1;
-            return false;
-        }
         ld->offset = x_dif;
         if (ld->quadrant == 1 || ld->quadrant == 2)
         {
@@ -663,15 +679,17 @@ bool calculate_laser_data(
             // left
             ld->collision_type = 0;
         }
+        if (abs(y_dif) < CORNER_SENSITIVITY)
+        {
+            ld->corner_error = true;
+        }
+        if (abs(x_dif) > MAX_ERROR)
+        {
+            ld->offset_error = true;
+        }
     }
     else
     {
-        if (abs(x_dif) < CORNER_SENSITIVITY || abs(y_dif) > MAX_ERROR)
-        {
-            ld->collision_type = ld->quadrant = -1;
-            return false;
-        }
-        //Extra: if y_dif < CORNER, set -1
         ld->offset = y_dif;
         // if in the 2nd or 3rd quadrant, we're hitting the top
         if (ld->quadrant & 0x2)
@@ -683,8 +701,20 @@ bool calculate_laser_data(
             // bottom
             ld->collision_type = 1;
         }
+        if (abs(x_dif) < CORNER_SENSITIVITY)
+        {
+            ld->corner_error = true;
+        }
+        if (abs(y_dif) > MAX_ERROR)
+        {
+            ld->offset_error = true;
+        }
     }
-    return true;
+    if (ld->reliable == 2)
+    {
+        ld->offset = 0;
+    }
+    return !ld->offset_error && !ld->corner_error && ld->reliable == 0;
 }
 
 // Main function for updating the map, sets a wall where the laser ends
@@ -698,13 +728,8 @@ int8_t draw_laser_line(struct laser_data* ld)
     // d is distance
     // x_n , y_n is end_x, end_y
 
-    if (ld->offset > MAX_ERROR || ld->collision_type == -1)
-    {
-        return -1;
-    }
     uint8_t end_x_coord;
     uint8_t end_y_coord;
-    uint16_t other_dif;
 
     // Depending on direction we're hitting different walls of the cell, and
     // that gives different coordinates for the cell
@@ -714,35 +739,47 @@ int8_t draw_laser_line(struct laser_data* ld)
             //hitting left side
             end_x_coord = (ld->endX - ld->offset) / GRID_SIZE;
             end_y_coord = ld->endY / GRID_SIZE;
-            other_dif = ld->endY % GRID_SIZE;
             break;
         case 1:
             // bottom
             end_x_coord = ld->endX / GRID_SIZE;
             end_y_coord = (ld->endY - ld->offset) / GRID_SIZE;
-            other_dif = ld->endX % GRID_SIZE;
             break;
         case 2:
             // right
             end_x_coord = (ld->endX - ld->offset) / GRID_SIZE - 1;
             end_y_coord = ld->endY / GRID_SIZE;
-            other_dif = ld->endY % GRID_SIZE;
             break;
         case 3:
             // top
             end_x_coord = ld->endX / GRID_SIZE;
             end_y_coord = (ld->endY - ld->offset) / GRID_SIZE - 1;
-            other_dif = ld->endX % GRID_SIZE;
             break;
         default:
             return -1;
     }
 
-    if (end_x_coord < MAP_X_MAX && end_y_coord < MAP_Y_MAX &&
-            (abs(other_dif) > CORNER_SENSITIVITY || abs(ld->offset) > CORNER_SENSITIVITY))
+    if (end_x_coord < MAP_X_MAX && end_y_coord < MAP_Y_MAX)
     {
-        mark_wall(end_x_coord, end_y_coord);
+        if (ld->reliable == 0 && !ld->corner_error && !ld->offset_error)
+        {
+            // if it's a perfectly good hit, mark as wall
+            mark_wall(end_x_coord, end_y_coord);
+        }
+        else if (ld->reliable == 1 && !ld->corner_error)
+        {
+            // if we're operating too close, mark as wall as long as it's not
+            // a corner error
+            mark_wall(end_x_coord, end_y_coord);
+        }
     }
+
+    // if we're too close, there's no empty spaces
+    if (ld->reliable == 1)
+    {
+        return -1;
+    }
+    // otherwise we can mark spaces up to the sensors MAX
 
     /* Calculate which cells the laser passed trough before hitting the wall */
     // A line drawn across a square grid at an angle will intersect with points
@@ -758,49 +795,57 @@ int8_t draw_laser_line(struct laser_data* ld)
         cot = fabs(ld->cos / ld->sin);
     }
 
+    uint16_t endx = ld->endX;
+    uint16_t endy = ld->endY;
+    if (ld->collision_type & 0x1)
+    {
+        endy -= ld->offset;
+    }
+    else
+    {
+        endx -= ld->offset;
+    }
+
+    // mark the square the sensor starts in as empty
+    if (abs(calculate_dif(ld->startX)) > CORNER_SENSITIVITY &&
+            abs(calculate_dif(ld->startY)) > CORNER_SENSITIVITY)
+    {
+        mark_empty(MmToGrid(ld->startX), MmToGrid(ld->startY));
+    }
+
     switch (ld->quadrant)
     {
         case 0:
-            if (laser_positive_x(ld->startX, ld->startY, end_x_coord, tan) ||
-                    laser_positive_y(ld->startX, ld->startY, end_y_coord, cot))
-            {
-                return -1;
-            }
-            break;
+            return ( laser_positive_x(ld->startX, ld->startY, endx, tan)
+                    || laser_positive_y(ld->startX, ld->startY, endy, cot));
         case 1:
-            if (laser_negative_x(ld->startX, ld->startY, end_x_coord, tan) ||
-                    laser_positive_y(ld->startX, ld->startY, end_y_coord, -cot))
-            {
-                return -1;
-            }
-            break;
+            return (laser_negative_x(ld->startX, ld->startY, endx, tan)
+                    || laser_positive_y(ld->startX, ld->startY, endy, -cot));
         case 2:
-            if (laser_negative_x(ld->startX, ld->startY, end_x_coord, -tan) ||
-                    laser_negative_y(ld->startX, ld->startY, end_y_coord, -cot))
-            {
-                return -1;
-            }
-            break;
+            return (laser_negative_x(ld->startX, ld->startY, endx, -tan)
+                    || laser_negative_y(ld->startX, ld->startY, endy, -cot));
         case 3:
-            if (laser_positive_x(ld->startX, ld->startY, end_x_coord, -tan) ||
-                    laser_negative_y(ld->startX, ld->startY, end_y_coord, cot))
-            {
-                return -1;
-            }
-            break;
+            return (laser_positive_x(ld->startX, ld->startY, endx, -tan)
+                    || laser_negative_y(ld->startX, ld->startY, endy, cot));
         default:
             return -1;
     }
-    return 0;
 }
 
+#define GRID_DIV_CORNER_CEIL(d) (d / GRID_SIZE) + ((d % GRID_SIZE > CORNER_SENSITIVITY) ? 1 : 0)
+#define GRID_DIV_CORNER_FLOOR(d) (d / GRID_SIZE) + ((d % GRID_SIZE < CORNER_SENSITIVITY) ? 1 : 0)
+
+#define GRID_DIV_CEIL(d) (d / GRID_SIZE + ((d % GRID_SIZE) ? 1 : 0))
+#define GRID_DIV_FLOOR(d) (d / GRID_SIZE)
+#define GRID_DIV_ROUND(d) (d / GRID_SIZE + \
+        ((d % GRID_SIZE >= GRID_SIZE/2) ? 1 : 0))
 // helper functions for draw_laser_line that calls laser_loop,
 // used to mark empty squares.
-int8_t laser_positive_x(uint16_t x, uint16_t y, uint8_t end_x_coord, double delta_y)
+int8_t laser_positive_x(uint16_t x, uint16_t y, uint16_t end_x, double delta_y)
 {
-    uint8_t  x_0       = x % GRID_SIZE ? x / GRID_SIZE + 1 : x / GRID_SIZE; // ceil
-    uint16_t y_0       = y + delta_y * (x_0 - (double) x / GRID_SIZE);
-    uint8_t  max_steps = end_x_coord - x_0;
+    uint8_t  x_0       = GRID_DIV_CEIL(x);
+    uint16_t y_0       = round(y + delta_y * (x_0*GRID_SIZE - x));
+    uint8_t  max_steps = GRID_DIV_CEIL(end_x) - x_0;
     if (max_steps > MAP_X_MAX)
     {
         return 0;
@@ -808,23 +853,24 @@ int8_t laser_positive_x(uint16_t x, uint16_t y, uint8_t end_x_coord, double delt
     return laser_loop(max_steps, x_0, y_0, +1.0, delta_y, mark_empty);
 }
 
-int8_t laser_negative_x(uint16_t x, uint16_t y, uint8_t end_x_coord, double delta_y)
+int8_t laser_negative_x(uint16_t x, uint16_t y, uint16_t end_x, double delta_y)
 {
-    uint8_t  x_0       = x / GRID_SIZE - 1; // integer division == floor
-    uint16_t y_0       = y + delta_y * ((double) x / GRID_SIZE - x_0 + 1);
-    uint8_t  max_steps = x_0 - end_x_coord;
+    uint8_t  x_0       = GRID_DIV_FLOOR(x);
+    uint16_t y_0       = round(y + delta_y * (x - x_0*GRID_SIZE));
+    uint8_t  max_steps = x_0 - GRID_DIV_FLOOR(end_x);
     if (max_steps > MAP_X_MAX)
     {
         return 0;
     }
-    return laser_loop(max_steps, x_0, y_0, -1.0, delta_y, mark_empty);
+    // subtract 1 from x_0 due to hitting the right wall of cells
+    return laser_loop(max_steps, x_0-1, y_0, -1.0, delta_y, mark_empty);
 }
 
-int8_t laser_positive_y(uint16_t x, uint16_t y, uint8_t end_y_coord, double delta_x)
+int8_t laser_positive_y(uint16_t x, uint16_t y, uint16_t end_y, double delta_x)
 {
-    uint8_t  y_0       = y % GRID_SIZE ? y / GRID_SIZE + 1 : y / GRID_SIZE; // ceil
-    uint16_t x_0       = x + delta_x * (y_0 - (double) y / GRID_SIZE);
-    uint8_t  max_steps = end_y_coord - y_0;
+    uint8_t  y_0       = GRID_DIV_CEIL(y);
+    uint16_t x_0       = round(x + delta_x * (y_0*GRID_SIZE - y));
+    uint8_t  max_steps = GRID_DIV_CEIL(end_y) - y_0;
     if (max_steps > MAP_Y_MAX)
     {
         return 0;
@@ -832,16 +878,17 @@ int8_t laser_positive_y(uint16_t x, uint16_t y, uint8_t end_y_coord, double delt
     return laser_loop(max_steps, y_0, x_0, +1.0, delta_x, mark_empty_rev);
 }
 
-int8_t laser_negative_y(uint16_t x, uint16_t y, uint8_t end_y_coord, double delta_x)
+int8_t laser_negative_y(uint16_t x, uint16_t y, uint16_t end_y, double delta_x)
 {
-    uint8_t  y_0       = y / GRID_SIZE - 1; // integer division == floor
-    uint16_t x_0       = x + delta_x * ((double) y / GRID_SIZE - y_0 + 1);
-    uint8_t  max_steps = y_0 - end_y_coord;
+    uint8_t  y_0       = GRID_DIV_FLOOR(y);
+    uint16_t x_0       = round(x + delta_x * (y - y_0*GRID_SIZE));
+    uint8_t  max_steps = y_0 - GRID_DIV_FLOOR(end_y);
     if (max_steps > MAP_Y_MAX)
     {
         return 0;
     }
-    return laser_loop(max_steps, y_0, x_0, -1.0, delta_x, mark_empty_rev);
+    // subtract 1 from y_0 due to hitting the upper wall of cell
+    return laser_loop(max_steps, y_0-1, x_0, -1.0, delta_x, mark_empty_rev);
 }
 
 // innermost loop for map updates, called for both x-aligned and y-aligned
@@ -947,12 +994,16 @@ void send_map_update(uint8_t x, uint8_t y, int8_t value)
 
 #if __TEST__
 
+#define TEST_RESET_MAP(x, y, v) \
+    Test_assertEquals(g_navigationMap[x][y], v) \
+    g_navigationMap[x][y] = 0;
+
 Test_test(Test, calc_sensor_pos)
 {
     uint16_t x, y;
-    uint16_t oldPosX = g_currentPosX;
-    uint16_t oldPosY = g_currentPosY;
-    uint16_t oldHeading = g_currentHeading;
+    uint16_t SAVE(g_currentPosX);
+    uint16_t SAVE(g_currentPosY);
+    uint16_t SAVE(g_currentHeading);
 
     g_currentPosX = 100;
     g_currentPosY = 90;
@@ -1007,9 +1058,9 @@ Test_test(Test, calc_sensor_pos)
     Test_assertEquals(x, 145);
     Test_assertEquals(y, 40);
 
-    g_currentPosX = oldPosX;
-    g_currentPosY = oldPosY;
-    g_currentHeading = oldHeading;
+    RESTORE(g_currentPosX);
+    RESTORE(g_currentPosY);
+    RESTORE(g_currentHeading);
 }
 
 Test_test(Test, heading_to_radian)
@@ -1023,11 +1074,11 @@ Test_test(Test, heading_to_radian)
 Test_test(Test, calc_heading_and_pos)
 {
     stdout = &mystdout;
-    uint16_t       oldCurrentPosX         = g_currentPosX;
-    uint16_t       oldCurrentPosY         = g_currentPosY;
-    uint16_t       oldHeading             = g_currentHeading;
-    enum Direction oldWheelDirectionLeft  = g_wheelDirectionLeft;
-    enum Direction oldWheelDirectionRight = g_wheelDirectionRight;
+    uint16_t SAVE(g_currentPosX);
+    uint16_t SAVE(g_currentPosY);
+    uint16_t SAVE(g_currentHeading);
+    enum Direction SAVE(g_wheelDirectionLeft);
+    enum Direction SAVE(g_wheelDirectionRight);
 
     struct sensor_data data;
     data.odometer_left  = 1;
@@ -1143,11 +1194,11 @@ Test_test(Test, calc_heading_and_pos)
     Test_assertEquals(g_currentPosY, 151); //150.73
     Test_assertEquals(g_currentHeading, 63037);
 
-    g_currentPosX         = oldCurrentPosX;
-    g_currentPosY         = oldCurrentPosY;
-    g_currentHeading      = oldHeading;
-    g_wheelDirectionLeft  = oldWheelDirectionLeft;
-    g_wheelDirectionRight = oldWheelDirectionRight;
+    RESTORE(g_currentPosX);
+    RESTORE(g_currentPosY);
+    RESTORE(g_currentHeading);
+    RESTORE(g_wheelDirectionLeft);
+    RESTORE(g_wheelDirectionRight);
 }
 
 Test_test(Test, mark_empty)
@@ -1167,9 +1218,7 @@ Test_test(Test, mark_empty)
 
     g_navigationMap[0][0] = INT8_MAX;
     Test_assertEquals(mark_empty(0, 0), -1);
-    Test_assertEquals(g_navigationMap[0][0], INT8_MAX);
-
-    g_navigationMap[0][0] = 0;
+    TEST_RESET_MAP(0, 0, INT8_MAX);
 }
 
 Test_test(Test, mark_wall)
@@ -1189,9 +1238,7 @@ Test_test(Test, mark_wall)
 
     g_navigationMap[0][0] = INT8_MIN;
     Test_assertEquals(mark_wall(0, 0), false);
-    Test_assertEquals(g_navigationMap[0][0], INT8_MIN);
-
-    g_navigationMap[0][0] = 0;
+    TEST_RESET_MAP(0, 0, INT8_MIN);
 }
 
 Test_test(Test, laser_loop_1)
@@ -1199,22 +1246,18 @@ Test_test(Test, laser_loop_1)
     // 2 cells straight to the right
     Test_assertEquals(laser_loop(2, 1, 200, +1.0, 0, mark_empty), 0);
 
-    Test_assertEquals(g_navigationMap[1][0], 1);
-    Test_assertEquals(g_navigationMap[2][0], 1);
-    g_navigationMap[1][0] = 0;
-    g_navigationMap[2][0] = 0;
-}
+    TEST_RESET_MAP(1, 0, 1);
+    TEST_RESET_MAP(2, 0, 1);
+        }
 
 Test_test(Test, laser_loop_2)
 {
     // 2 cells straight to the left
     Test_assertEquals(laser_loop(2, 2, 200, -1.0, 0, mark_empty), 0);
 
-    Test_assertEquals(g_navigationMap[2][0], 1);
-    Test_assertEquals(g_navigationMap[1][0], 1);
-    g_navigationMap[1][0] = 0;
-    g_navigationMap[2][0] = 0;
-}
+    TEST_RESET_MAP(2, 0, 1);
+    TEST_RESET_MAP(1, 0, 1);
+        }
 
 Test_test(Test, laser_loop_3)
 {
@@ -1222,29 +1265,22 @@ Test_test(Test, laser_loop_3)
     Test_assertEquals(laser_loop(3, MAP_X_MAX-3, 200,
                 +1.0, 0, mark_empty), 0);
 
-    Test_assertEquals(g_navigationMap[MAP_X_MAX-1][0], 1);
-    Test_assertEquals(g_navigationMap[MAP_X_MAX-2][0], 1);
-    Test_assertEquals(g_navigationMap[MAP_X_MAX-3][0], 1);
-    g_navigationMap[MAP_X_MAX-1][0] = 0;
-    g_navigationMap[MAP_X_MAX-2][0] = 0;
-    g_navigationMap[MAP_X_MAX-3][0] = 0;
-}
+    TEST_RESET_MAP(MAP_X_MAX-1, 0, 1);
+    TEST_RESET_MAP(MAP_X_MAX-2, 0, 1);
+    TEST_RESET_MAP(MAP_X_MAX-3, 0, 1);
+            }
 
 Test_test(Test, laser_loop_4)
 {
     // 4 cells straight to the left into the wall
     Test_assertEquals(laser_loop(4, 3, 200, -1.0, 0, mark_empty), 0);
 
-    Test_assertEquals(g_navigationMap[3][0], 1);
-    Test_assertEquals(g_navigationMap[2][0], 1);
-    Test_assertEquals(g_navigationMap[1][0], 1);
-    Test_assertEquals(g_navigationMap[0][0], 1);
+    TEST_RESET_MAP(3, 0, 1);
+    TEST_RESET_MAP(2, 0, 1);
+    TEST_RESET_MAP(1, 0, 1);
+    TEST_RESET_MAP(0, 0, 1);
 
-    g_navigationMap[0][0] = 0;
-    g_navigationMap[1][0] = 0;
-    g_navigationMap[2][0] = 0;
-    g_navigationMap[3][0] = 0;
-}
+                }
 
 Test_test(Test, laser_loop_5)
 {
@@ -1258,18 +1294,13 @@ Test_test(Test, laser_loop_6)
     // at (GRID_SIZE, 200).
     Test_assertEquals(laser_loop(5, 1, 200, 1, 1.0, mark_empty), 0);
 
-    Test_assertEquals(g_navigationMap[1][0], 1);
-    Test_assertEquals(g_navigationMap[2][1], 1);
-    Test_assertEquals(g_navigationMap[3][2], 1);
-    Test_assertEquals(g_navigationMap[4][3], 1);
-    Test_assertEquals(g_navigationMap[5][4], 1);
+    TEST_RESET_MAP(1, 0, 1);
+    TEST_RESET_MAP(2, 1, 1);
+    TEST_RESET_MAP(3, 2, 1);
+    TEST_RESET_MAP(4, 3, 1);
+    TEST_RESET_MAP(5, 4, 1);
 
-    g_navigationMap[1][0] = 0;
-    g_navigationMap[2][1] = 0;
-    g_navigationMap[3][2] = 0;
-    g_navigationMap[4][3] = 0;
-    g_navigationMap[5][4] = 0;
-}
+                    }
 
 Test_test(Test, laser_loop_7)
 {
@@ -1277,32 +1308,24 @@ Test_test(Test, laser_loop_7)
     // at (GRID_SIZE, 200).
     Test_assertEquals(laser_loop(4, 4, 200, -1, 2.4142135, mark_empty), 0);
 
-    Test_assertEquals(g_navigationMap[4][0], 1);
-    Test_assertEquals(g_navigationMap[3][2], 1);
-    Test_assertEquals(g_navigationMap[2][5], 1);
-    Test_assertEquals(g_navigationMap[1][7], 1);
+    TEST_RESET_MAP(4, 0, 1);
+    TEST_RESET_MAP(3, 2, 1);
+    TEST_RESET_MAP(2, 5, 1);
+    TEST_RESET_MAP(1, 7, 1);
 
-    g_navigationMap[4][0] = 0;
-    g_navigationMap[3][2] = 0;
-    g_navigationMap[2][5] = 0;
-    g_navigationMap[1][7] = 0;
-}
+                }
 
 Test_test(Test, laser_loop_8)
 {
     // 11/16 laser, hitting the first wall at (1600,3400)
     Test_assertEquals(laser_loop(4, 4, 8*GRID_SIZE+200, -1, -2.41421356, mark_empty), 0);
 
-    Test_assertEquals(g_navigationMap[4][8], 1);
-    Test_assertEquals(g_navigationMap[3][6], 1);
-    Test_assertEquals(g_navigationMap[2][3], 1);
-    Test_assertEquals(g_navigationMap[1][1], 1);
+    TEST_RESET_MAP(4, 8, 1);
+    TEST_RESET_MAP(3, 6, 1);
+    TEST_RESET_MAP(2, 3, 1);
+    TEST_RESET_MAP(1, 1, 1);
 
-    g_navigationMap[4][8] = 0;
-    g_navigationMap[3][6] = 0;
-    g_navigationMap[2][3] = 0;
-    g_navigationMap[1][1] = 0;
-}
+                }
 
 Test_test(Test, laser_loop_9)
 {
@@ -1310,43 +1333,33 @@ Test_test(Test, laser_loop_9)
     Test_assertEquals(laser_loop(4, 8, (MAP_Y_MAX-1)*GRID_SIZE+200, 1,
                 -5.02733949, mark_empty), 0);
 
-    Test_assertEquals(g_navigationMap[8][24], 1);
-    Test_assertEquals(g_navigationMap[9][19], 1);
-    Test_assertEquals(g_navigationMap[10][14], 1);
-    Test_assertEquals(g_navigationMap[11][9], 1);
+    TEST_RESET_MAP(8, 24, 1);
+    TEST_RESET_MAP(9, 19, 1);
+    TEST_RESET_MAP(10, 14, 1);
+    TEST_RESET_MAP(11, 9, 1);
 
-    g_navigationMap[8][24] = 0;
-    g_navigationMap[9][19] = 0;
-    g_navigationMap[10][14] = 0;
-    g_navigationMap[11][9] = 0;
-}
+                }
 
 Test_test(Test, laser_loop_10)
 {
     Test_assertEquals(laser_loop(4, 3, 200, -1.0, 0, mark_empty_rev), 0);
 
-    Test_assertEquals(g_navigationMap[0][3], 1);
-    Test_assertEquals(g_navigationMap[0][2], 1);
-    Test_assertEquals(g_navigationMap[0][1], 1);
-    Test_assertEquals(g_navigationMap[0][0], 1);
+    TEST_RESET_MAP(0, 3, 1);
+    TEST_RESET_MAP(0, 2, 1);
+    TEST_RESET_MAP(0, 1, 1);
+    TEST_RESET_MAP(0, 0, 1);
 
-    g_navigationMap[0][0] = 0;
-    g_navigationMap[0][1] = 0;
-    g_navigationMap[0][2] = 0;
-    g_navigationMap[0][3] = 0;
-}
+                }
 
 Test_test(Test, laser_positive_x_1)
 {
     // 2 cells straight to the right
     // there's a wall at (3, 0)
-    Test_assertEquals(laser_positive_x(200, 200, 3, 0), 0);
+    Test_assertEquals(laser_positive_x(200, 200, 3*GRID_SIZE, 0), 0);
 
-    Test_assertEquals(g_navigationMap[1][0], 1);
-    Test_assertEquals(g_navigationMap[2][0], 1);
-    g_navigationMap[1][0] = 0;
-    g_navigationMap[2][0] = 0;
-}
+    TEST_RESET_MAP(1, 0, 1);
+    TEST_RESET_MAP(2, 0, 1);
+        }
 
 Test_test(Test, laser_positive_x_2)
 {
@@ -1356,26 +1369,23 @@ Test_test(Test, laser_positive_x_2)
     {
         for (uint16_t start_y = 199; start_y < 202; ++start_y)
         {
-            Test_assertEquals(laser_positive_x(start_x, start_y, 3, 0), 0);
+            Test_assertEquals(laser_positive_x(start_x, start_y,
+                        3*GRID_SIZE, 0), 0);
 
-            Test_assertEquals(g_navigationMap[1][0], 1);
-            Test_assertEquals(g_navigationMap[2][0], 1);
-            g_navigationMap[1][0] = 0;
-            g_navigationMap[2][0] = 0;
-        }
+            TEST_RESET_MAP(1, 0, 1);
+            TEST_RESET_MAP(2, 0, 1);
+                                }
     }
 }
 
 Test_test(Test, laser_negative_x_1)
 {
     // 2 cells straight to the left from (1400, 200)
-    Test_assertEquals(laser_negative_x(1400, 200, 0, 0), 0);
+    Test_assertEquals(laser_negative_x(1400, 200, 400, 0), 0);
 
-    Test_assertEquals(g_navigationMap[2][0], 1);
-    Test_assertEquals(g_navigationMap[1][0], 1);
-    g_navigationMap[1][0] = 0;
-    g_navigationMap[2][0] = 0;
-}
+    TEST_RESET_MAP(2, 0, 1);
+    TEST_RESET_MAP(1, 0, 1);
+        }
 
 Test_test(Test, laser_negative_x_2)
 {
@@ -1384,13 +1394,11 @@ Test_test(Test, laser_negative_x_2)
     {
         for (uint16_t start_y = 199; start_y < 202; ++start_y)
         {
-            Test_assertEquals(laser_negative_x(start_x, start_y, 0, 0), 0);
+            Test_assertEquals(laser_negative_x(start_x, start_y, 400, 0), 0);
 
-            Test_assertEquals(g_navigationMap[2][0], 1);
-            Test_assertEquals(g_navigationMap[1][0], 1);
-            g_navigationMap[1][0] = 0;
-            g_navigationMap[2][0] = 0;
-        }
+            TEST_RESET_MAP(2, 0, 1);
+            TEST_RESET_MAP(1, 0, 1);
+                                }
     }
 }
 
@@ -1401,16 +1409,13 @@ Test_test(Test, laser_positive_y_1)
     {
         for (uint16_t start_y = 8599; start_y < 8602; ++start_y)
         {
-            Test_assertEquals(laser_positive_y(start_x, start_y, 25, 0), 0);
+            Test_assertEquals(laser_positive_y(start_x, start_y, 25*GRID_SIZE, 0), 0);
 
-            Test_assertEquals(g_navigationMap[0][MAP_Y_MAX-1], 1);
-            Test_assertEquals(g_navigationMap[0][MAP_Y_MAX-2], 1);
-            Test_assertEquals(g_navigationMap[0][MAP_Y_MAX-3], 1);
+            TEST_RESET_MAP(0, MAP_Y_MAX-1, 1);
+            TEST_RESET_MAP(0, MAP_Y_MAX-2, 1);
+            TEST_RESET_MAP(0, MAP_Y_MAX-3, 1);
 
-            g_navigationMap[0][MAP_Y_MAX-1] = 0;
-            g_navigationMap[0][MAP_Y_MAX-2] = 0;
-            g_navigationMap[0][MAP_Y_MAX-3] = 0;
-        }
+                                            }
     }
 }
 
@@ -1422,25 +1427,21 @@ Test_test(Test, laser_negative_y_1)
     {
         for (uint16_t start_y = 1799; start_y < 1802; ++start_y)
         {
-            Test_assertEquals(laser_negative_y(start_x, start_y, -1, 0), 0);
+            Test_assertEquals(laser_negative_y(start_x, start_y, 0, 0), 0);
 
-            Test_assertEquals(g_navigationMap[0][3], 1);
-            Test_assertEquals(g_navigationMap[0][2], 1);
-            Test_assertEquals(g_navigationMap[0][1], 1);
-            Test_assertEquals(g_navigationMap[0][0], 1);
+            TEST_RESET_MAP(0, 3, 1);
+            TEST_RESET_MAP(0, 2, 1);
+            TEST_RESET_MAP(0, 1, 1);
+            TEST_RESET_MAP(0, 0, 1);
 
-            g_navigationMap[0][0] = 0;
-            g_navigationMap[0][1] = 0;
-            g_navigationMap[0][2] = 0;
-            g_navigationMap[0][3] = 0;
-        }
+                                                        }
     }
 }
 Test_test(Test, draw_laser_line)
 {
-    uint16_t oldPosX = g_currentPosX;
-    uint16_t oldPosY = g_currentPosY;
-    uint16_t oldHeading = g_currentHeading;
+    uint16_t SAVE(g_currentPosX);
+    uint16_t SAVE(g_currentPosY);
+    uint16_t SAVE(g_currentHeading);
 
     g_currentPosX = 500;
     g_currentPosY = 200;
@@ -1466,46 +1467,60 @@ Test_test(Test, draw_laser_line)
     Test_assertEquals(ld.offset, 0);
     Test_assertEquals(ld.cos, 1);
     Test_assertEquals(ld.sin, 0);
+    Test_assertEquals(ld.reliable, 0);
+    Test_assertEquals(ld.corner_error, 0);
+    Test_assertEquals(ld.offset_error, 0);
 
     Test_assertEquals(draw_laser_line(&ld), 0);
 
-    Test_assertEquals(g_navigationMap[2][0], 1);
-    Test_assertEquals(g_navigationMap[3][0], 1);
-    Test_assertEquals(g_navigationMap[4][0], 1);
-    Test_assertEquals(g_navigationMap[5][0], -1);
+    TEST_RESET_MAP(1, 0, 1);
 
-    g_navigationMap[2][0] = 0;
-    g_navigationMap[3][0] = 0;
-    g_navigationMap[4][0] = 0;
-    g_navigationMap[5][0] = 0;
+    TEST_RESET_MAP(2, 0, 1);
+    TEST_RESET_MAP(3, 0, 1);
+    TEST_RESET_MAP(4, 0, 1);
+    TEST_RESET_MAP(5, 0, -1);
 
+    RESTORE(g_currentPosX);
+    RESTORE(g_currentPosY);
+    RESTORE(g_currentHeading);
+}
+Test_test(Test, draw_laser_line__)
+{
+    uint16_t SAVE(g_currentPosX);
+    uint16_t SAVE(g_currentPosY);
+    uint16_t SAVE(g_currentHeading);
+
+    g_currentPosX = 500;
+    g_currentPosY = 200;
+    g_currentHeading = 0;
+
+    update_trig_cache();
     // a laser positioned 120 behind the robot
     g_currentPosX = 1120;
+
+    struct sensor_data sd;
+    struct laser_data ld;
     sd.lidar_backward = 1000;
+
     calculate_laser_data(&sd, &ld, 1);
     Test_assertEquals(ld.collision_type, 2);
     Test_assertEquals(ld.quadrant, 2);
     Test_assertEquals(draw_laser_line(&ld), 0);
 
-    Test_assertEquals(g_navigationMap[0][0], 1);
-    Test_assertEquals(g_navigationMap[1][0], 1);
+    TEST_RESET_MAP(0, 0, 1);
+    TEST_RESET_MAP(1, 0, 1);
+    TEST_RESET_MAP(2, 0, 1);
 
-    g_navigationMap[0][0] = 0;
-    g_navigationMap[1][0] = 0;
-
-
-
-    g_currentPosX = oldPosX;
-    g_currentPosY = oldPosY;
-    g_currentHeading = oldHeading;
-
+    RESTORE(g_currentPosX);
+    RESTORE(g_currentPosY);
+    RESTORE(g_currentHeading);
 }
 
 Test_test(Test, draw_laser_line_2)
 {
-    uint16_t oldPosX = g_currentPosX;
-    uint16_t oldPosY = g_currentPosY;
-    uint16_t oldHeading = g_currentHeading;
+    uint16_t SAVE(g_currentPosX);
+    uint16_t SAVE(g_currentPosY);
+    uint16_t SAVE(g_currentHeading);
 
     g_currentHeading = 48392;
 
@@ -1533,33 +1548,51 @@ Test_test(Test, draw_laser_line_2)
 
     Test_assertEquals(ld.collision_type, 3);
     Test_assertEquals(ld.quadrant, 2);
+    Test_assertEquals(ld.startX, 9771);
+    Test_assertEquals(ld.startY, 4980);
+    Test_assertEquals(ld.endX, 9406);
+    Test_assertEquals(ld.endY, 65517);
+    Test_assertEquals(ld.reliable, 0);
 
     Test_assertEquals(draw_laser_line(&ld), 0);
     //Test_assertEquals(draw_laser_line(120, 0, 0, 5012), 0);
+    TEST_RESET_MAP(24, 12, 1);
+    TEST_RESET_MAP(24, 11, 1);
+    TEST_RESET_MAP(24, 10, 1);
+    TEST_RESET_MAP(24, 9, 1);
+    TEST_RESET_MAP(24, 8, 1);
+    TEST_RESET_MAP(24, 7, 1);
 
-    Test_assertEquals(g_navigationMap[24][11], 1);
-    Test_assertEquals(g_navigationMap[24][10], 1);
-    Test_assertEquals(g_navigationMap[24][9], 1);
-    Test_assertEquals(g_navigationMap[24][8], 1);
-    Test_assertEquals(g_navigationMap[24][7], 1);
+    TEST_RESET_MAP(23, 6, 1);
 
-    Test_assertEquals(g_navigationMap[23][4], 1);
-    Test_assertEquals(g_navigationMap[23][3], 1);
-    Test_assertEquals(g_navigationMap[23][2], 1);
-    Test_assertEquals(g_navigationMap[23][1], 1);
-    Test_assertEquals(g_navigationMap[23][0], 1);
+    TEST_RESET_MAP(23, 4, 1);
+    TEST_RESET_MAP(23, 3, 1);
+    TEST_RESET_MAP(23, 2, 1);
+    TEST_RESET_MAP(23, 1, 1);
+    TEST_RESET_MAP(23, 0, 1);
 
-    g_navigationMap[24][11] = 0;
-    g_navigationMap[24][10] = 0;
-    g_navigationMap[24][9] = 0;
-    g_navigationMap[24][8] = 0;
-    g_navigationMap[24][7] = 0;
-    g_navigationMap[23][4] = 0;
-    g_navigationMap[23][3] = 0;
-    g_navigationMap[23][2] = 0;
-    g_navigationMap[23][1] = 0;
-    g_navigationMap[23][0] = 0;
+    RESTORE(g_currentPosX);
+    RESTORE(g_currentPosY);
+    RESTORE(g_currentHeading);
+}
 
+Test_test(Test, draw_laser_line_2_2)
+{
+    uint16_t SAVE(g_currentPosX);
+    uint16_t SAVE(g_currentPosY);
+    uint16_t SAVE(g_currentHeading);
+
+    g_currentHeading = 48392;
+
+    update_trig_cache();
+
+    g_currentPosX = GridToMm(24) - 20;
+    g_currentPosY = GridToMm(12)+100;
+
+    Test_assertEquals(g_currentPosX, 9780);
+    Test_assertEquals(g_currentPosY, 5100);
+    struct sensor_data sd;
+    struct laser_data ld;
     sd.lidar_forward = 4592;
     calculate_laser_data(&sd, &ld, 0);
     Test_assertEquals(ld.collision_type, 3);
@@ -1567,39 +1600,31 @@ Test_test(Test, draw_laser_line_2)
     Test_assertEquals(draw_laser_line(&ld), 0);
     //Test_assertEquals(draw_laser_line(100, 0, 0, 4612), 0);
 
-    Test_assertEquals(g_navigationMap[24][11], 1);
-    Test_assertEquals(g_navigationMap[24][10], 1);
-    Test_assertEquals(g_navigationMap[24][9], 1);
-    Test_assertEquals(g_navigationMap[24][8], 1);
-    Test_assertEquals(g_navigationMap[24][7], 1);
+    TEST_RESET_MAP(24, 12, 1);
+    TEST_RESET_MAP(24, 11, 1);
+    TEST_RESET_MAP(24, 10, 1);
+    TEST_RESET_MAP(24, 9, 1);
+    TEST_RESET_MAP(24, 8, 1);
+    TEST_RESET_MAP(24, 7, 1);
 
-    Test_assertEquals(g_navigationMap[23][4], 1);
-    Test_assertEquals(g_navigationMap[23][3], 1);
-    Test_assertEquals(g_navigationMap[23][2], 1);
-    Test_assertEquals(g_navigationMap[23][1], 1);
-    Test_assertEquals(g_navigationMap[23][0], -1);
+    TEST_RESET_MAP(23, 6, 1);
 
-    g_navigationMap[24][11] = 0;
-    g_navigationMap[24][10] = 0;
-    g_navigationMap[24][9] = 0;
-    g_navigationMap[24][8] = 0;
-    g_navigationMap[24][7] = 0;
-    g_navigationMap[23][4] = 0;
-    g_navigationMap[23][3] = 0;
-    g_navigationMap[23][2] = 0;
-    g_navigationMap[23][1] = 0;
-    g_navigationMap[23][0] = 0;
+    TEST_RESET_MAP(23, 4, 1);
+    TEST_RESET_MAP(23, 3, 1);
+    TEST_RESET_MAP(23, 2, 1);
+    TEST_RESET_MAP(23, 1, 1);
+    TEST_RESET_MAP(23, 0, -1);
 
-    g_currentPosX = oldPosX;
-    g_currentPosY = oldPosY;
-    g_currentHeading = oldHeading;
+    RESTORE(g_currentPosX);
+    RESTORE(g_currentPosY);
+    RESTORE(g_currentHeading);
 }
 
 Test_test(Test, draw_laser_line_3)
 {
-    uint16_t oldPosX = g_currentPosX;
-    uint16_t oldPosY = g_currentPosY;
-    uint16_t oldHeading = g_currentHeading;
+    uint16_t SAVE(g_currentPosX);
+    uint16_t SAVE(g_currentPosY);
+    uint16_t SAVE(g_currentHeading);
 
     g_currentPosX = GridToMm(24);
     g_currentPosY = GridToMm(0);
@@ -1618,13 +1643,10 @@ Test_test(Test, draw_laser_line_3)
     Test_assertEquals(draw_laser_line(&ld), 0);
     //Test_assertEquals(draw_laser_line(120, 0, 0, 880), 0);
 
-    Test_assertEquals(g_navigationMap[24][1], 1);
-    Test_assertEquals(g_navigationMap[24][2], 1);
-    Test_assertEquals(g_navigationMap[24][3], -1);
-
-    g_navigationMap[24][1] = 0;
-    g_navigationMap[24][2] = 0;
-    g_navigationMap[24][3] = 0;
+    TEST_RESET_MAP(24, 0, 1);
+    TEST_RESET_MAP(24, 1, 1);
+    TEST_RESET_MAP(24, 2, 1);
+    TEST_RESET_MAP(24, 3, -1);
 
     // a laser positioned 85 behind the robot and 70 to the side
     // i.e. ir_leftback detects a wall at 130
@@ -1645,10 +1667,27 @@ Test_test(Test, draw_laser_line_3)
     // start_y = 200 + 1*-85 + 0*70 = 115
     // end_x = 9870
 
-    Test_assertEquals(g_navigationMap[23][0], -1);
+    TEST_RESET_MAP(24, 0, 1);
+    TEST_RESET_MAP(23, 0, -1);
 
-    g_navigationMap[23][0] = 0;
+    RESTORE(g_currentPosX);
+    RESTORE(g_currentPosY);
+    RESTORE(g_currentHeading);
+}
+Test_test(Test, draw_laser_line_3_2)
+{
+    uint16_t SAVE(g_currentPosX);
+    uint16_t SAVE(g_currentPosY);
+    uint16_t SAVE(g_currentHeading);
 
+    struct laser_data ld;
+    g_currentPosX = GridToMm(24);
+    g_currentPosY = GridToMm(0);
+    g_currentHeading = FULL_TURN/4;
+
+    update_trig_cache();
+
+    struct sensor_data sd;
     // ir_rightfront detects a wall at 130
     sd.ir_rightfront = 130;
     calculate_laser_data(&sd, &ld, 4);
@@ -1673,23 +1712,55 @@ Test_test(Test, draw_laser_line_3)
 
     Test_assertEquals(draw_laser_line(&ld), 0);
 
-    Test_assertEquals(g_navigationMap[25][0], -1);
+    TEST_RESET_MAP(24, 0, 1);
+    TEST_RESET_MAP(25, 0, -1);
 
-    g_navigationMap[25][0] = 0;
-
-
-
-    g_currentPosX = oldPosX;
-    g_currentPosY = oldPosY;
-    g_currentHeading = oldHeading;
+    RESTORE(g_currentPosX);
+    RESTORE(g_currentPosY);
+    RESTORE(g_currentHeading);
 }
 
+Test_test(Test, ir_min)
+{
+    uint16_t SAVE(g_currentPosX);
+    uint16_t SAVE(g_currentPosY);
+    uint16_t SAVE(g_currentHeading);
+
+    Test_assertEquals(laser_positive_x(
+                GridToMm(24)+70,
+                GridToMm(10)+200+80,
+                GridToMm(24)+70+IR_MAX,
+                0), 0);
+    TEST_RESET_MAP(25, 11, 1);
+
+    g_currentPosX = GridToMm(24);
+    g_currentPosY = GridToMm(10) + 200;
+    g_currentHeading = FULL_TURN/4;
+    struct laser_data ld;
+
+    struct sensor_data sd;
+    sd.ir_rightfront = 530;
+    calculate_laser_data(&sd, &ld, 4);
+
+    Test_assertEquals(ld.startX, GridToMm(24)+70); //9870
+    Test_assertEquals(ld.startY, GridToMm(10)+200+80); //8480
+    Test_assertEquals(ld.endX, GridToMm(24)+70+IR_MAX); //10220
+    Test_assertEquals(ld.reliable, 2);
+
+    draw_laser_line(&ld);
+    TEST_RESET_MAP(25, 11, 1);
+        TEST_RESET_MAP(24, 11, 1);
+
+    RESTORE(g_currentPosX);
+    RESTORE(g_currentPosY);
+    RESTORE(g_currentHeading);
+}
 
 Test_test(Test, update_map)
 {
-    uint16_t oldPosX = g_currentPosX;
-    uint16_t oldPosY = g_currentPosY;
-    uint16_t oldHeading = g_currentHeading;
+    uint16_t SAVE(g_currentPosX);
+    uint16_t SAVE(g_currentPosY);
+    uint16_t SAVE(g_currentHeading);
 
     g_currentPosX = GridToMm(24);
     g_currentPosY = GridToMm(10) + 200;
@@ -1704,41 +1775,29 @@ Test_test(Test, update_map)
     sd.ir_rightback = 130;
 
     Test_assertEquals(update_map(&sd), 0);
-    Test_assertEquals(g_navigationMap[24][12], 1);
-    Test_assertEquals(g_navigationMap[24][13], -1);
+    //detected by multiple sensors
+    TEST_RESET_MAP(24, 10, 3);
+    TEST_RESET_MAP(24, 11, 3);
 
-    Test_assertEquals(g_navigationMap[24][9], 1);
-    Test_assertEquals(g_navigationMap[24][8], -1);
+    TEST_RESET_MAP(24, 12, 1);
+    TEST_RESET_MAP(24, 13, -1);
 
-    Test_assertEquals(g_navigationMap[23][11], -1);
+    TEST_RESET_MAP(24, 9, 1);
+    TEST_RESET_MAP(24, 8, -1);
 
-    Test_assertEquals(g_navigationMap[23][10], 1);
-    Test_assertEquals(g_navigationMap[22][10], -1);
+    TEST_RESET_MAP(23, 11, -1);
 
-    Test_assertEquals(g_navigationMap[25][11], 1);
-    Test_assertEquals(g_navigationMap[26][11], -1);
+    TEST_RESET_MAP(23, 10, 1);
+    // (22, 10) above IR_MAX
 
-    Test_assertEquals(g_navigationMap[25][10], -1);
+    TEST_RESET_MAP(25, 11, 1);
+    // (26, 11) above IR_MAX
 
-    g_navigationMap[24][12] = 0;
-    g_navigationMap[24][13] = 0;
+    TEST_RESET_MAP(25, 10, -1);
 
-    g_navigationMap[24][9] = 0;
-    g_navigationMap[24][8] = 0;
-
-    g_navigationMap[23][11] = 0;
-
-    g_navigationMap[23][10] = 0;
-    g_navigationMap[22][10] = 0;
-
-    g_navigationMap[25][11] = 0;
-    g_navigationMap[26][11] = 0;
-
-    g_navigationMap[25][10] = 0;
-
-    g_currentPosX = oldPosX;
-    g_currentPosY = oldPosY;
-    g_currentHeading = oldHeading;
+    RESTORE(g_currentPosX);
+    RESTORE(g_currentPosY);
+    RESTORE(g_currentHeading);
 }
 
 Test_test(Test, calculate_dif)
@@ -1750,9 +1809,9 @@ Test_test(Test, calculate_dif)
 }
 Test_test(Test, adjust_position)
 {
-    uint16_t oldPosX = g_currentPosX;
-    uint16_t oldPosY = g_currentPosY;
-    uint16_t oldHeading = g_currentHeading;
+    uint16_t SAVE(g_currentPosX);
+    uint16_t SAVE(g_currentPosY);
+    uint16_t SAVE(g_currentHeading);
 
     g_currentPosX = GridToMm(24);
     g_currentPosY = GridToMm(10);
@@ -1786,7 +1845,7 @@ Test_test(Test, adjust_position)
     Test_assertEquals(g_currentPosX, GridToMm(24)-10);
     Test_assertEquals(g_currentPosY, GridToMm(10)+5);
 
-    // broken since lowering MIN_ADJUST_SENSORS
+    // TODO broken since lowering MIN_ADJUST_SENSORS
     /*g_currentPosX = GridToMm(24)+8;
     g_currentPosY = GridToMm(10);
     sd = (struct foo){ .arr = {470, 480, 0, 0, 120, 120}};
@@ -1812,11 +1871,63 @@ Test_test(Test, adjust_position)
     Test_assertEquals(g_currentPosX, GridToMm(24)); //9800
     Test_assertEquals(g_currentPosY, GridToMm(10)); //4200
 
-
-    g_currentPosX = oldPosX;
-    g_currentPosY = oldPosY;
-    g_currentHeading = oldHeading;
+    RESTORE(g_currentPosX);
+    RESTORE(g_currentPosY);
+    RESTORE(g_currentHeading);
 }
-// test corner sensitivity
+Test_test(Test, corner_sensitivity)
+{
+    uint16_t SAVE(g_currentPosX);
+    uint16_t SAVE(g_currentPosY);
+    uint16_t SAVE(g_currentHeading);
+
+    struct laser_data ld;
+    ld.startX = 400;
+    ld.startY = 400;
+    ld.endX = 1200;
+    ld.endY = 400;
+    ld.collision_type = 0;
+    ld.quadrant = 0;
+    ld.offset = 0;
+    ld.cos = 1;
+    ld.sin = 0;
+
+    ld.reliable = 0;
+    ld.corner_error = true;
+    ld.offset_error = false;
+
+    draw_laser_line(&ld);
+    ld.startX = 600;
+    draw_laser_line(&ld);
+
+    RESTORE(g_currentPosX);
+    RESTORE(g_currentPosY);
+    RESTORE(g_currentHeading);
+}
+Test_test(Test, corner_sensitivity_y)
+{
+    uint16_t SAVE(g_currentPosX);
+    uint16_t SAVE(g_currentPosY);
+    uint16_t SAVE(g_currentHeading);
+
+    struct laser_data ld;
+    ld.startX = 400;
+    ld.startY = 600;
+    ld.endX = 400;
+    ld.endY = 1200;
+    ld.collision_type = 1;
+    ld.quadrant = 1;
+    ld.offset = 0;
+    ld.cos = 0;
+    ld.sin = 1;
+    ld.reliable = 0;
+    ld.corner_error = true;
+    ld.offset_error = false;
+    draw_laser_line(&ld);
+
+    RESTORE(g_currentPosX);
+    RESTORE(g_currentPosY);
+    RESTORE(g_currentHeading);
+}
 // test max error
 #endif // __TEST__
