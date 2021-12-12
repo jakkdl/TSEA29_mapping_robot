@@ -2,7 +2,7 @@
 
 bool g_IRDone = false;
 
-void AdcInit()
+void AdcInit(void)
 {
 	ADMUX = (1 << REFS0); // use VCC as reference for conversion
 	ADCSRA = (1 << ADEN) | (1 << ADIE) ; // Enable ADC and set it to do interrupt when completed
@@ -18,7 +18,7 @@ void ADCRead(uint8_t channel)
 	return;
 }
 
-void MeasureIR()
+void MeasureIR(void)
 {
 	ADCRead(0x00);
 	ADCRead(0x01);

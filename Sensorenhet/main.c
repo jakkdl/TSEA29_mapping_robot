@@ -31,7 +31,7 @@ struct sensor_data data;
  * odometer internal value can differ with +-1 which means +-5mm
  */
 
-void StartReading()
+void StartReading(void)
 {
     g_readingDone = false;
     g_sendData = false;
@@ -41,7 +41,7 @@ void StartReading()
     ADCRead(0x05);
 }
 
-void PinInit()
+void PinInit(void)
 {
     // define output pins
     DDRB |= (1 << PORTB4) | (1 << PORTB6);
@@ -82,7 +82,7 @@ int main(void)
     }
 }
 struct data_packet packet;
-void SendData()
+void SendData(void)
 {
     packet.byte_count = 2;
 
@@ -103,7 +103,7 @@ void SendData()
 
 
 
-void ConvertOdo()
+void ConvertOdo(void)
 {
     // converts odo count to mm traveled;
     data.odometer_left = round((double)g_leftCount * WHEEL_DIAMETER * M_PI / OPENINGS * ODO_FIX); // max is 50 mm /cycle / 10 pegs
