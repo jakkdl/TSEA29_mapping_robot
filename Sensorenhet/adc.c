@@ -10,38 +10,20 @@ void AdcInit()
 	DIDR0 = (1 << ADC0D) | (1 << ADC1D) | (1 << ADC2D) | (1 << ADC3D) | (1 << ADC5D) | (1 << ADC6D); // disable digital input for pins that are used as analog inputs
 }
 
-void StartAdc()
+void ADCRead(uint8_t channel)
 {
-	ADCSRA |= (1 << ADSC);
+	ADMUX = (ADMUX & 0xE0) | (channel & 0x1F);
+	ADCSRA |= (1 <<ADSC);
+	while(ADCSRA &(1 << ADSC));
+	return;
 }
 
-void NextInputPin()
-{
-	if ((ADMUX & (1 << PORTB1)) && (ADMUX & (1 << PORTB0))) // looped through all adc pins for IR sensors
-	{
-		ADMUX = 0x40; // return to ADC0 to be converted completed one loop
-		g_IRDone = true;
-	}
-	else
-	{
-		ADMUX++; // go to next input pin
-		StartAdc();
-	}
-}
 void MeasureIR()
 {
-	cli();
-	ADMUX = 0x40;
-	sei();
-	StartAdc();
-	_delay_ms(1);
-	NextInputPin();
-	_delay_ms(1);
-	NextInputPin();
-	_delay_ms(1);
-	NextInputPin();
-	_delay_ms(1);
-	NextInputPin();
+	ADCRead(0x00);
+	ADCRead(0x01);
+	ADCRead(0x02);
+	ADCRead(0x03);
 }
 uint16_t ConvertVoltage(double ADCVoltage)
 // converts the input voltage to closest cm only between 8-80 cm
@@ -52,9 +34,9 @@ uint16_t ConvertVoltage(double ADCVoltage)
 	{
 		return 0;
 	}
-	else if (ADCVoltage < 0.4)
+	else if (ADCVoltage < 0.8)
 	{
-		return -1;
+		return 0xFFFF;
 	}
 	else if ((ADCVoltage <= 2.8) && (ADCVoltage > 2.3))
 	{

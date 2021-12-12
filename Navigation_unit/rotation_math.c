@@ -14,9 +14,10 @@
 // of the corners.
 #define CORNER_SENSITIVITY 30
 
-// Throw out all laser data that detects a wall more than this many mm away
-// from where a wall could be in theory.
+// map update throws out an update if a wall is too far from where it can be
 #define MAX_ERROR 50
+#define LIDAR_MIN 150
+#define IR_MIN 80
 
 // Minimum and maximum values for the sensors
 #define IR_MIN 80
@@ -68,6 +69,7 @@ int8_t laser_positive_x(uint16_t x, uint16_t y, uint8_t end_x_coord, double delt
 int8_t laser_negative_x(uint16_t x, uint16_t y, uint8_t end_x_coord, double delta_y);
 int8_t laser_positive_y(uint16_t x, uint16_t y, uint8_t end_y_coord, double delta_x);
 int8_t laser_negative_y(uint16_t x, uint16_t y, uint8_t end_y_coord, double delta_x);
+bool adjust_position(struct sensor_data* sd);
 bool calculate_laser_data(
         struct sensor_data* sd,
         struct laser_data* ld,
@@ -230,12 +232,17 @@ int8_t calculate_heading_and_position(struct sensor_data* data)
 
         g_currentPosX += round(cos(headingAvg) * distance);
         g_currentPosY += round(sin(headingAvg) * distance);
+		
         send_position();
 
 
     }
     if (heading_change)
     {
+		if (data->odometer_left == 0 && data->odometer_right == 0)
+		{
+			return 0;
+		}
         g_currentHeading += heading_change;
         packet.address = ADR_HEADING;
         packet.byte_count = 2;
@@ -246,6 +253,7 @@ int8_t calculate_heading_and_position(struct sensor_data* data)
         // cache cos & sin
         update_trig_cache();
     }
+	adjust_position(data);
     // TODO use lidar & IR to calibrate heading and position
     return 0;
 }
@@ -317,11 +325,10 @@ double calculate_wanted_heading(struct laser_data* ld, uint16_t distance)
     }
     return wanted_heading_rad;
 }
-#include <stdio.h>
+//#include <stdio.h>
 #define MAX_HEADING_DIFF FULL_TURN/64
 int8_t adjust_heading(struct sensor_data* sd)
 {
-    stdout = &mystdout;
     int16_t sum = 0;
     uint16_t wanted_heading;
     int16_t diff;
@@ -349,7 +356,7 @@ int8_t adjust_heading(struct sensor_data* sd)
 
         wanted_heading = radian_to_heading(wanted_heading_rad) - LASER_DIRECTION[i]*FULL_TURN/4;
         diff = (int16_t)(wanted_heading - g_currentHeading);
-        printf("%d %f %u %u\n", i, wanted_heading_rad, wanted_heading, diff);
+        //printf("%d %f %u %u\n", i, wanted_heading_rad, wanted_heading, diff);
         if (abs(diff) < MAX_HEADING_DIFF)
         {
             sum += diff;
@@ -513,7 +520,7 @@ Test_test(Test, adjust_heading)
 #define MAX_ADJUST 50
 
 // the minimum number of sensors within MAX_ADJUST in order to update position
-#define MIN_ADJUST_SENSORS 3
+#define MIN_ADJUST_SENSORS 2
 
 // assumes heading is correct, and calibrates the robots position
 // according to the distance to the walls
@@ -605,13 +612,13 @@ bool calculate_laser_data(
         return false;
     }
     // lidar
-    if (sensor_id < 2 && (distance < 150 || distance > 10000))
+    if (sensor_id < 2 && (distance < LIDAR_MIN || distance > 10000))
     {
         ld->collision_type = -1;
         return false;
     }
     // IR
-    else if ((sensor_id & 0x6) && (distance < 80 || distance > 800))
+    else if ((sensor_id & 0x6) && (distance < IR_MIN || distance > 800))
     {
         ld->collision_type = -1;
         return false;
@@ -731,6 +738,8 @@ int8_t draw_laser_line(struct laser_data* ld)
     if (end_x_coord < MAP_X_MAX && end_y_coord < MAP_Y_MAX &&
             (abs(other_dif) > CORNER_SENSITIVITY || abs(ld->offset) > CORNER_SENSITIVITY))
     {
+		if (g_navigationMap[end_x_coord][end_y_coord] > INT8_MIN)
+		{
         // mark as wall
         g_navigationMap[end_x_coord][end_y_coord] -= 1;
 
@@ -748,6 +757,7 @@ int8_t draw_laser_line(struct laser_data* ld)
             send_map_update(end_x_coord, end_y_coord,
                     g_navigationMap[end_x_coord][end_y_coord]);
         }
+		}
     }
 
     /* Calculate which cells the laser passed trough before hitting the wall */

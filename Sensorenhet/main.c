@@ -19,7 +19,8 @@ uint16_t g_lidarDistance = 0; // distance in mm
 bool g_readingDone = true;
 bool g_sendData = false;
 
-#define WHEEL_DIAMETER 62
+#define ODO_FIX 1
+#define WHEEL_DIAMETER 65.65
 
 struct sensor_data data;
 
@@ -32,7 +33,7 @@ void StartReading()
     MeasureIR();
     data.lidar_forward = MeasureLidarFront();
     data.lidar_backward = MeasureLidarBack();
-    MeasureMLX();
+    ADCRead(0x05);
 }
 
 void PinInit()
@@ -100,12 +101,13 @@ void SendData()
 void ConvertOdo()
 {
     // converts odo count to mm traveled;
-    data.odometer_left = round(g_leftCount * WHEEL_DIAMETER * M_PI / OPENINGS); // max is 50 mm /cycle / 10 pegs
-    data.odometer_right = round(g_rightCount * WHEEL_DIAMETER * M_PI / OPENINGS); // const 5.105088
+    data.odometer_left = round((double)g_leftCount * WHEEL_DIAMETER * M_PI / OPENINGS * ODO_FIX); // max is 50 mm /cycle / 10 pegs
+    data.odometer_right = round((double)g_rightCount * WHEEL_DIAMETER * M_PI / OPENINGS * ODO_FIX); // const 5.105088
     g_rightCount = 0;
     g_leftCount = 0;
 }
 
+#define VRef 4.79
 ISR(ADC_vect)
 {
     if (ADMUX == 0x45)
@@ -127,7 +129,7 @@ ISR(ADC_vect)
         uint16_t IRDistance = 0;
         uint8_t ADCLowBit = ADCL;
         double ADCRes = ADCH<<8 | ADCLowBit; // puts result of ADC in ADCRes
-        ADCRes = ADCRes * 5;
+        ADCRes = ADCRes * VRef;
         ADCVoltage = ADCRes / 1024;
         IRDistance = ConvertVoltage(ADCVoltage);
         switch (ADMUX)
