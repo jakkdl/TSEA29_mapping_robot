@@ -10,18 +10,31 @@
 #include "../AVR_testing/test.h"
 
 // if we hit right at the corner of a wall, we don't know which
-// coordinate it corresponds to. So we throw out all values too close
-// to the corners.
+// coordinate it corresponds to. So we throw out all values within this many mm
+// of the corners.
 #define CORNER_SENSITIVITY 30
-#define SPIN_RATIO 0.708
 
-// map update throws out an update if a wall is too far from where it can be
+// Throw out all laser data that detects a wall more than this many mm away
+// from where a wall could be in theory.
 #define MAX_ERROR 50
 
-#define AXLE_WIDTH 170          // must be measured
-#define MID_TO_WHEEL_CENTER 110 // must be measured
+// Minimum and maximum values for the sensors
+#define IR_MIN 80
+#define IR_MAX 350
+#define LIDAR_MIN 100
 
+// If the gyro is broken, we can exclusively use the odometers for heading
+// Long-term you maybe want to use a hybrid of them both though
 #define USE_ODO_FOR_HEADING 0
+
+// The odometer spins when turning on the spot, not turning far enough.
+// Lowering this causes us to update less from the odometer, turning more.
+#define SPIN_RATIO 0.708
+
+// Measurements used to calculate position
+#define AXLE_WIDTH 170
+#define MID_TO_WHEEL_CENTER 110
+
 #define M_TAU (2 * M_PI)
 #define min(x, y) x < y ? x : y
 double g_cosHeading = 0;
@@ -117,6 +130,8 @@ void update_trig_cache(void)
     g_cosHeading = cos(headingRad);
     g_sinHeading = sin(headingRad);
 }
+
+// helper function to calculate the coordinates of a sensor on the robot
 void calculate_sensor_position(int8_t x, int8_t y,
         uint16_t* start_x, uint16_t* start_y)
 {
@@ -126,7 +141,7 @@ void calculate_sensor_position(int8_t x, int8_t y,
             g_sinHeading * x + laser_sin(1) * y);
 }
 
-// calculate new heading, using only the odometers
+// calculate heading change, using only the odometers
 int16_t odo_heading_change(struct sensor_data* data)
 {
     int16_t arc_length;
@@ -662,7 +677,9 @@ bool calculate_laser_data(
     return true;
 }
 
-
+// Main function for updating the map, sets a wall where the laser ends
+// and marks squares leading up to it (not including the square the sensor is
+// in) as empty space.
 int8_t draw_laser_line(struct laser_data* ld)
 {
     // see laser_intersecting_pot_walls.jpg
@@ -710,8 +727,6 @@ int8_t draw_laser_line(struct laser_data* ld)
         default:
             return -1;
     }
-
-
 
     if (end_x_coord < MAP_X_MAX && end_y_coord < MAP_Y_MAX &&
             (abs(other_dif) > CORNER_SENSITIVITY || abs(ld->offset) > CORNER_SENSITIVITY))
@@ -785,6 +800,8 @@ int8_t draw_laser_line(struct laser_data* ld)
     return 0;
 }
 
+// helper functions for draw_laser_line that calls laser_loop,
+// used to mark empty squares.
 int8_t laser_positive_x(uint16_t x, uint16_t y, uint8_t end_x_coord, double delta_y)
 {
     uint8_t  x_0       = x % GRID_SIZE ? x / GRID_SIZE + 1 : x / GRID_SIZE; // ceil
@@ -833,6 +850,9 @@ int8_t laser_negative_y(uint16_t x, uint16_t y, uint8_t end_y_coord, double delt
     return laser_loop(max_steps, y_0, x_0, -1.0, delta_x, mark_empty_rev);
 }
 
+// innermost loop for map updates, called for both x-aligned and y-aligned
+// updates. Calls the function supplied by the caller, which is mark_empty or
+// mark_empty_rev
 int8_t laser_loop(uint8_t  max_steps,
         uint8_t  a,
         uint16_t b_0,
@@ -854,11 +874,14 @@ int8_t laser_loop(uint8_t  max_steps,
     return res;
 }
 
+// reverses parameters before calling mark_empty, to make laser_loop fully
+// generalizable
 int8_t mark_empty_rev(uint8_t y, uint8_t x)
 {
     return mark_empty(x, y);
 }
 
+// marks a square as empty and calls send_map_update
 int8_t mark_empty(uint8_t x, uint8_t y)
 {
     if (x >= MAP_X_MAX || y >= MAP_Y_MAX)
@@ -887,7 +910,12 @@ int8_t mark_empty(uint8_t x, uint8_t y)
     return 0;
 }
 
+// marks a square as a wall and calls send_map_update
+int8_t mark_walll(uint8_t x, uint8_t y)
+{
 
+}
+// Sends a map update to the display unit
 void send_map_update(uint8_t x, uint8_t y, int8_t value)
 {
     struct data_packet packet;
