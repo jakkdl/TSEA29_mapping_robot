@@ -36,7 +36,7 @@ uint16_t ConvertVoltage(double ADCVoltage)
 	}
 	else if (ADCVoltage < 0.8)
 	{
-		return 0xFFFF;
+		return UINT16_MAX;
 	}
 	else if ((ADCVoltage <= 2.8) && (ADCVoltage > 2.3))
 	{

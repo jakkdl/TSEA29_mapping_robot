@@ -24,7 +24,12 @@ bool g_sendData = false;
 
 struct sensor_data data;
 
-//TODO: testing functionality: MLX gyro
+/* Sensor values:
+ * IR-sensor sends valid data when distance is 80-350mm sends UINT16_TMAX when above and 0 when below
+ * lidar sends valid data data when distance > 1000mm and fluxuating data when < 1m
+ * gyro fluctuates with about +- 100 when standing still, most values between +- 40
+ * odometer internal value can differ with +-1 which means +-5mm
+ */
 
 void StartReading()
 {
