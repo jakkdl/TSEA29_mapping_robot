@@ -22,7 +22,7 @@ void MODULE##_test_##NAME(void)
 #include <stdbool.h>
 #include <stdio.h>
 
-#define MSG_LEN 80
+#define MSG_LEN 100
 // typedefs
 typedef enum TestResult
 {
@@ -50,15 +50,18 @@ extern FILE mystdout;
 // Initialise the test framework
 void Test_add(Test_TestHolder* test);
 
-bool Test_assertTrueLog(uint8_t condition, uint16_t lineNumber);
+bool Test_assertTrueLog(uint8_t condition, uint16_t lineNumber,
+        char* file);
 
 bool Test_assertEqualLog(uint16_t actual,
         uint16_t expected,
-        uint16_t lineNumber);
+        uint16_t lineNumber,
+        char* file);
 
 bool Test_assertFloatEqualLog(double actual,
         double expected,
-        uint16_t lineNumber);
+        uint16_t lineNumber,
+        char* file);
 
 void Test_runall(void);
 
@@ -86,19 +89,19 @@ void MODULE##_appendtest_##NAME(void)                                      \
 void MODULE##_test_##NAME(void) /*define mod_test_name*/
 
 #define Test_assertTrue(condition)                                             \
-    if (!Test_assertTrueLog((condition), __LINE__)) \
+    if (!Test_assertTrueLog((condition), __LINE__, __FILE__)) \
 { \
     return; \
 }
 
 #define Test_assertEquals(actual, expected)                                    \
-    if (!Test_assertEqualLog((actual), (expected), __LINE__)) \
+    if (!Test_assertEqualLog((actual), (expected), __LINE__, __FILE__)) \
 { \
     return; \
 }
 
 #define Test_assertFloatEquals(actual, expected)                               \
-    if (!Test_assertFloatEqualLog((actual), (expected), __LINE__)) \
+    if (!Test_assertFloatEqualLog((actual), (expected), __LINE__, __FILE__)) \
 { \
     return; \
 }
