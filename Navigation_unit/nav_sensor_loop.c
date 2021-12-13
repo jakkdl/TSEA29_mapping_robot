@@ -99,7 +99,7 @@ void send_sensor_data(struct sensor_data* data)
     packet.byte_count = 2;
 
     uint16_t* value = (uint16_t*) data;
-    for (int i=0; i < 8; ++i)
+    for (int i=2; i < 6; ++i)
     {
         packet.address = i;
         packet.bytes[0] = Uint16ToByte0(*(value+i));
@@ -123,7 +123,7 @@ int8_t nav_main(void)
 
     // updates g_currentHeading, g_currentPosX and g_currentPosY
     // sends them to display if updated
-    if (calculate_heading_and_position(data) == -1)
+    if (update_heading_and_position(data) == -1)
     {
         return -1;
     }
@@ -148,7 +148,7 @@ int8_t nav_main(void)
     // which if there's updates, sends them to com-unit
     update_map(data);
 
-    
+
     // Check if we should run nav algo
     if (g_navigationMode == AUTONOMOUS && !g_navigationGoalSet)
     {

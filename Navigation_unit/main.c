@@ -26,6 +26,8 @@ int main(void)
     //switch busy wait to https://www.nongnu.org/avr-libc/user-manual/group__avr__sleep.html
     struct data_packet sensor_data;
     struct data_packet com_data;
+	g_navigationMap[MmToGrid(g_currentPosX)][MmToGrid(g_currentPosY)] = INT8_MAX;
+	
     sei();
     while(1)
     {

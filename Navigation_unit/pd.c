@@ -13,7 +13,7 @@ void PDcontroller_Set_RefNode();
 
 #define MAX_SPEED 0x80
 
-#define TURN_SENSITIVITY (FULL_TURN/256)
+#define TURN_SENSITIVITY (FULL_TURN/128)
 
 // robot will stop when the middle of the robot is within this many mm of
 // the middle of the target square along both the x and y axis
@@ -110,9 +110,9 @@ bool PDcontroller_Update(void)
       send_debug((int16_t)deltaX& 0xFFFF, 45);
       send_debug((int16_t)(deltaX>>8)& 0xFFFF, 45);
       send_debug((int16_t)deltaY& 0xFFFF, 46);
-      send_debug((int16_t)(deltaY>>8)& 0xFFFF, 46);*/
+      send_debug((int16_t)(deltaY>>8)& 0xFFFF, 46);
 	  send_debug((uint16_t)TURN_SENSITIVITY, 47);
-	  send_debug((int16_t)temp, 48);
+	  send_debug((int16_t)temp, 48);*/
     //i have no idea what this is but works but pointer magic?
     //create a 2 part long with the CTE as reference then point to is in 2 different byte
 

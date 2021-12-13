@@ -71,7 +71,9 @@ void Test_add(Test_TestHolder* test)
     m_Test_head = test;
 }
 
-bool Test_assertTrueLog(uint8_t condition, uint16_t lineNumber)
+bool Test_assertTrueLog(uint8_t condition,
+        uint16_t lineNumber,
+        char* file)
 {
     // We have the active test
     if (!(condition))
@@ -81,9 +83,10 @@ bool Test_assertTrueLog(uint8_t condition, uint16_t lineNumber)
         snprintf(
                 m_Test_activeTest->message,
                 MSG_LEN,
-                "FAIL: %s @ %u\n    not true\n",
+                "FAIL: %s @ %u in %s\n    not true\n",
                 m_Test_activeTest->name,
-                lineNumber);
+                lineNumber,
+                file);
         return false;
     }
     return true;
@@ -91,7 +94,8 @@ bool Test_assertTrueLog(uint8_t condition, uint16_t lineNumber)
 
 bool Test_assertEqualLog(uint16_t actual,
                          uint16_t expected,
-                         uint16_t lineNumber)
+                         uint16_t lineNumber,
+                         char* file)
 {
     if (expected != actual)
     {
@@ -100,9 +104,10 @@ bool Test_assertEqualLog(uint16_t actual,
         snprintf(
                 m_Test_activeTest->message,
                 MSG_LEN,
-                "FAIL: %s @ line %u\n    got %u expected %u\n",
+                "FAIL: %s @ %u in %s\n    got %u expected %u\n",
                 m_Test_activeTest->name,
                 lineNumber,
+                file,
                 actual,
                 expected
                 );
@@ -113,7 +118,8 @@ bool Test_assertEqualLog(uint16_t actual,
 
 bool Test_assertFloatEqualLog(double actual,
                               double expected,
-                              uint16_t lineNumber)
+                              uint16_t lineNumber,
+                              char* file)
 {
     if (expected != actual)
     {
@@ -122,9 +128,10 @@ bool Test_assertFloatEqualLog(double actual,
         snprintf(
                 m_Test_activeTest->message,
                 MSG_LEN,
-                "FAIL: %s @ %u\n    got %f expected %f\n",
+                "FAIL: %s @ %u in %s\n    got %f expected %f\n",
                 m_Test_activeTest->name,
                 lineNumber,
+                file,
                 actual,
                 expected
                 );
@@ -159,8 +166,9 @@ bool check_reset_map(void)
         { \
             if (m_Test_activeTest->testResult == SUCCESS) \
             { \
-                printf("FAIL: %s after test\n    " #var " is %u and not reset to " #value "\n", \
+                printf("FAIL: %s in %s after test\n    " #var " is %u and not reset to " #value "\n", \
                         m_Test_activeTest->name, \
+                        m_Test_activeTest->file, \
                         var); \
                 m_Test_result.successCount--; \
                 m_Test_result.failureCount++; \
@@ -246,8 +254,9 @@ void Test_runall(void)
         test_reset_global(g_uart_rx_1.length, 0)
         if (!check_reset_map() && m_Test_activeTest->testResult == SUCCESS)
         {
-            printf("FAIL: \"%s\" left garbage in the map according to above\n",
-                    m_Test_activeTest->name);
+            printf("FAIL: \"%s\" in %s\n    left garbage in the map according to above\n",
+                    m_Test_activeTest->name,
+                    m_Test_activeTest->file);
             m_Test_result.successCount--;
             m_Test_result.failureCount++;
             m_Test_activeTest->testResult = FAILURE;

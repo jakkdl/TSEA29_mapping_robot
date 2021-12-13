@@ -1,6 +1,6 @@
 #include "lidar.h"
 
-uint16_t MeasureLidarFront()
+uint16_t MeasureLidarFront(void)
 {
 	// PWMsignal is max 4ms
 	// result of this function varies greatly when < 30cm stabilizes after 3 measurments
@@ -39,7 +39,7 @@ uint16_t MeasureLidarFront()
 	return lidarF;
 }
 
-uint16_t MeasureLidarBack()
+uint16_t MeasureLidarBack(void)
 {
 	uint16_t PWMTime = 0;
 	uint16_t firstTime = 0;
@@ -77,13 +77,13 @@ uint16_t MeasureLidarBack()
 	return lidarB;
 }
 
-void ExtInterruptInit()
+void ExtInterruptInit(void)
 {
 	EICRA = (1 << ISC01) | (1 << ISC00) | (1 << ISC11) | (1 << ISC10);
 	EIMSK = (1 << INT0) | (1 << INT1);
 }
 
-void TimerInit()
+void TimerInit(void)
 {
 	TCNT1 = 0x0000;
 	TCCR1B = (1 << CS11); // divide clock by 8 to get 2 tick every microsec
@@ -91,7 +91,7 @@ void TimerInit()
 
 
 #define F 62.5
-void MsTimerInit()
+void MsTimerInit(void)
 {
 	TCNT3 = 0x0000;
 	TCCR3B = (1 << CS32); // divide clock by 256 to get 3125 ticks per 50ms

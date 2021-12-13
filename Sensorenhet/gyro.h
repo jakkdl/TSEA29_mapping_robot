@@ -7,7 +7,7 @@
 extern uint16_t g_Vref;
 extern int32_t g_gyroFault;
 extern bool g_startup;
-int16_t MLXGyroVal();
-void MeasureMLX();
+int16_t MLXGyroVal(void);
+void MeasureMLX(void);
 void GyroInit(void);
 #endif
