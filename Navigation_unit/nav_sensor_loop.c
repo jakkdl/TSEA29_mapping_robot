@@ -123,7 +123,7 @@ int8_t nav_main(void)
 
     // updates g_currentHeading, g_currentPosX and g_currentPosY
     // sends them to display if updated
-    if (calculate_heading_and_position(data) == -1)
+    if (update_heading_and_position(data) == -1)
     {
         return -1;
     }
@@ -148,7 +148,7 @@ int8_t nav_main(void)
     // which if there's updates, sends them to com-unit
     update_map(data);
 
-    
+
     // Check if we should run nav algo
     if (g_navigationMode == AUTONOMOUS && !g_navigationGoalSet)
     {
