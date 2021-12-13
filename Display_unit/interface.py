@@ -14,6 +14,15 @@ import time
 #     timeout=1
 # )
 
+ser = serial.Serial(
+    port='/dev/tty.Firefly-71B7-SPP',  # this port should be changed to your own port
+    baudrate=115200,
+    parity=serial.PARITY_EVEN,
+    stopbits=serial.STOPBITS_ONE,
+    bytesize=serial.EIGHTBITS,
+    timeout=1
+)
+
 g_output = []
 
 g_sensor_data = []
@@ -35,12 +44,11 @@ class Constants:
     ROBOT_X = 24
     ROBOT_Y = 0
     AUTO_SCROLL = True
-    AUTONOMOUS = True
-    ROBOT_X = 24
-    ROBOT_Y = 24
+    AUTONOMOUS = False
     ROBOT_COLOR = "red"
     WALL_COLOR = "black"
     EMPTY_COLOR = "green"
+    UNKNOWN_COLOR = "gray"
 
 
 class Map(LabelFrame):
@@ -65,10 +73,10 @@ class Map(LabelFrame):
                 tag = stringTuple[0] + "," + stringTuple[1]
 
                 self.canvas.create_rectangle(x * CELL_SIZE + SPACING, y * CELL_SIZE + SPACING,
-                                             (x + 1)*CELL_SIZE, (y + 1)*CELL_SIZE, fill='gray', width=0, tags=tag)
+                                             (x + 1)*CELL_SIZE, (y + 1)*CELL_SIZE, fill=Constants.UNKNOWN_COLOR, width=0, tags=tag)
 
         self.canvas.create_rectangle(Constants.ROBOT_X * CELL_SIZE + SPACING, Constants.ROBOT_Y * CELL_SIZE + SPACING, 25 *
-                                     CELL_SIZE, 25 * CELL_SIZE, fill='red', tags='robot')
+                                     CELL_SIZE, 1 * CELL_SIZE, fill=Constants.ROBOT_COLOR, tags='robot')
         self.canvas.pack(side=LEFT)
 
     def updateMap(self):
@@ -77,9 +85,16 @@ class Map(LabelFrame):
         if g_map_data:
             x = g_map_data[0][0]
             y = g_map_data[0][1]
+            cell = self.canvas.find_withtag(str(x) + "," + str(y))
+            cell_type = g_map_data[0][2]
             g_map_data.pop(0)
-            square = self.canvas.find_withtag(str(x) + "," + str(y))
-            self.canvas.itemconfig(square, fill=Constants.WALL_COLOR)
+
+            # wall
+            if cell_type < 0:
+                self.canvas.itemconfig(cell, fill=Constants.WALL_COLOR)
+            # empty
+            elif cell_type > 0:
+                self.canvas.itemconfig(cell, fill=Constants.EMPTY_COLOR)
 
     def moveRobot(self):
         """animates the robot's movement"""
@@ -204,40 +219,40 @@ class Controls(LabelFrame):
 
     def onKeyPressed(self, e):
         '''controls direction variables with cursor keys'''
+        if not Constants.AUTONOMOUS:
+            key = e.keysym
 
-        key = e.keysym
+            LEFT_CURSOR_KEY = "Left"
+            if key == LEFT_CURSOR_KEY:
+                arrow = self.canvas.find_withtag("left_arrow")
+                self.canvas.itemconfig(arrow, fill='green')
+                threading.Thread(target=packageMaker,
+                                 args=("command", [4])).start()
+                print("Rotate left")
 
-        LEFT_CURSOR_KEY = "Left"
-        if key == LEFT_CURSOR_KEY:
-            arrow = self.canvas.find_withtag("left_arrow")
-            self.canvas.itemconfig(arrow, fill='green')
-            threading.Thread(target=packageMaker,
-                             args=("command", [4])).start()
-            print("Rotate left")
+            RIGHT_CURSOR_KEY = "Right"
+            if key == RIGHT_CURSOR_KEY:
+                arrow = self.canvas.find_withtag("right_arrow")
+                self.canvas.itemconfig(arrow, fill='green')
+                threading.Thread(target=packageMaker,
+                                 args=("command", [5])).start()
+                print("Rotate right")
 
-        RIGHT_CURSOR_KEY = "Right"
-        if key == RIGHT_CURSOR_KEY:
-            arrow = self.canvas.find_withtag("right_arrow")
-            self.canvas.itemconfig(arrow, fill='green')
-            threading.Thread(target=packageMaker,
-                             args=("command", [5])).start()
-            print("Rotate right")
+            UP_CURSOR_KEY = "Up"
+            if key == UP_CURSOR_KEY:
+                arrow = self.canvas.find_withtag("up_arrow")
+                self.canvas.itemconfig(arrow, fill='green')
+                threading.Thread(target=packageMaker,
+                                 args=("command", [2])).start()
+                print("Go forward")
 
-        UP_CURSOR_KEY = "Up"
-        if key == UP_CURSOR_KEY:
-            arrow = self.canvas.find_withtag("up_arrow")
-            self.canvas.itemconfig(arrow, fill='green')
-            threading.Thread(target=packageMaker,
-                             args=("command", [2])).start()
-            print("Go forward")
-
-        DOWN_CURSOR_KEY = "Down"
-        if key == DOWN_CURSOR_KEY:
-            arrow = self.canvas.find_withtag("down_arrow")
-            self.canvas.itemconfig(arrow, fill='green')
-            threading.Thread(target=packageMaker,
-                             args=("command", [3])).start()
-            print("Go backwards")
+            DOWN_CURSOR_KEY = "Down"
+            if key == DOWN_CURSOR_KEY:
+                arrow = self.canvas.find_withtag("down_arrow")
+                self.canvas.itemconfig(arrow, fill='green')
+                threading.Thread(target=packageMaker,
+                                 args=("command", [3])).start()
+                print("Go backwards")
 
         # Pauses the autoscroll in the console
         SPACE = "space"
@@ -245,32 +260,32 @@ class Controls(LabelFrame):
             Constants.AUTO_SCROLL = not Constants.AUTO_SCROLL
 
     def onKeyReleased(self, e):
+        if not Constants.AUTONOMOUS:
+            key = e.keysym
 
-        key = e.keysym
+            LEFT_CURSOR_KEY = "Left"
+            if key == LEFT_CURSOR_KEY:
+                arrow = self.canvas.find_withtag("left_arrow")
+                self.canvas.itemconfig(arrow, fill='black')
+                print("Rotate left")
 
-        LEFT_CURSOR_KEY = "Left"
-        if key == LEFT_CURSOR_KEY:
-            arrow = self.canvas.find_withtag("left_arrow")
-            self.canvas.itemconfig(arrow, fill='black')
-            print("Rotate left")
+            RIGHT_CURSOR_KEY = "Right"
+            if key == RIGHT_CURSOR_KEY:
+                arrow = self.canvas.find_withtag("right_arrow")
+                self.canvas.itemconfig(arrow, fill='black')
+                print("Rotate right")
 
-        RIGHT_CURSOR_KEY = "Right"
-        if key == RIGHT_CURSOR_KEY:
-            arrow = self.canvas.find_withtag("right_arrow")
-            self.canvas.itemconfig(arrow, fill='black')
-            print("Rotate right")
+            UP_CURSOR_KEY = "Up"
+            if key == UP_CURSOR_KEY:
+                arrow = self.canvas.find_withtag("up_arrow")
+                self.canvas.itemconfig(arrow, fill='black')
+                print("Go forward")
 
-        UP_CURSOR_KEY = "Up"
-        if key == UP_CURSOR_KEY:
-            arrow = self.canvas.find_withtag("up_arrow")
-            self.canvas.itemconfig(arrow, fill='black')
-            print("Go forward")
-
-        DOWN_CURSOR_KEY = "Down"
-        if key == DOWN_CURSOR_KEY:
-            arrow = self.canvas.find_withtag("down_arrow")
-            self.canvas.itemconfig(arrow, fill='black')
-            print("Go backwards")
+            DOWN_CURSOR_KEY = "Down"
+            if key == DOWN_CURSOR_KEY:
+                arrow = self.canvas.find_withtag("down_arrow")
+                self.canvas.itemconfig(arrow, fill='black')
+                print("Go backwards")
 
     def setNavigationMode(self):
         global g_dict
@@ -314,7 +329,7 @@ class Information(LabelFrame):
     def updateInformation(self):
         """updates the console"""
         mode = self.canvas.find_withtag("mode_text")
-        pos = self.canvas.find_withtag("position_text")
+        #pos = self.canvas.find_withtag("position_text")
         if(Constants.AUTONOMOUS):
             self.canvas.itemconfig(mode, text="Mode: AUTONOMOUS")
         else:
@@ -364,10 +379,10 @@ def listener():
                     break
                 out.append(result)
                 i += 1
-            g_output.append(out)
-
+            g_output.append(out.copy())
+            packet_parser()
         else:
-            print("In valid header recived not printe to file: ", temp)
+            print("In valid header recived not printe to file: ", header)
 
 
 def packageMaker(operation, byteList):
@@ -566,7 +581,8 @@ def packet_parser():
                 if len(g_output[0]) == 5:
                     nrOut = "Map update: " + str(g_output[0][2]) + " " + str(
                         g_output[0][3]) + " " + str(uint8_to_int8(g_output[0][4]))
-                    g_map_data.append([(g_output[0][2]), (g_output[0][3])])
+                    g_map_data.append(
+                        [(g_output[0][2]), (g_output[0][3]), uint8_to_int8(g_output[0][4])])
                 else:
                     nrOut = "Map update paket miss match " + str(g_output[0])
 
@@ -576,6 +592,8 @@ def packet_parser():
                     str(g_output[0])
 
             g_sensor_data.append(nrOut)
+            print("nrOut: ", nrOut)
+            g_output.pop(0)
 
 
 def uint16_to_int16(value):
@@ -604,6 +622,13 @@ def mm_to_grid(x, y):
 
 
 def main():
+    # thread for incoming bluetooth stream
+    t1 = threading.Thread(target=listener)
+    t1.start()
+
+    # thread for reading all incomming data
+    #t2 = threading.Thread(target=packet_parser)
+    # t2.start()
 
     # main thread graphics
     root = Tk()
@@ -614,14 +639,6 @@ def main():
     root.geometry("1445x840")
     root.title("Gudrid Interface")
     root.mainloop()
-
-    # thread for incoming bluetooth stream
-    t1 = threading.Thread(target=listener)
-    t1.start()
-
-    # thread for reading all incomming data
-    t2 = threading.Thread(target=packet_parser)
-    t2.start()
 
 
 if __name__ == '__main__':
