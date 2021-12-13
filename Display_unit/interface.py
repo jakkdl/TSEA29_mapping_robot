@@ -5,14 +5,23 @@ import threading
 import time
 
 """port needs to be changed depending on which computer you are using"""
-# ser = serial.Serial(
-#     port='/dev/rfcomm0', #this port should be changed to your own port
-#     baudrate=115200,
-#     parity=serial.PARITY_EVEN,
-#     stopbits=serial.STOPBITS_ONE,
-#     bytesize=serial.EIGHTBITS,
-#     timeout=1
-# )
+""" ser = serial.Serial(
+    port='/dev/rfcomm0', #this port should be changed to your own port
+    baudrate=115200,
+    parity=serial.PARITY_EVEN,
+    stopbits=serial.STOPBITS_ONE,
+    bytesize=serial.EIGHTBITS,
+    timeout=1
+) """
+
+ser = serial.Serial(
+    port='/dev/tty.Firefly-71B7-SPP',  # this port should be changed to your own port
+    baudrate=115200,
+    parity=serial.PARITY_EVEN,
+    stopbits=serial.STOPBITS_ONE,
+    bytesize=serial.EIGHTBITS,
+    timeout=1
+)
 
 g_output = []
 
@@ -22,6 +31,10 @@ g_pos_data = []
 g_currentpos_data = []
 
 g_dict = {"command": 0xB2, "kd": 0xE2, "kp": 0xD2}
+
+g_robot_x = 24
+g_robot_y = 0
+g_autonomous = False
 
 
 class Constants:
@@ -33,11 +46,10 @@ class Constants:
     CELL_SIZE = 20
     PADDING = 10
     AUTO_SCROLL = True
-    AUTONOMOUS = True
-    ROBOT_X = 24
-    ROBOT_Y = 24
     ROBOT_COLOR = "red"
-    WALL_COLOR = "blue"
+    WALL_COLOR = "black"
+    EMPTY_COLOR = "green"
+    UNKNOWN_COLOR = "gray"
 
 
 class Map(LabelFrame):
@@ -51,8 +63,9 @@ class Map(LabelFrame):
         self.after(Constants.DELAY, self.onTimer)
         CELL_SIZE = 20
         SPACING = 4
+        global g_robot_x
+        global g_robot_y
         self.canvas = Canvas(self, width=CELL_SIZE * 49, height=CELL_SIZE * 25)
-
         for x in range(49):
             for y in range(25):
 
@@ -62,10 +75,10 @@ class Map(LabelFrame):
                 tag = stringTuple[0] + "," + stringTuple[1]
 
                 self.canvas.create_rectangle(x * CELL_SIZE + SPACING, y * CELL_SIZE + SPACING,
-                                             (x + 1)*CELL_SIZE, (y + 1)*CELL_SIZE, fill='gray', width=0, tags=tag)
+                                             (x + 1)*CELL_SIZE, (y + 1)*CELL_SIZE, fill=Constants.UNKNOWN_COLOR, width=0, tags=tag)
 
-        self.canvas.create_rectangle(Constants.ROBOT_X * CELL_SIZE + SPACING, Constants.ROBOT_Y * CELL_SIZE + SPACING, 25 *
-                                     CELL_SIZE, 25 * CELL_SIZE, fill='red', tags='robot')
+        self.canvas.create_rectangle(g_robot_x * CELL_SIZE + SPACING, g_robot_y * CELL_SIZE + SPACING, 25 *
+                                     CELL_SIZE, 1 * CELL_SIZE, fill=Constants.ROBOT_COLOR, tags='robot')
         self.canvas.pack(side=LEFT)
 
     def updateMap(self):
@@ -74,22 +87,39 @@ class Map(LabelFrame):
         if g_map_data:
             x = g_map_data[0][0]
             y = g_map_data[0][1]
+            cell_type = g_map_data[0][2]
+            cell = self.canvas.find_withtag(str(x) + "," + str(y))
+
+            #print("map debug: ", x, y, cell_type)
+
+            # wall
+            if cell_type < 0:
+                self.canvas.itemconfig(cell, fill=Constants.WALL_COLOR)
+            # empty
+            elif cell_type > 0:
+                self.canvas.itemconfig(cell, fill=Constants.EMPTY_COLOR)
             g_map_data.pop(0)
-            square = self.canvas.find_withtag(str(x) + "," + str(y))
-            self.canvas.itemconfig(square, fill=Constants.WALL_COLOR)
-            self.after(Constants.DELAY, self.onTimer)
-  
 
     def moveRobot(self):
         """animates the robot's movement"""
+
         global g_currentpos_data
+        global g_robot_x
+        global g_robot_y
+        cellsize = 20
+        spacing = 4
+
         if g_currentpos_data:
             x = g_currentpos_data[0][0]
             y = g_currentpos_data[0][1]
-            g_currentpos_data.pop(0)
+            print("x: ", x)
+            print("y: ", y)
             robot = self.canvas.find_withtag('robot')
-            self.canvas.move(robot, x, y)
-
+            self.canvas.move(robot, (x - g_robot_x)*cellsize,
+                             (y - g_robot_y)*cellsize)
+            g_robot_x = x
+            g_robot_y = y
+            g_currentpos_data.pop(0)
 
     def onTimer(self):
         '''creates a cycle each timer event'''
@@ -204,40 +234,41 @@ class Controls(LabelFrame):
 
     def onKeyPressed(self, e):
         '''controls direction variables with cursor keys'''
-
+        global g_autonomous
         key = e.keysym
+        if not g_autonomous:
 
-        LEFT_CURSOR_KEY = "Left"
-        if key == LEFT_CURSOR_KEY:
-            arrow = self.canvas.find_withtag("left_arrow")
-            self.canvas.itemconfig(arrow, fill='green')
-            threading.Thread(target=packageMaker,
-                             args=("command", [4])).start()
-            print("Rotate left")
+            LEFT_CURSOR_KEY = "Left"
+            if key == LEFT_CURSOR_KEY:
+                arrow = self.canvas.find_withtag("left_arrow")
+                self.canvas.itemconfig(arrow, fill='green')
+                threading.Thread(target=packageMaker,
+                                 args=("command", [4])).start()
+                print("Rotate left")
 
-        RIGHT_CURSOR_KEY = "Right"
-        if key == RIGHT_CURSOR_KEY:
-            arrow = self.canvas.find_withtag("right_arrow")
-            self.canvas.itemconfig(arrow, fill='green')
-            threading.Thread(target=packageMaker,
-                             args=("command", [5])).start()
-            print("Rotate right")
+            RIGHT_CURSOR_KEY = "Right"
+            if key == RIGHT_CURSOR_KEY:
+                arrow = self.canvas.find_withtag("right_arrow")
+                self.canvas.itemconfig(arrow, fill='green')
+                threading.Thread(target=packageMaker,
+                                 args=("command", [5])).start()
+                print("Rotate right")
 
-        UP_CURSOR_KEY = "Up"
-        if key == UP_CURSOR_KEY:
-            arrow = self.canvas.find_withtag("up_arrow")
-            self.canvas.itemconfig(arrow, fill='green')
-            threading.Thread(target=packageMaker,
-                             args=("command", [2])).start()
-            print("Go forward")
+            UP_CURSOR_KEY = "Up"
+            if key == UP_CURSOR_KEY:
+                arrow = self.canvas.find_withtag("up_arrow")
+                self.canvas.itemconfig(arrow, fill='green')
+                threading.Thread(target=packageMaker,
+                                 args=("command", [2])).start()
+                print("Go forward")
 
-        DOWN_CURSOR_KEY = "Down"
-        if key == DOWN_CURSOR_KEY:
-            arrow = self.canvas.find_withtag("down_arrow")
-            self.canvas.itemconfig(arrow, fill='green')
-            threading.Thread(target=packageMaker,
-                             args=("command", [3])).start()
-            print("Go backwards")
+            DOWN_CURSOR_KEY = "Down"
+            if key == DOWN_CURSOR_KEY:
+                arrow = self.canvas.find_withtag("down_arrow")
+                self.canvas.itemconfig(arrow, fill='green')
+                threading.Thread(target=packageMaker,
+                                 args=("command", [3])).start()
+                print("Go backwards")
 
         # Pauses the autoscroll in the console
         SPACE = "space"
@@ -245,41 +276,44 @@ class Controls(LabelFrame):
             Constants.AUTO_SCROLL = not Constants.AUTO_SCROLL
 
     def onKeyReleased(self, e):
-
+        global g_autonomous
         key = e.keysym
+        if not g_autonomous:
 
-        LEFT_CURSOR_KEY = "Left"
-        if key == LEFT_CURSOR_KEY:
-            arrow = self.canvas.find_withtag("left_arrow")
-            self.canvas.itemconfig(arrow, fill='black')
-            print("Rotate left")
+            LEFT_CURSOR_KEY = "Left"
+            if key == LEFT_CURSOR_KEY:
+                arrow = self.canvas.find_withtag("left_arrow")
+                self.canvas.itemconfig(arrow, fill='black')
+                print("Rotate left")
 
-        RIGHT_CURSOR_KEY = "Right"
-        if key == RIGHT_CURSOR_KEY:
-            arrow = self.canvas.find_withtag("right_arrow")
-            self.canvas.itemconfig(arrow, fill='black')
-            print("Rotate right")
+            RIGHT_CURSOR_KEY = "Right"
+            if key == RIGHT_CURSOR_KEY:
+                arrow = self.canvas.find_withtag("right_arrow")
+                self.canvas.itemconfig(arrow, fill='black')
+                print("Rotate right")
 
-        UP_CURSOR_KEY = "Up"
-        if key == UP_CURSOR_KEY:
-            arrow = self.canvas.find_withtag("up_arrow")
-            self.canvas.itemconfig(arrow, fill='black')
-            print("Go forward")
+            UP_CURSOR_KEY = "Up"
+            if key == UP_CURSOR_KEY:
+                arrow = self.canvas.find_withtag("up_arrow")
+                self.canvas.itemconfig(arrow, fill='black')
+                print("Go forward")
 
-        DOWN_CURSOR_KEY = "Down"
-        if key == DOWN_CURSOR_KEY:
-            arrow = self.canvas.find_withtag("down_arrow")
-            self.canvas.itemconfig(arrow, fill='black')
-            print("Go backwards")
+            DOWN_CURSOR_KEY = "Down"
+            if key == DOWN_CURSOR_KEY:
+                arrow = self.canvas.find_withtag("down_arrow")
+                self.canvas.itemconfig(arrow, fill='black')
+                print("Go backwards")
 
     def setNavigationMode(self):
+        print("SETTING NAVIGATION MODE")
         global g_dict
-        if Constants.AUTONOMOUS:
+        global g_autonomous
+        if g_autonomous:
             packageMaker("command", [0])
-            Constants.AUTONOMOUS = False
+            g_autonomous = False
         else:
             packageMaker("command", [1])
-            Constants.AUTONOMOUS = True
+            g_autonomous = True
 
     def setPd(self):
         """Function called when pressing SET PD"""
@@ -313,9 +347,10 @@ class Information(LabelFrame):
 
     def updateInformation(self):
         """updates the console"""
+        global g_autonomous
         mode = self.canvas.find_withtag("mode_text")
-        pos = self.canvas.find_withtag("position_text")
-        if(Constants.AUTONOMOUS):
+        #pos = self.canvas.find_withtag("position_text")
+        if(g_autonomous):
             self.canvas.itemconfig(mode, text="Mode: AUTONOMOUS")
         else:
             self.canvas.itemconfig(mode, text="Mode: MANUAL")
@@ -364,10 +399,9 @@ def listener():
                     break
                 out.append(result)
                 i += 1
-            g_output.append(out)
-
+            g_output.append(out.copy())
         else:
-            print("In valid header recived not printe to file: ", temp)
+            print("In valid header recived not printe to file: ", header)
 
 
 def packageMaker(operation, byteList):
@@ -403,74 +437,88 @@ def packet_parser():
         if g_output:
             nrOut = ""
 
-            #debug
+            # debug
             if g_output[0][0] == 12:
-                    #pd paket
+                # pd paket
                 if g_output[0][2] == 255:
                     if len(g_output[0]) == 7:
-                        nrOut = "\nPropotional: " + str(uint16_to_int16(g_output[0][4] << 8 | g_output[0][3]))
-                        nrOut = nrOut + " \nDerivative: " + str(uint16_to_int16(g_output[0][6] << 8 | g_output[0][5]))
+                        nrOut = "\nPropotional: " + \
+                            str(uint16_to_int16(
+                                g_output[0][4] << 8 | g_output[0][3]))
+                        nrOut = nrOut + " \nDerivative: " + \
+                            str(uint16_to_int16(
+                                g_output[0][6] << 8 | g_output[0][5]))
                         #nrOut = nrOut + " \nCTE: " + str( float(g_output[0][8] << 8 | g_output[0][9]) )
                     else:
                         nrOut = "paket miss match: " + str(g_output[0])
 
-                    #Navigation goal paket
+                    # Navigation goal paket
                 elif g_output[0][2] == 254:
                     if len(g_output[0]) == 7:
-                        nrOut = "\nNavigationGoal X: " + str(g_output[0][4] << 8 | g_output[0][3])
-                        nrOut = nrOut + " \nNavigationGoal Y: " + str(g_output[0][6] << 8 | g_output[0][5])
+                        nrOut = "\nNavigationGoal X: " + \
+                            str(g_output[0][4] << 8 | g_output[0][3])
+                        nrOut = nrOut + " \nNavigationGoal Y: " + \
+                            str(g_output[0][6] << 8 | g_output[0][5])
                     else:
                         nrOut = "paket miss match: " + str(g_output[0])
 
-                    #reference palet
+                    # reference palet
                 elif g_output[0][2] == 253:
                     if len(g_output[0]) == 7:
-                        nrOut = "\nReference Pos X: " + str(g_output[0][4] << 8 | g_output[0][3])
-                        nrOut = nrOut + " \nReference Pos Y: " + str(g_output[0][6] << 8 | g_output[0][5])
+                        nrOut = "\nReference Pos X: " + \
+                            str(g_output[0][4] << 8 | g_output[0][3])
+                        nrOut = nrOut + " \nReference Pos Y: " + \
+                            str(g_output[0][6] << 8 | g_output[0][5])
                     else:
                         nrOut = "paket miss match: " + str(g_output[0])
 
-                    #nav goal heading paket
+                    # nav goal heading paket
                 elif g_output[0][2] == 252:
                     if len(g_output[0]) == 5:
-                        nrOut = nrOut + " \nNavigationGoalHeading: " + str(g_output[0][4] << 8 | g_output[0][3])
+                        nrOut = nrOut + " \nNavigationGoalHeading: " + \
+                            str(g_output[0][4] << 8 | g_output[0][3])
                     else:
                         nrOut = "paket miss match: " + str(g_output[0])
 
-                    #debugs id followed by int 16
+                    # debugs id followed by int 16
                 elif 42 <= g_output[0][2] <= 46:
                     if len(g_output[0]) == 5:
-                        nrOut = str(g_output[0][2]) + " " + str(uint16_to_int16(g_output[0][4] << 8 | g_output[0][3]))
+                        nrOut = str(
+                            g_output[0][2]) + " " + str(uint16_to_int16(g_output[0][4] << 8 | g_output[0][3]))
                     else:
                         nrOut = "paket miss match: " + str(g_output[0])
-                    
-                    #break paket end of pd loop
-                elif g_output[0][2] == 100:
-                     nrOut = "\n"*10
 
-                    #generic debug id + uint 16
+                    # break paket end of pd loop
+                elif g_output[0][2] == 100:
+                    nrOut = "\n"*10
+
+                    # generic debug id + uint 16
                 elif len(g_output[0]) == 5:
-                    nrOut = "Debug: " + str(g_output[0][2]) + " " + str(g_output[0][4] << 8 | g_output[0][3])
-                    
-                    #debug with unknow id and none generic
+                    nrOut = "Debug: " + \
+                        str(g_output[0][2]) + " " + \
+                        str(g_output[0][4] << 8 | g_output[0][3])
+
+                    # debug with unknow id and none generic
                 else:
                     nrOut = "unknow debug: " + str(g_output[0])
 
-            #lidar forward
+            # lidar forward
             elif g_output[0][0] == 0:
                 if len(g_output[0]) == 4:
                     nrOut = g_output[0][3] << 8 | g_output[0][2]
                     nrOut = "Lidar Forward: " + str(nrOut)
                 else:
-                    nrOut = "Lidar Forward paket miss match " + str(g_output[0])
-                
+                    nrOut = "Lidar Forward paket miss match " + \
+                        str(g_output[0])
+
             # lidar backwards
             elif g_output[0][0] == 1:
                 if len(g_output[0]) == 4:
                     nrOut = g_output[0][3] << 8 | g_output[0][2]
                     nrOut = "Lidar Backwards: " + str(nrOut)
                 else:
-                    nrOut = "Lidar Backwards paket miss match " + str(g_output[0]) 
+                    nrOut = "Lidar Backwards paket miss match " + \
+                        str(g_output[0])
 
                 # IR front left
             elif g_output[0][0] == 2:
@@ -478,7 +526,8 @@ def packet_parser():
                     nrOut = g_output[0][3] << 8 | g_output[0][2]
                     nrOut = "IR Front Left: " + str(nrOut)
                 else:
-                    nrOut = "IR Front Left paket miss match " + str(g_output[0])
+                    nrOut = "IR Front Left paket miss match " + \
+                        str(g_output[0])
 
                 # IR back left
             elif g_output[0][0] == 3:
@@ -494,7 +543,8 @@ def packet_parser():
                     nrOut = g_output[0][3] << 8 | g_output[0][2]
                     nrOut = "IR Front Right: " + str(nrOut)
                 else:
-                    nrOut = "IR Front Right paket miss match " + str(g_output[0])
+                    nrOut = "IR Front Right paket miss match " + \
+                        str(g_output[0])
 
                 # IR right back
             elif g_output[0][0] == 5:
@@ -502,12 +552,14 @@ def packet_parser():
                     nrOut = g_output[0][3] << 8 | g_output[0][2]
                     nrOut = "IR Back Right: " + str(nrOut)
                 else:
-                    nrOut = "IR Back Right paket miss match " + str(g_output[0])
+                    nrOut = "IR Back Right paket miss match " + \
+                        str(g_output[0])
 
                 # gyro
             elif g_output[0][0] == 6:
                 if len(g_output[0]) == 4:
-                    nrOut = uint16_to_int16( g_output[0][3] << 8 | g_output[0][2] )
+                    nrOut = uint16_to_int16(
+                        g_output[0][3] << 8 | g_output[0][2])
                     nrOut = "Gyro: " + str(nrOut)
                 else:
                     nrOut = "Gyro paket miss match " + str(g_output[0])
@@ -515,7 +567,8 @@ def packet_parser():
                 # odometer
             elif g_output[0][0] == 7:
                 if len(g_output[0]) == 4:
-                    nrOut = "L: " + str(g_output[0][3]) + " R: " + str(g_output[0][2])
+                    nrOut = "L: " + \
+                        str(g_output[0][3]) + " R: " + str(g_output[0][2])
                     nrOut = "Odometer: " + str(nrOut)
                 else:
                     nrOut = "Odometer paket miss match " + str(g_output[0])
@@ -523,10 +576,15 @@ def packet_parser():
                 # position
             elif g_output[0][0] == 8:
                 if len(g_output[0]) == 6:
-                    nrOut = "\nPositionX: " + str(g_output[0][3] << 8 | g_output[0][2])
-                    nrOut += "\nPositionY: " + str(g_output[0][5] << 8 | g_output[0][4])
-                    g_pos_data.append( [(g_output[0][3] << 8 | g_output[0][2]), (g_output[0][5] << 8 | g_output[0][4])] )
-                    g_currentpos_data.append( [mm_to_grid((g_output[0][3] << 8 | g_output[0][2])), mm_to_grid(g_output[0][5] << 8 | g_output[0][4])] )
+                    nrOut = "\nPositionX: " + \
+                        str(g_output[0][3] << 8 | g_output[0][2])
+                    nrOut += "\nPositionY: " + \
+                        str(g_output[0][5] << 8 | g_output[0][4])
+                    g_pos_data.append(
+                        [(g_output[0][3] << 8 | g_output[0][2]), (g_output[0][5] << 8 | g_output[0][4])])
+                    x, y = mm_to_grid(
+                        (g_output[0][3] << 8 | g_output[0][2]), g_output[0][5] << 8 | g_output[0][4])
+                    g_currentpos_data.append([x, y])
                 else:
                     nrOut = "Position paket miss match " + str(g_output[0])
 
@@ -541,16 +599,21 @@ def packet_parser():
                 # map update
             elif g_output[0][0] == 10:
                 if len(g_output[0]) == 5:
-                    nrOut = "Map update: " + str(g_output[0][2]) + " " + str(g_output[0][3]) + " " + str( uint8_to_int8( g_output[0][4] ) )
-                    g_map_data.append( [(g_output[0][2]), (g_output[0][3])] )
+                    nrOut = "Map update: " + str(g_output[0][2]) + " " + str(
+                        g_output[0][3]) + " " + str(uint8_to_int8(g_output[0][4]))
+                    g_map_data.append(
+                        [(g_output[0][2]), (g_output[0][3]), uint8_to_int8(g_output[0][4])])
                 else:
                     nrOut = "Map update paket miss match " + str(g_output[0])
 
-                #last case should never happen
+                # last case should never happen
             else:
-                nrOut = "Unknow paket we should never be here check code: " + str(g_output[0])
+                nrOut = "Unknow paket we should never be here check code: " + \
+                    str(g_output[0])
 
             g_sensor_data.append(nrOut)
+            #print("nrOut: ", nrOut)
+            g_output.pop(0)
 
 
 def uint16_to_int16(value):
@@ -579,6 +642,13 @@ def mm_to_grid(x, y):
 
 
 def main():
+    # thread for incoming bluetooth stream
+    t1 = threading.Thread(target=listener)
+    t1.start()
+
+    # thread for reading all incomming data
+    t2 = threading.Thread(target=packet_parser)
+    t2.start()
 
     # main thread graphics
     root = Tk()
@@ -589,14 +659,6 @@ def main():
     root.geometry("1445x840")
     root.title("Gudrid Interface")
     root.mainloop()
-
-    # thread for incoming bluetooth stream
-    t1 = threading.Thread(target=listener)
-    t1.start()
-
-    # thread for reading all incomming data
-    t2 = threading.Thread(target=packet_parser)
-    t2.start()
 
 
 if __name__ == '__main__':
