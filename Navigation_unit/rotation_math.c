@@ -265,6 +265,7 @@ int8_t update_heading_and_position(struct sensor_data* data)
 {
     calculate_heading_and_position(data);
     adjust_position(data);
+    adjust_heading(data);
     return 0;
 }
 
@@ -379,7 +380,7 @@ double cwh2(struct laser_data* ld)
 
 // how much of the perceived angle change should be updated
 // in one tick
-#define ADJUST_RATIO 1
+#define ADJUST_RATIO 4
 
 int8_t adjust_heading(struct sensor_data* sd)
 {

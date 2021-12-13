@@ -1,6 +1,6 @@
 RM = rm -f
 CFLAGS	= -mmcu=atmega1284p
-CFLAGS	+= -O0 -Wall -Wextra -std=gnu99
+CFLAGS	+= -Os -Wall -Wextra -std=gnu99
 CFLAGS	+= -g2
 CFLAGS	+= -mrelax
 
