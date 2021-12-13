@@ -5,23 +5,23 @@ import threading
 import time
 
 """port needs to be changed depending on which computer you are using"""
-ser = serial.Serial(
+""" ser = serial.Serial(
     port='/dev/rfcomm0', #this port should be changed to your own port
     baudrate=115200,
     parity=serial.PARITY_EVEN,
     stopbits=serial.STOPBITS_ONE,
     bytesize=serial.EIGHTBITS,
     timeout=1
-)
+) """
 
-# ser = serial.Serial(
-#     port='/dev/tty.Firefly-71B7-SPP',  # this port should be changed to your own port
-#     baudrate=115200,
-#     parity=serial.PARITY_EVEN,
-#     stopbits=serial.STOPBITS_ONE,
-#     bytesize=serial.EIGHTBITS,
-#     timeout=1
-# )
+ser = serial.Serial(
+    port='/dev/tty.Firefly-71B7-SPP',  # this port should be changed to your own port
+    baudrate=115200,
+    parity=serial.PARITY_EVEN,
+    stopbits=serial.STOPBITS_ONE,
+    bytesize=serial.EIGHTBITS,
+    timeout=1
+)
 
 g_output = []
 
@@ -32,6 +32,10 @@ g_currentpos_data = []
 
 g_dict = {"command": 0xB2, "kd": 0xE2, "kp": 0xD2}
 
+g_robot_x = 24
+g_robot_y = 0
+g_autonomous = False
+
 
 class Constants:
 
@@ -41,10 +45,7 @@ class Constants:
     ONE_STEP = 20
     CELL_SIZE = 20
     PADDING = 10
-    ROBOT_X = 24
-    ROBOT_Y = 0
     AUTO_SCROLL = True
-    AUTONOMOUS = False
     ROBOT_COLOR = "red"
     WALL_COLOR = "black"
     EMPTY_COLOR = "green"
@@ -62,8 +63,9 @@ class Map(LabelFrame):
         self.after(Constants.DELAY, self.onTimer)
         CELL_SIZE = 20
         SPACING = 4
+        global g_robot_x
+        global g_robot_y
         self.canvas = Canvas(self, width=CELL_SIZE * 49, height=CELL_SIZE * 25)
-
         for x in range(49):
             for y in range(25):
 
@@ -75,7 +77,7 @@ class Map(LabelFrame):
                 self.canvas.create_rectangle(x * CELL_SIZE + SPACING, y * CELL_SIZE + SPACING,
                                              (x + 1)*CELL_SIZE, (y + 1)*CELL_SIZE, fill=Constants.UNKNOWN_COLOR, width=0, tags=tag)
 
-        self.canvas.create_rectangle(Constants.ROBOT_X * CELL_SIZE + SPACING, Constants.ROBOT_Y * CELL_SIZE + SPACING, 25 *
+        self.canvas.create_rectangle(g_robot_x * CELL_SIZE + SPACING, g_robot_y * CELL_SIZE + SPACING, 25 *
                                      CELL_SIZE, 1 * CELL_SIZE, fill=Constants.ROBOT_COLOR, tags='robot')
         self.canvas.pack(side=LEFT)
 
@@ -101,13 +103,15 @@ class Map(LabelFrame):
     def moveRobot(self):
         """animates the robot's movement"""
         global g_currentpos_data
+        global g_robot_x
+        global g_robot_y
         if g_currentpos_data:
             x = g_currentpos_data[0][0]
             y = g_currentpos_data[0][1]
-            cell = self.canvas.find_withtag(str(x) + "," + str(y))
-            #robot = self.canvas.find_withtag('robot')
-            self.canvas.itemconfig(cell, x, y)
-            # self.canvas.move(robot, x, y)
+            robot = self.canvas.find_withtag('robot')
+            self.canvas.move(robot, x - g_robot_x, y - g_robot_y)
+            g_robot_x = x
+            g_robot_y = y
             g_currentpos_data.pop(0)
 
     def onTimer(self):
@@ -223,8 +227,9 @@ class Controls(LabelFrame):
 
     def onKeyPressed(self, e):
         '''controls direction variables with cursor keys'''
+        global g_autonomous
         key = e.keysym
-        if not Constants.AUTONOMOUS:
+        if not g_autonomous:
 
             LEFT_CURSOR_KEY = "Left"
             if key == LEFT_CURSOR_KEY:
@@ -264,7 +269,8 @@ class Controls(LabelFrame):
             Constants.AUTO_SCROLL = not Constants.AUTO_SCROLL
 
     def onKeyReleased(self, e):
-        if not Constants.AUTONOMOUS:
+        global g_autonomous
+        if not g_autonomous:
             key = e.keysym
 
             LEFT_CURSOR_KEY = "Left"
@@ -294,12 +300,13 @@ class Controls(LabelFrame):
     def setNavigationMode(self):
         print("SETTING NAVIGATION MODE")
         global g_dict
-        if Constants.AUTONOMOUS:
+        global g_autonomous
+        if g_autonomous:
             packageMaker("command", [0])
-            Constants.AUTONOMOUS = False
+            g_autonomous = False
         else:
             packageMaker("command", [1])
-            Constants.AUTONOMOUS = True
+            g_autonomous = True
 
     def setPd(self):
         """Function called when pressing SET PD"""
@@ -333,10 +340,11 @@ class Information(LabelFrame):
 
     def updateInformation(self):
         """updates the console"""
+        global g_autonomous
         mode = self.canvas.find_withtag("mode_text")
         #pos = self.canvas.find_withtag("position_text")
         print("UPDATING INFORMATION")
-        if(Constants.AUTONOMOUS):
+        if(g_autonomous):
             self.canvas.itemconfig(mode, text="Mode: AUTONOMOUS")
         else:
             self.canvas.itemconfig(mode, text="Mode: MANUAL")
@@ -568,8 +576,9 @@ def packet_parser():
                         str(g_output[0][5] << 8 | g_output[0][4])
                     g_pos_data.append(
                         [(g_output[0][3] << 8 | g_output[0][2]), (g_output[0][5] << 8 | g_output[0][4])])
-                    x, y = mm_to_grid((g_output[0][3] << 8 | g_output[0][2]), g_output[0][5] << 8 | g_output[0][4])
-                    g_currentpos_data.append([x,y])
+                    x, y = mm_to_grid(
+                        (g_output[0][3] << 8 | g_output[0][2]), g_output[0][5] << 8 | g_output[0][4])
+                    g_currentpos_data.append([x, y])
                 else:
                     nrOut = "Position paket miss match " + str(g_output[0])
 
