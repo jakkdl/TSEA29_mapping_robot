@@ -169,10 +169,10 @@ bool wall_follow()
     // wall follow complete
     if (at_start_pos())
     {
-        /*if (unexplored_cells_exist())
+        if (unexplored_cells_exist())
         {
             return false;
-        }*/
+        }
         return true;
     }
     return false;

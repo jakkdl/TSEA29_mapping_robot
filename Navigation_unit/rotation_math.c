@@ -94,6 +94,7 @@ int8_t mark_empty_rev(uint8_t y, uint8_t x);
 bool mark_wall(uint8_t x, uint8_t y);
 
 int8_t draw_laser_line(struct laser_data* ld);
+int8_t adjust_heading(struct sensor_data* sd);
 
 void send_position(void);
 void send_heading(void);
@@ -265,7 +266,7 @@ int8_t update_heading_and_position(struct sensor_data* data)
 {
     calculate_heading_and_position(data);
     adjust_position(data);
-    adjust_heading(data);
+    //adjust_heading(data);
     return 0;
 }
 
