@@ -381,6 +381,7 @@ double cwh2(struct laser_data* ld)
 // how much of the perceived angle change should be updated
 // in one tick
 #define ADJUST_RATIO 4
+#define MIN_SENSORS_FOR_ADJUST 3
 
 int8_t adjust_heading(struct sensor_data* sd)
 {
@@ -509,7 +510,7 @@ int8_t adjust_heading(struct sensor_data* sd)
         }
     }
     //printf("\nsum: %f, count: %d, %u\n", sum, count, radian_to_heading(sum/count));
-    if (count >= 1)
+    if (count >= MIN_SENSORS_FOR_ADJUST)
     {
         g_currentHeading += radian_to_heading(sum / count) / ADJUST_RATIO;
         update_trig_cache();
