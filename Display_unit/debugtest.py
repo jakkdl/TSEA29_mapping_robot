@@ -14,13 +14,17 @@ ser = serial.Serial(
     timeout=1
 )
 
-"""glboal static vars"""
-g_output = [] #will contian all pakets in following format [addres, byte count, paket0, ... , paket6] up to 7 pakets
-g_dict = {"command": 0xB2, "kd": 0xE2, "kp": 0xD2} #this has the header should not be change unless you know what you are doing
-g_x = 0
-g_y = 0
-g_map_update = False
-g_color = "red"
+g_output = []
+
+g_map_data = []
+
+
+g_dict = {"command": 0xB2, "kd": 0xE2, "kp": 0xD2}
+
+g_robot_x = 24
+g_robot_y = 0
+g_autonomous = False
+
 
 def listener():
     global g_output
@@ -77,87 +81,93 @@ def consolOut():
 
     uint16_t are sent with lower part first.
     """
-    global g_output
-    global g_map_update
-    global g_x 
-    global g_y
-    global g_color
-
+    global g_map_data
     while True:
         if g_output:
             nrOut = ""
 
-            #debug
+            # debug
             if g_output[0][0] == 12:
-                    #pd paket
+                # pd paket
                 if g_output[0][2] == 255:
                     if len(g_output[0]) == 7:
-                        nrOut = "\nPropotional: " + str(uint16_to_int16(g_output[0][4] << 8 | g_output[0][3]))
-                        nrOut = nrOut + " \nDerivative: " + str(uint16_to_int16(g_output[0][6] << 8 | g_output[0][5]))
+                        nrOut = "\nPropotional: " + \
+                            str(uint16_to_int16(
+                                g_output[0][4] << 8 | g_output[0][3]))
+                        nrOut = nrOut + " \nDerivative: " + \
+                            str(uint16_to_int16(
+                                g_output[0][6] << 8 | g_output[0][5]))
                         #nrOut = nrOut + " \nCTE: " + str( float(g_output[0][8] << 8 | g_output[0][9]) )
                     else:
                         nrOut = "paket miss match: " + str(g_output[0])
 
-                    #Navigation goal paket
+                    # Navigation goal paket
                 elif g_output[0][2] == 254:
                     if len(g_output[0]) == 7:
-                        nrOut = "\nNavigationGoal X: " + str(g_output[0][4] << 8 | g_output[0][3])
-                        nrOut = nrOut + " \nNavigationGoal Y: " + str(g_output[0][6] << 8 | g_output[0][5])
-                        g_x, g_y = mm_to_grid((g_output[0][4] << 8 | g_output[0][3]), (g_output[0][6] << 8 | g_output[0][5]))
-                        g_color = "pink"
-                        g_map_update = True
+                        nrOut = "\nNavigationGoal X: " + \
+                            str(g_output[0][4] << 8 | g_output[0][3])
+                        nrOut = nrOut + " \nNavigationGoal Y: " + \
+                            str(g_output[0][6] << 8 | g_output[0][5])
                     else:
                         nrOut = "paket miss match: " + str(g_output[0])
 
-                    #reference palet
+                    # reference palet
                 elif g_output[0][2] == 253:
                     if len(g_output[0]) == 7:
-                        nrOut = "\nReference Pos X: " + str(g_output[0][4] << 8 | g_output[0][3])
-                        nrOut = nrOut + " \nReference Pos Y: " + str(g_output[0][6] << 8 | g_output[0][5])
+                        nrOut = "\nReference Pos X: " + \
+                            str(g_output[0][4] << 8 | g_output[0][3])
+                        nrOut = nrOut + " \nReference Pos Y: " + \
+                            str(g_output[0][6] << 8 | g_output[0][5])
                     else:
                         nrOut = "paket miss match: " + str(g_output[0])
 
-                    #nav goal heading paket
+                    # nav goal heading paket
                 elif g_output[0][2] == 252:
                     if len(g_output[0]) == 5:
-                        nrOut = nrOut + " \nNavigationGoalHeading: " + str(g_output[0][4] << 8 | g_output[0][3])
+                        nrOut = nrOut + " \nNavigationGoalHeading: " + \
+                            str(g_output[0][4] << 8 | g_output[0][3])
                     else:
                         nrOut = "paket miss match: " + str(g_output[0])
 
-                    #debugs id followed by int 16
+                    # debugs id followed by int 16
                 elif 42 <= g_output[0][2] <= 46:
                     if len(g_output[0]) == 5:
-                        nrOut = str(g_output[0][2]) + " " + str(uint16_to_int16(g_output[0][4] << 8 | g_output[0][3]))
+                        nrOut = str(
+                            g_output[0][2]) + " " + str(uint16_to_int16(g_output[0][4] << 8 | g_output[0][3]))
                     else:
                         nrOut = "paket miss match: " + str(g_output[0])
-                    
-                    #break paket end of pd loop
-                elif g_output[0][2] == 100:
-                     nrOut = "\n"*10
 
-                    #generic debug id + uint 16
+                    # break paket end of pd loop
+                elif g_output[0][2] == 100:
+                    nrOut = "\n"*10
+
+                    # generic debug id + uint 16
                 elif len(g_output[0]) == 5:
-                    nrOut = "Debug: " + str(g_output[0][2]) + " " + str(g_output[0][4] << 8 | g_output[0][3])
-                    
-                    #debug with unknow id and none generic
+                    nrOut = "Debug: " + \
+                        str(g_output[0][2]) + " " + \
+                        str(g_output[0][4] << 8 | g_output[0][3])
+
+                    # debug with unknow id and none generic
                 else:
                     nrOut = "unknow debug: " + str(g_output[0])
 
-            #lidar forward
+            # lidar forward
             elif g_output[0][0] == 0:
                 if len(g_output[0]) == 4:
                     nrOut = g_output[0][3] << 8 | g_output[0][2]
                     nrOut = "Lidar Forward: " + str(nrOut)
                 else:
-                    nrOut = "Lidar Forward paket miss match " + str(g_output[0])
-                
+                    nrOut = "Lidar Forward paket miss match " + \
+                        str(g_output[0])
+
             # lidar backwards
             elif g_output[0][0] == 1:
                 if len(g_output[0]) == 4:
                     nrOut = g_output[0][3] << 8 | g_output[0][2]
                     nrOut = "Lidar Backwards: " + str(nrOut)
                 else:
-                    nrOut = "Lidar Backwards paket miss match " + str(g_output[0]) 
+                    nrOut = "Lidar Backwards paket miss match " + \
+                        str(g_output[0])
 
                 # IR front left
             elif g_output[0][0] == 2:
@@ -165,7 +175,8 @@ def consolOut():
                     nrOut = g_output[0][3] << 8 | g_output[0][2]
                     nrOut = "IR Front Left: " + str(nrOut)
                 else:
-                    nrOut = "IR Front Left paket miss match " + str(g_output[0])
+                    nrOut = "IR Front Left paket miss match " + \
+                        str(g_output[0])
 
                 # IR back left
             elif g_output[0][0] == 3:
@@ -181,7 +192,8 @@ def consolOut():
                     nrOut = g_output[0][3] << 8 | g_output[0][2]
                     nrOut = "IR Front Right: " + str(nrOut)
                 else:
-                    nrOut = "IR Front Right paket miss match " + str(g_output[0])
+                    nrOut = "IR Front Right paket miss match " + \
+                        str(g_output[0])
 
                 # IR right back
             elif g_output[0][0] == 5:
@@ -189,12 +201,14 @@ def consolOut():
                     nrOut = g_output[0][3] << 8 | g_output[0][2]
                     nrOut = "IR Back Right: " + str(nrOut)
                 else:
-                    nrOut = "IR Back Right paket miss match " + str(g_output[0])
+                    nrOut = "IR Back Right paket miss match " + \
+                        str(g_output[0])
 
                 # gyro
             elif g_output[0][0] == 6:
                 if len(g_output[0]) == 4:
-                    nrOut = uint16_to_int16( g_output[0][3] << 8 | g_output[0][2] )
+                    nrOut = uint16_to_int16(
+                        g_output[0][3] << 8 | g_output[0][2])
                     nrOut = "Gyro: " + str(nrOut)
                 else:
                     nrOut = "Gyro paket miss match " + str(g_output[0])
@@ -202,7 +216,8 @@ def consolOut():
                 # odometer
             elif g_output[0][0] == 7:
                 if len(g_output[0]) == 4:
-                    nrOut = "L: " + str(g_output[0][3]) + " R: " + str(g_output[0][2])
+                    nrOut = "L: " + \
+                        str(g_output[0][3]) + " R: " + str(g_output[0][2])
                     nrOut = "Odometer: " + str(nrOut)
                 else:
                     nrOut = "Odometer paket miss match " + str(g_output[0])
@@ -210,11 +225,10 @@ def consolOut():
                 # position
             elif g_output[0][0] == 8:
                 if len(g_output[0]) == 6:
-                    nrOut = "\nPositionX: " + str(g_output[0][3] << 8 | g_output[0][2])
-                    nrOut += "\nPositionY: " + str(g_output[0][5] << 8 | g_output[0][4])
-                    g_x, g_y = mm_to_grid((g_output[0][3] << 8 | g_output[0][2]), (g_output[0][5] << 8 | g_output[0][4]))
-                    g_color = "red"
-                    g_map_update = True
+                    nrOut = "\nPositionX: " + \
+                        str(g_output[0][3] << 8 | g_output[0][2])
+                    nrOut += "\nPositionY: " + \
+                        str(g_output[0][5] << 8 | g_output[0][4])
                 else:
                     nrOut = "Position paket miss match " + str(g_output[0])
 
@@ -229,28 +243,25 @@ def consolOut():
                 # map update
             elif g_output[0][0] == 10:
                 if len(g_output[0]) == 5:
-                    nrOut = "Map update: " + str(g_output[0][2]) + " " + str(g_output[0][3]) + " " + str( uint8_to_int8( g_output[0][4] ) )
-                    g_x = g_output[0][2]
-                    g_y = g_output[0][3]
-
-                    if uint8_to_int8( g_output[0][4] ) < 0:
-                        g_color = "blue"
-                    else:
-                        g_color = "green"
-
-                    g_map_update = True
+                    nrOut = "Map update: " + str(g_output[0][2]) + " " + str(
+                        g_output[0][3]) + " " + str(uint8_to_int8(g_output[0][4]))
+                    g_map_data.append(
+                        [(g_output[0][2]), (g_output[0][3]), uint8_to_int8(g_output[0][4])])
                 else:
                     nrOut = "Map update paket miss match " + str(g_output[0])
 
-                #last case should never happen
+                # last case should never happen
             else:
-                nrOut = "Unknow paket we should never be here check code: " + str(g_output[0])
-            
-            #add the current nrout which is our output to debug file
+                nrOut = "Unknow paket we should never be here check code: " + \
+                    str(g_output[0])
+
+            #print("nrOut: ", nrOut)
             f = open("debug.txt", "a")
-            f.write(nrOut + "\n")
+            f.write(nrOut +"\n")
             f.close()
             g_output.pop(0)
+            time.sleep(0.01)
+
 
 
 def mm_to_grid(x, y):
@@ -325,18 +336,24 @@ def graphic():
 
 
 class Constants:
-    """
-    class that have all the constant for the graphics
-    """
-    DELAY = 300
+
+    FRAME_WIDTH = 1445
+    FRAME_HEIGHT = 1000
+    DELAY = 1
+    ONE_STEP = 20
     CELL_SIZE = 20
+    PADDING = 10
+    AUTO_SCROLL = True
+    ROBOT_COLOR = "red"
+    WALL_COLOR = "black"
+    EMPTY_COLOR = "green"
+    UNKNOWN_COLOR = "gray"
 
 
 
 class Map(LabelFrame):
-    """
-    graphical representation of the room class
-    """
+    
+    """Graphical representation of the robot's movement and the room"""
 
     def __init__(self, parent):
         """Constructor"""
@@ -345,35 +362,50 @@ class Map(LabelFrame):
         self.after(Constants.DELAY, self.onTimer)
         CELL_SIZE = 20
         SPACING = 4
+        global g_robot_x
+        global g_robot_y
         self.canvas = Canvas(self, width=CELL_SIZE * 49, height=CELL_SIZE * 25)
-
         for x in range(49):
             for y in range(25):
 
                 # Create an "xy" tag for each rectangle on the map
-                coord = (x, y)
+                mirrored_x = 48 - x
+                coord = (mirrored_x, y)
                 stringTuple = tuple(map(str, coord))
                 tag = stringTuple[0] + "," + stringTuple[1]
 
                 self.canvas.create_rectangle(x * CELL_SIZE + SPACING, y * CELL_SIZE + SPACING,
-                                             (x + 1)*CELL_SIZE, (y + 1)*CELL_SIZE, fill='gray', width=0, tags=tag)
+                                             (x + 1)*CELL_SIZE, (y + 1)*CELL_SIZE, fill=Constants.UNKNOWN_COLOR, width=0, tags=tag)
+
+        self.canvas.create_rectangle(g_robot_x * CELL_SIZE + SPACING, g_robot_y * CELL_SIZE + SPACING, 25 *
+                                     CELL_SIZE, 1 * CELL_SIZE, fill=Constants.ROBOT_COLOR, tags='robot')
         self.canvas.pack(side=LEFT)
 
     def updateMap(self):
-        global g_map_update
-        global g_x
-        global g_y
-        square = self.canvas.find_withtag(
-                        str( g_x ) + "," + str( g_y ))
-        self.canvas.itemconfig(square, fill=g_color)
-        
-        self.after(Constants.DELAY, self.onTimer)
-        g_map_update = False
+        """if g_map_update has been reciver from console out and update the grid"""
+        global g_map_data
+        if g_map_data:
+            x = g_map_data[0][0]
+            y = g_map_data[0][1]
+            cell_type = g_map_data[0][2]
+            cell = self.canvas.find_withtag(str(x) + "," + str(y))
+            #print(len(g_map_data))
+            #print("map debug: ", x, y, cell_type)
+
+            # wall
+            if cell_type < 20:
+                self.canvas.itemconfig(cell, fill=Constants.WALL_COLOR)
+            # empty
+            elif cell_type > -20:
+                self.canvas.itemconfig(cell, fill=Constants.EMPTY_COLOR)
+            else:
+                pass
+            
+            g_map_data.pop(0)
 
     def onTimer(self):
         '''creates a cycle each timer event'''
-        if g_map_update:
-            self.updateMap()
+        self.updateMap()
         self.after(Constants.DELAY, self.onTimer)
 
 

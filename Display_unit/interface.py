@@ -5,28 +5,29 @@ import threading
 import time
 
 """port needs to be changed depending on which computer you are using"""
-""" ser = serial.Serial(
+ser = serial.Serial(
     port='/dev/rfcomm0', #this port should be changed to your own port
     baudrate=115200,
     parity=serial.PARITY_EVEN,
     stopbits=serial.STOPBITS_ONE,
     bytesize=serial.EIGHTBITS,
     timeout=1
-) """
+) 
 
-ser = serial.Serial(
-    port='/dev/tty.Firefly-71B7-SPP',  # this port should be changed to your own port
-    baudrate=115200,
-    parity=serial.PARITY_EVEN,
-    stopbits=serial.STOPBITS_ONE,
-    bytesize=serial.EIGHTBITS,
-    timeout=1
-)
+# ser = serial.Serial(
+# #     port='/dev/tty.Firefly-71B7-SPP',  # this port should be changed to your own port
+# #     baudrate=115200,
+# #     parity=serial.PARITY_EVEN,
+# #     stopbits=serial.STOPBITS_ONE,
+# #     bytesize=serial.EIGHTBITS,
+# #     timeout=1
+# # )
 
 g_output = []
 
 g_sensor_data = []
 g_map_data = []
+
 g_pos_data = []
 g_currentpos_data = []
 
@@ -41,7 +42,7 @@ class Constants:
 
     FRAME_WIDTH = 1445
     FRAME_HEIGHT = 1000
-    DELAY = 50
+    DELAY = 1
     ONE_STEP = 20
     CELL_SIZE = 20
     PADDING = 10
@@ -70,7 +71,8 @@ class Map(LabelFrame):
             for y in range(25):
 
                 # Create an "xy" tag for each rectangle on the map
-                coord = (x, y)
+                mirrored_x = 48 - x
+                coord = (mirrored_x, y)
                 stringTuple = tuple(map(str, coord))
                 tag = stringTuple[0] + "," + stringTuple[1]
 
@@ -89,15 +91,18 @@ class Map(LabelFrame):
             y = g_map_data[0][1]
             cell_type = g_map_data[0][2]
             cell = self.canvas.find_withtag(str(x) + "," + str(y))
-
-            #print("map debug: ", x, y, cell_type)
+            print(len(g_map_data))
+            print("map debug: ", x, y, cell_type)
 
             # wall
-            if cell_type < 0:
+            if cell_type < 20:
                 self.canvas.itemconfig(cell, fill=Constants.WALL_COLOR)
             # empty
-            elif cell_type > 0:
+            elif cell_type > -20:
                 self.canvas.itemconfig(cell, fill=Constants.EMPTY_COLOR)
+            else:
+                pass
+            
             g_map_data.pop(0)
 
     def moveRobot(self):
@@ -112,10 +117,10 @@ class Map(LabelFrame):
         if g_currentpos_data:
             x = g_currentpos_data[0][0]
             y = g_currentpos_data[0][1]
-            print("x: ", x)
-            print("y: ", y)
+            #print("x: ", x)
+            #print("y: ", y)
             robot = self.canvas.find_withtag('robot')
-            self.canvas.move(robot, (x - g_robot_x)*cellsize,
+            self.canvas.move(robot, -(x - g_robot_x)*cellsize,
                              (y - g_robot_y)*cellsize)
             g_robot_x = x
             g_robot_y = y
@@ -400,6 +405,7 @@ def listener():
                 out.append(result)
                 i += 1
             g_output.append(out.copy())
+            #packet_parser()
         else:
             print("In valid header recived not printe to file: ", header)
 
@@ -432,6 +438,8 @@ def packet_parser():
     global g_sensor_data
     global g_pos_data
     global g_currentpos_data
+
+    global g_map_used_date
 
     while True:
         if g_output:
@@ -614,14 +622,15 @@ def packet_parser():
             g_sensor_data.append(nrOut)
             #print("nrOut: ", nrOut)
             g_output.pop(0)
+            time.sleep(0.01)
 
 
 def uint16_to_int16(value):
     """
     convert from an unsigned 16 bit to signed bit 16
     """
-    if (value > 32768):
-        return value - 65536
+    if (value > 32767):
+        return value - 65534
     return value
 
 
@@ -629,8 +638,8 @@ def uint8_to_int8(value):
     """
     convert from an unsigned 8 bit to signed bit 8
     """
-    if (value > 128):
-        return value - 256
+    if (value > 127):
+        return value - 254
     return value
 
 
