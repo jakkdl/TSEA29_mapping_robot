@@ -102,14 +102,21 @@ class Map(LabelFrame):
 
     def moveRobot(self):
         """animates the robot's movement"""
+
         global g_currentpos_data
         global g_robot_x
         global g_robot_y
+        cellsize = 20
+        spacing = 4
+
         if g_currentpos_data:
             x = g_currentpos_data[0][0]
             y = g_currentpos_data[0][1]
+            print("x: ", x)
+            print("y: ", y)
             robot = self.canvas.find_withtag('robot')
-            self.canvas.move(robot, x - g_robot_x, y - g_robot_y)
+            self.canvas.move(robot, (x - g_robot_x)*cellsize,
+                             (y - g_robot_y)*cellsize)
             g_robot_x = x
             g_robot_y = y
             g_currentpos_data.pop(0)
@@ -270,8 +277,8 @@ class Controls(LabelFrame):
 
     def onKeyReleased(self, e):
         global g_autonomous
+        key = e.keysym
         if not g_autonomous:
-            key = e.keysym
 
             LEFT_CURSOR_KEY = "Left"
             if key == LEFT_CURSOR_KEY:
@@ -343,7 +350,6 @@ class Information(LabelFrame):
         global g_autonomous
         mode = self.canvas.find_withtag("mode_text")
         #pos = self.canvas.find_withtag("position_text")
-        print("UPDATING INFORMATION")
         if(g_autonomous):
             self.canvas.itemconfig(mode, text="Mode: AUTONOMOUS")
         else:
