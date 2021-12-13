@@ -5,23 +5,23 @@ import threading
 import time
 
 """port needs to be changed depending on which computer you are using"""
-# ser = serial.Serial(
-#     port='/dev/rfcomm0', #this port should be changed to your own port
-#     baudrate=115200,
-#     parity=serial.PARITY_EVEN,
-#     stopbits=serial.STOPBITS_ONE,
-#     bytesize=serial.EIGHTBITS,
-#     timeout=1
-# )
-
 ser = serial.Serial(
-    port='/dev/tty.Firefly-71B7-SPP',  # this port should be changed to your own port
+    port='/dev/rfcomm0', #this port should be changed to your own port
     baudrate=115200,
     parity=serial.PARITY_EVEN,
     stopbits=serial.STOPBITS_ONE,
     bytesize=serial.EIGHTBITS,
     timeout=1
 )
+
+# ser = serial.Serial(
+#     port='/dev/tty.Firefly-71B7-SPP',  # this port should be changed to your own port
+#     baudrate=115200,
+#     parity=serial.PARITY_EVEN,
+#     stopbits=serial.STOPBITS_ONE,
+#     bytesize=serial.EIGHTBITS,
+#     timeout=1
+# )
 
 g_output = []
 
@@ -85,9 +85,10 @@ class Map(LabelFrame):
         if g_map_data:
             x = g_map_data[0][0]
             y = g_map_data[0][1]
-            cell = self.canvas.find_withtag(str(x) + "," + str(y))
             cell_type = g_map_data[0][2]
-            g_map_data.pop(0)
+            cell = self.canvas.find_withtag(str(x) + "," + str(y))
+
+            #print("map debug: ", x, y, cell_type)
 
             # wall
             if cell_type < 0:
@@ -95,6 +96,7 @@ class Map(LabelFrame):
             # empty
             elif cell_type > 0:
                 self.canvas.itemconfig(cell, fill=Constants.EMPTY_COLOR)
+            g_map_data.pop(0)
 
     def moveRobot(self):
         """animates the robot's movement"""
@@ -102,9 +104,11 @@ class Map(LabelFrame):
         if g_currentpos_data:
             x = g_currentpos_data[0][0]
             y = g_currentpos_data[0][1]
+            cell = self.canvas.find_withtag(str(x) + "," + str(y))
+            #robot = self.canvas.find_withtag('robot')
+            self.canvas.itemconfig(cell, x, y)
+            # self.canvas.move(robot, x, y)
             g_currentpos_data.pop(0)
-            robot = self.canvas.find_withtag('robot')
-            self.canvas.move(robot, x, y)
 
     def onTimer(self):
         '''creates a cycle each timer event'''
@@ -564,8 +568,8 @@ def packet_parser():
                         str(g_output[0][5] << 8 | g_output[0][4])
                     g_pos_data.append(
                         [(g_output[0][3] << 8 | g_output[0][2]), (g_output[0][5] << 8 | g_output[0][4])])
-                    g_currentpos_data.append([mm_to_grid((g_output[0][3] << 8 | g_output[0][2])), mm_to_grid(
-                        g_output[0][5] << 8 | g_output[0][4])])
+                    x, y = mm_to_grid((g_output[0][3] << 8 | g_output[0][2]), g_output[0][5] << 8 | g_output[0][4])
+                    g_currentpos_data.append([x,y])
                 else:
                     nrOut = "Position paket miss match " + str(g_output[0])
 
@@ -593,7 +597,7 @@ def packet_parser():
                     str(g_output[0])
 
             g_sensor_data.append(nrOut)
-            print("nrOut: ", nrOut)
+            #print("nrOut: ", nrOut)
             g_output.pop(0)
 
 
