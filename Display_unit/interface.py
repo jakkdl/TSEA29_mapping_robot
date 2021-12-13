@@ -219,8 +219,8 @@ class Controls(LabelFrame):
 
     def onKeyPressed(self, e):
         '''controls direction variables with cursor keys'''
+        key = e.keysym
         if not Constants.AUTONOMOUS:
-            key = e.keysym
 
             LEFT_CURSOR_KEY = "Left"
             if key == LEFT_CURSOR_KEY:
@@ -288,6 +288,7 @@ class Controls(LabelFrame):
                 print("Go backwards")
 
     def setNavigationMode(self):
+        print("SETTING NAVIGATION MODE")
         global g_dict
         if Constants.AUTONOMOUS:
             packageMaker("command", [0])
@@ -330,6 +331,7 @@ class Information(LabelFrame):
         """updates the console"""
         mode = self.canvas.find_withtag("mode_text")
         #pos = self.canvas.find_withtag("position_text")
+        print("UPDATING INFORMATION")
         if(Constants.AUTONOMOUS):
             self.canvas.itemconfig(mode, text="Mode: AUTONOMOUS")
         else:
@@ -380,7 +382,6 @@ def listener():
                 out.append(result)
                 i += 1
             g_output.append(out.copy())
-            packet_parser()
         else:
             print("In valid header recived not printe to file: ", header)
 
@@ -627,8 +628,8 @@ def main():
     t1.start()
 
     # thread for reading all incomming data
-    #t2 = threading.Thread(target=packet_parser)
-    # t2.start()
+    t2 = threading.Thread(target=packet_parser)
+    t2.start()
 
     # main thread graphics
     root = Tk()
