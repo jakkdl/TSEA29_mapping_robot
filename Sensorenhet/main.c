@@ -20,7 +20,7 @@ bool g_readingDone = true;
 bool g_sendData = false;
 
 #define ODO_FIX 1
-#define WHEEL_DIAMETER 65.65
+#define WHEEL_DIAMETER 65.4
 
 struct sensor_data data;
 
@@ -124,7 +124,12 @@ ISR(ADC_vect)
 		}
 		else
 		{
-			data.gyro = -1*MLXGyroVal();
+			int16_t temp = -1 * MLXGyroVal();
+			/*if (temp < 120 && temp > -120)
+			{
+				temp = 0;
+			}*/
+			data.gyro = temp;
 			g_readingDone = true;
 		}
     }

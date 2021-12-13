@@ -8,6 +8,7 @@
 
 void PDcontroller_Reset();
 void PDcontroller_Set_RefNode();
+bool passedGoal();
 
 #define MIN_SPEED 0x40
 
@@ -90,7 +91,7 @@ bool PDcontroller_Update(void)
     int32_t RX = ((int32_t) g_currentPosX) - g_navigationGoalX;
     int32_t RY = ((int32_t) g_currentPosY) - g_navigationGoalY;
 
-    if (abs(RX) < POS_SENSITIVITY && abs(RY) < POS_SENSITIVITY)
+    if ((abs(RX) < POS_SENSITIVITY && abs(RY) < POS_SENSITIVITY) || passedGoal())
     {
         g_wheelSpeedLeft = 0;
         g_wheelSpeedRight = 0;
@@ -184,6 +185,46 @@ void PDcontroller_Reset(){
 void PDcontroller_Set_RefNode(){
     g_referencePosX = g_currentPosX;
     g_referencePosY = g_currentPosY;
+}
+
+bool passedGoal()
+{
+	uint8_t dir = 0;
+	if (!(g_currentHeading > 57344))
+	{
+		dir = round((double)g_currentHeading/16384);
+	}
+	bool passed = false;
+	switch(dir)
+	{
+		case 0:
+		if (g_currentPosX > g_navigationGoalX + POS_SENSITIVITY)
+		{
+			passed = true;
+		}
+		break;
+		case 1:
+		if (g_currentPosY > g_navigationGoalY + POS_SENSITIVITY)
+		{
+			passed = true;
+		}
+		break;
+		case 2:
+		if (g_currentPosX < g_navigationGoalX - POS_SENSITIVITY)
+		{
+			passed = true;
+		}
+		break;
+		case 3:
+		if (g_currentPosY < g_navigationGoalY - POS_SENSITIVITY)
+		{
+			passed = true;
+		}
+		break;
+		default:
+		break;
+	}
+	return passed;
 }
 
 #if __TEST__
