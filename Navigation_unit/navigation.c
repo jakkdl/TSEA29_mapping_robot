@@ -59,7 +59,6 @@ bool isValidCell(uint16_t x, uint16_t y, bool visited[MAP_X_MAX][MAP_Y_MAX])
     }
     if (visited[x][y] || IsWall(x,y))
     {
-        printf("visited: %d wall: %d\n", visited[x][y], IsWall(x,y));
         return false;
     }
     return true;
@@ -74,7 +73,8 @@ struct Queue
 
 struct Queue* createQueue(unsigned capacity)
 {
-    struct Queue* queue;
+    struct Queue q;
+    struct Queue* queue = &q;
     queue->capacity = capacity;
     queue->front = queue->size = 0;
     queue->rear = capacity - 1;
@@ -125,11 +125,11 @@ bool BFS()
     enqueue(queue, y);
     while(!isEmpty(queue))
     {
-        printQueue(queue);
+        //printQueue(queue);
         x = dequeue(queue);
         y = dequeue(queue);
-        printf("x1 = %d, y1 = %d\n", x, y);
-        printf("size: %d\n", queue->size);
+        /*printf("x1 = %d, y1 = %d\n", x, y);
+        printf("size: %d\n", queue->size);*/
         if (isValidCell(x, y, visited))
         {
             if (IsUnknown(x,y))
