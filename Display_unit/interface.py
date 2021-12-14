@@ -14,7 +14,7 @@ import time
 ) """
 
 ser = serial.Serial(
-    port='/dev/tty.Firefly-71B7-SPP',  # this port should be changed to your own port
+    port='/dev/rfcomm0',  # this port should be changed to your own port
     baudrate=115200,
     parity=serial.PARITY_EVEN,
     stopbits=serial.STOPBITS_ONE,

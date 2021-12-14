@@ -1,4 +1,5 @@
 #include "navigation.h"
+#include <stdlib.h>
 
 int      queueSize            = 0;
 int      adjacentCellsSize    = 0;
@@ -28,6 +29,7 @@ bool    is_wall(uint8_t dir);
 uint8_t get_heading();
 bool    at_start_pos();
 void    save_start_pos();
+bool    BFS();
 
 uint16_t get_start_pos(int xy)
 {
@@ -46,21 +48,99 @@ void save_start_pos()
 
 bool unexplored_cells_exist()
 {
-    for (int x = 0; x < 49; x++)
+    return BFS();
+}
+
+bool isValidCell(uint16_t x, uint16_t y, bool visited[MAP_X_MAX][MAP_Y_MAX])
+{
+    if  (x > MAP_X_MAX || y > MAP_Y_MAX)
     {
-        for (int y = 0; y < 25; y++)
+        return false;
+    }
+    if (visited[x][y] || IsWall(x,y))
+    {
+        return false;
+    }
+    return true;
+}
+
+struct Queue
+{
+    int front, rear, size;
+    unsigned capacity;
+    int* array;
+};
+
+struct Queue* createQueue(unsigned capacity)
+{
+    struct Queue* queue = (struct Queue*)malloc(sizeof(struct Queue));
+    queue->capacity = capacity;
+    queue->front = queue->size = 0;
+    queue->rear = capacity - 1;
+    queue->array = (int*)malloc(queue->capacity * sizeof(int));
+    return queue;
+}
+
+bool isEmpty(struct Queue* queue)
+{
+    return(queue->size == 0);
+}
+
+void enqueue(struct Queue* queue, int val)
+{
+    queue->rear = (queue->rear + 1) % queue->capacity;
+    queue->array[queue->rear] = val;
+    queue->size = queue->size + 1;
+}
+
+int dequeue(struct Queue* queue)
+{
+    int i = queue->array[queue->front];
+    queue->front = (queue->front + 1) % queue->capacity;
+    queue->size = queue->size - 1;
+    return i;
+}
+
+bool BFS()
+{
+    int x = 24;
+    int y = 0;
+    printf("x1 = %d, y1 = %d\n", x, y);
+    bool visited[MAP_X_MAX][MAP_Y_MAX];
+    struct Queue* queue = createQueue(MAP_Y_MAX*MAP_X_MAX);
+    enqueue(queue, x);
+    enqueue(queue, y);
+    while(!isEmpty(queue))
+    {
+        //printf("x = %d, y = %d\n", cord->x, cord->y);
+        x = dequeue(queue);
+        y = dequeue(queue);
+        if (isValidCell(x, y, visited))
         {
-            if (IsUnknown(x, y))
+            printf("x2 = %d, y2 = %d\n", x, y);
+            if (IsUnknown(x,y))
             {
-                g_endPoint[0] = x;
-                g_endPoint[1] = y;
                 return true;
             }
-        }
+            //should be done better
+            
+            visited[x][y] = true;
+            x += 1;
+            enqueue(queue, x);
+            enqueue(queue, y);
+            x -= 2;
+            enqueue(queue, x);
+            enqueue(queue,y);
+            x += 1;
+            y += 1;
+            enqueue(queue, x);
+            enqueue(queue, y);
+            y -= 2;
+            enqueue(queue, x);
+            enqueue(queue, x);        }
     }
     return false;
 }
-
 // checks if cell at g_navigationMap[x][y] is a wall
 bool is_wall(uint8_t dir)
 {
@@ -483,7 +563,35 @@ should go?
 
 Test_test(Test, test_unexplored_cells_exist)
 {
+    stdout = &mystdout;
+    uint16_t prevPosx = g_startPosX;
+    uint16_t prevPosY = g_startPosY;
+    uint16_t startposx = g_startPosX;
+    uint16_t startposy = g_startPosY;
+    g_startPosY = 0;
+    g_startPosX = 24;
     Test_assertTrue(unexplored_cells_exist());
+    MakeWall(24,1);
+    MakeWall(25,0);
+    MakeWall(23,0);
+    MakeEmpty(24,0);
+    Test_assertEquals(MmToGrid(200), 0);
+    Test_assertEquals(MmToGrid(9600), 24);
+    g_startPosY = 200;
+    g_startPosX = 9600;
+    Test_assertEquals(unexplored_cells_exist(), false);
+    //reset map
+    for (int x = 0; x < 49; x++)
+    {
+        for (int y = 0; y < 25; y++)
+        {
+            MakeUnknown(x, y);
+        }
+    }
+    g_startPosY = startposy;
+    g_startPosX = startposx;
+    g_currentPosY = prevPosY;
+    g_currentPosX = prevPosx;
 }
 
 Test_test(Test, test_cells_exist)
@@ -496,8 +604,6 @@ Test_test(Test, test_cells_exist)
         }
     }
     Test_assertEquals(unexplored_cells_exist(), false);
-    MakeUnknown(0, 1);
-    Test_assertEquals(unexplored_cells_exist(), true);
     // reset map
     for (int x = 0; x < 49; x++)
     {
