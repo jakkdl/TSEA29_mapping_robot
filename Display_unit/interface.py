@@ -1,27 +1,26 @@
-from struct import pack
 from tkinter import *
 import serial
 import threading
 import time
 
 """port needs to be changed depending on which computer you are using"""
-ser = serial.Serial(
-    port='/dev/rfcomm0', #this port should be changed to your own port
+""" ser = serial.Serial(
+    port='/dev/rfcomm0',  # this port should be changed to your own port
     baudrate=115200,
     parity=serial.PARITY_EVEN,
     stopbits=serial.STOPBITS_ONE,
     bytesize=serial.EIGHTBITS,
     timeout=1
-) 
+) """
 
-# ser = serial.Serial(
-# #     port='/dev/tty.Firefly-71B7-SPP',  # this port should be changed to your own port
-# #     baudrate=115200,
-# #     parity=serial.PARITY_EVEN,
-# #     stopbits=serial.STOPBITS_ONE,
-# #     bytesize=serial.EIGHTBITS,
-# #     timeout=1
-# # )
+ser = serial.Serial(
+    port='/dev/tty.Firefly-71B7-SPP',  # this port should be changed to your own port
+    baudrate=115200,
+    parity=serial.PARITY_EVEN,
+    stopbits=serial.STOPBITS_ONE,
+    bytesize=serial.EIGHTBITS,
+    timeout=1
+)
 
 g_output = []
 
@@ -30,6 +29,8 @@ g_map_data = []
 
 g_pos_data = []
 g_currentpos_data = []
+
+g_direction = []
 
 g_dict = {"command": 0xB2, "kd": 0xE2, "kp": 0xD2}
 
@@ -102,7 +103,7 @@ class Map(LabelFrame):
                 self.canvas.itemconfig(cell, fill=Constants.EMPTY_COLOR)
             else:
                 pass
-            
+
             g_map_data.pop(0)
 
     def moveRobot(self):
@@ -345,7 +346,7 @@ class Information(LabelFrame):
         self.canvas.create_text(Constants.PADDING,
                                 Constants.PADDING, font=("Purisa", 20), text="Position: ", anchor=NW, tags="position_text")
         self.canvas.create_text(Constants.PADDING,
-                                Constants.PADDING * 4, font=("Purisa", 20), text="Direction: ", anchor=NW, tags="heading_text")
+                                Constants.PADDING * 4, font=("Purisa", 20), text="Direction: ", anchor=NW, tags="direction_text")
         self.canvas.create_text(Constants.PADDING, Constants.PADDING * 7,
                                 font=("Purisa", 20), text="Mode: ", anchor=NW, tags="mode_text")
         self.canvas.pack(side=LEFT)
@@ -353,8 +354,22 @@ class Information(LabelFrame):
     def updateInformation(self):
         """updates the console"""
         global g_autonomous
+        global g_currentpos_data
         mode = self.canvas.find_withtag("mode_text")
-        #pos = self.canvas.find_withtag("position_text")
+        pos = self.canvas.find_withtag("position_text")
+        dir = self.canvas.find_withtag("direction_text")
+        x, y = 0
+        if g_currentpos_data:
+            x, y = mm_to_grid(g_currentpos_data[0][0], g_currentpos_data[0][1])
+
+        if g_currentpos_data:
+            g_currentpos_data.pop(0)
+        if g_direction:
+            g_direction.pop(0)
+
+        self.canvas.itemconfig(pos, text="Position: " + str(x) + ", " + str(y))
+        self.canvas.itemconfig(dir, text="Direction: " + g_direction[0])
+
         if(g_autonomous):
             self.canvas.itemconfig(mode, text="Mode: AUTONOMOUS")
         else:
@@ -405,7 +420,7 @@ def listener():
                 out.append(result)
                 i += 1
             g_output.append(out.copy())
-            #packet_parser()
+            # packet_parser()
         else:
             print("In valid header recived not printe to file: ", header)
 
@@ -438,8 +453,7 @@ def packet_parser():
     global g_sensor_data
     global g_pos_data
     global g_currentpos_data
-
-    global g_map_used_date
+    global g_direction
 
     while True:
         if g_output:
@@ -601,6 +615,7 @@ def packet_parser():
                 if len(g_output[0]) == 4:
                     nrOut = g_output[0][3] << 8 | g_output[0][2]
                     nrOut = "Direction: " + str(nrOut)
+                    g_direction.append(nrOut)
                 else:
                     nrOut = "Direction paket miss match " + str(g_output[0])
 
@@ -620,9 +635,7 @@ def packet_parser():
                     str(g_output[0])
 
             g_sensor_data.append(nrOut)
-            #print("nrOut: ", nrOut)
             g_output.pop(0)
-            time.sleep(0.01)
 
 
 def uint16_to_int16(value):
