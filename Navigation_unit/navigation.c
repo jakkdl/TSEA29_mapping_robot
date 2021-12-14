@@ -73,8 +73,7 @@ struct Queue
 struct Queue g_queue;
 struct Queue* createQueue(unsigned capacity)
 {
-    static struct Queue q;
-    struct Queue* queue = &q;
+    struct Queue* queue = &g_queue;
     queue->capacity = capacity;
     queue->front = queue->size = 0;
     queue->rear = capacity - 1;
@@ -119,7 +118,7 @@ bool BFS()
 {
     int x = MmToGrid(g_currentPosX);
     int y = MmToGrid(g_currentPosY);
-    static bool visited[MAP_X_MAX][MAP_Y_MAX];
+    bool visited[MAP_X_MAX][MAP_Y_MAX] = {0};
     struct Queue* queue = createQueue(MAP_Y_MAX*MAP_X_MAX);
     bool result = false;
     enqueue(queue, x);
@@ -133,8 +132,7 @@ bool BFS()
         {
             if (IsUnknown(x,y))
             {
-                result = true;
-                break;
+                return true;
             }
             //should be done better
             
@@ -149,14 +147,7 @@ bool BFS()
             enqueue(queue, y-1);
         }
     }
-    for (int x = 0; x < 49; x++)
-    {
-        for (int y = 0; y < 25; y++)
-        {
-            visited[x][y] = false;
-        }
-    }
-    return result;
+    return false;
 }
 // checks if cell at g_navigationMap[x][y] is a wall
 bool is_wall(uint8_t dir)
