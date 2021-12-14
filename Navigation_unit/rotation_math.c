@@ -383,7 +383,7 @@ double cwh2(struct laser_data* ld)
 #define ADJUST_RATIO 4
 #define MIN_SENSORS_FOR_ADJUST 3
 
-int8_t adjust_heading(struct sensor_data* sd)
+int8_t adjust_heading_2(struct sensor_data* sd)
 {
     struct laser_data ld;
 
@@ -520,6 +520,143 @@ int8_t adjust_heading(struct sensor_data* sd)
     return false;
 }
 
+// Angle of the slope of cos & sin in the four quadrants
+// i.e. is the function increasing (1) or decreasing (0)
+// which can be used to see if our heading is too small or too large
+// when checking the offset of each laser
+int8_t COS_DELTA(+1, +1, -1, -1);
+int8_t SIN_DELTA(-1, +1, +1, -1);
+
+int8_t adjust_dir(struct laser_data* ld)
+{
+    if (ld.offset = 0)
+    {
+        return 0;
+    }
+    if (ld.collision_type & 1)
+    {
+        // y hit
+        if (ld.offset < 0)
+        {
+            return SIN_DELTA(ld.quadrant);
+        }
+        else
+        {
+            return -SIN_DELTA(ld.quadrant);
+        }
+    }
+    else
+    {
+        if (ld.offset < 0)
+        {
+            return COS_DELTA(ld.quadrant);
+        }
+        else
+        {
+            return -COS_DELTA(ld.quadrant);
+        }
+    }
+}
+
+#if __TEST__
+Test_test(Test, adjust_dir_x)
+{
+    struct laser_data ld;
+
+    ld.collision_type = 0;
+
+    ld.quadrant = 0;
+    ld.offset = +1;
+    Test_assertEquals(adjust_dir(&ld), 1);
+    ld.offset = -1;
+    Test_assertEquals(adjust_dir(&ld), -1);
+
+    ld.quadrant = 3;
+    ld.offset = +1;
+    Test_assertEquals(adjust_dir(&ld), -1);
+    ld.offset = -1;
+    Test_assertEquals(adjust_dir(&ld), 1);
+
+    ld.collision_type = 2;
+
+    ld.quadrant = 1;
+    ld.offset = +1;
+    Test_assertEquals(adjust_dir(&ld), 1);
+    ld.offset = -1;
+    Test_assertEquals(adjust_dir(&ld), -1);
+
+    ld.quadrant = 2;
+    ld.offset = +1;
+    Test_assertEquals(adjust_dir(&ld), -1);
+    ld.offset = -1;
+    Test_assertEquals(adjust_dir(&ld), 1);
+}
+Test_test(Test, adjust_dir_y)
+{
+    struct laser_data ld;
+
+    ld.collision_type = 1;
+
+    ld.quadrant = 0;
+    ld.offset = +1;
+    Test_assertEquals(adjust_dir(&ld), -1);
+    ld.offset = -1;
+    Test_assertEquals(adjust_dir(&ld), 1);
+
+    ld.quadrant = 1;
+    ld.offset = +1;
+    Test_assertEquals(adjust_dir(&ld), 1);
+    ld.offset = -1;
+    Test_assertEquals(adjust_dir(&ld), -1);
+
+    ld.collision_type = 3;
+
+    ld.quadrant = 2;
+    ld.offset = +1;
+    Test_assertEquals(adjust_dir(&ld), 1);
+    ld.offset = -1;
+    Test_assertEquals(adjust_dir(&ld), -1);
+
+    ld.quadrant = 3;
+
+    ld.offset = +1;
+    Test_assertEquals(adjust_dir(&ld), -1);
+    ld.offset = -1;
+    Test_assertEquals(adjust_dir(&ld), 1);
+}
+#endif
+
+int8_t adjust_heading(struct sensor_data* sd)
+{
+    struct laser_data ld;
+
+    int8_t count = 0;
+    int8_t sum = 0;
+    double distance;
+    double s_distance;
+    double wanted_heading_rad;
+    double heading_shift;
+    double curr_heading = heading_to_radian(g_currentHeading);
+    for (int8_t i = 0; i < 6; ++i)
+    {
+        double diff = 9999;
+        calculate_laser_data(sd, &ld, i);
+        // if the laser fails to detect a wall, or is too close to a corner
+        // it's unusable
+        if (ld.reliable == 2 || ld.corner_error)
+        {
+            continue;
+        }
+        // if the laser is too close to a wall, we *can* use it if it
+        // *shouldn't* be too close to a wall.
+        if (ld.reliable == 1)
+        {
+            // TODO
+            continue;
+        }
+        sum += adjust_dir(&ld);
+    }
+}
 #if __TEST__
 struct foo {
     uint16_t arr[6];
