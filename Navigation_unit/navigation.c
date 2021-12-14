@@ -4,10 +4,10 @@
 int      queueSize            = 0;
 int      adjacentCellsSize    = 0;
 int      traversableCellsSize = 0;
-uint8_t  g_queue[QUEUE_ROWS][COLS];
-uint8_t  g_adjacentCells[ROWS_ADJACENT][COLS];
-uint8_t  g_traversableCells[ROWS_ADJACENT][COLS];
-uint8_t  g_endPoint[COORD_SIZE];
+//uint8_t  g_queue[QUEUE_ROWS][COLS];
+//uint8_t  g_adjacentCells[ROWS_ADJACENT][COLS];
+//uint8_t  g_traversableCells[ROWS_ADJACENT][COLS];
+//uint8_t  g_endPoint[COORD_SIZE];
 uint16_t g_startPosX;
 uint16_t g_startPosY;
 
@@ -59,7 +59,7 @@ bool isValidCell(uint16_t x, uint16_t y, bool visited[MAP_X_MAX][MAP_Y_MAX])
     }
     if (visited[x][y] || IsWall(x,y))
     {
-        printf("visited: %d wall: %d\n", visited[x][y], IsWall(x,y));
+        //printf("visited: %d wall: %d\n", visited[x][y], IsWall(x,y));
         return false;
     }
     return true;
@@ -71,14 +71,13 @@ struct Queue
     unsigned capacity;
     int array[MAP_X_MAX*MAP_Y_MAX];
 };
-
+struct Queue g_queue;
 struct Queue* createQueue(unsigned capacity)
 {
-    struct Queue* queue;
-    queue->capacity = capacity;
-    queue->front = queue->size = 0;
-    queue->rear = capacity - 1;
-    return queue;
+    g_queue.capacity = capacity;
+    g_queue.front = g_queue.size = 0;
+    g_queue.rear = capacity - 1;
+    return &g_queue;
 }
 
 bool isEmpty(struct Queue* queue)
@@ -102,16 +101,16 @@ int dequeue(struct Queue* queue)
 }
 void printQueue(struct Queue* queue)
 {
-    printf("queue:\n");
+    //printf("queue:\n");
     for(int i = queue->front; i <= queue->rear; i++)
     {
         if(i%2 == 0)
         {
-            printf("x = %d", queue->array[i]);
+            //printf("x = %d", queue->array[i]);
         }
         else
         {
-            printf("y = %d\n", queue->array[i]);
+            //printf("y = %d\n", queue->array[i]);
         }
     }
 }
@@ -119,8 +118,9 @@ bool BFS()
 {
     int x = MmToGrid(g_currentPosX);
     int y = MmToGrid(g_currentPosY);
-    bool visited[MAP_X_MAX][MAP_Y_MAX];
+    static bool visited[MAP_X_MAX][MAP_Y_MAX];
     struct Queue* queue = createQueue(MAP_Y_MAX*MAP_X_MAX);
+    bool result = false;
     enqueue(queue, x);
     enqueue(queue, y);
     while(!isEmpty(queue))
@@ -128,33 +128,36 @@ bool BFS()
         printQueue(queue);
         x = dequeue(queue);
         y = dequeue(queue);
-        printf("x1 = %d, y1 = %d\n", x, y);
-        printf("size: %d\n", queue->size);
+        //printf("x1 = %d, y1 = %d\n", x, y);
+        //printf("size: %d\n", queue->size);
         if (isValidCell(x, y, visited))
         {
             if (IsUnknown(x,y))
             {
-                return true;
+                result = true;
+                break;
             }
             //should be done better
             
             visited[x][y] = true;
-            x += 1;
-            enqueue(queue, x);
+            enqueue(queue, x+1);
             enqueue(queue, y);
-            x -= 2;
-            enqueue(queue, x);
-            enqueue(queue,y);
-            x += 1;
-            y += 1;
-            enqueue(queue, x);
+            enqueue(queue, x-1);
             enqueue(queue, y);
-            y -= 2;
             enqueue(queue, x);
-            enqueue(queue, y);
+            enqueue(queue, y+1);
+            enqueue(queue, x);
+            enqueue(queue, y-1);
         }
     }
-    return false;
+    for (int x = 0; x < 49; x++)
+    {
+        for (int y = 0; y < 25; y++)
+        {
+            visited[x][y] = false;
+        }
+    }
+    return result;
 }
 // checks if cell at g_navigationMap[x][y] is a wall
 bool is_wall(uint8_t dir)
@@ -578,7 +581,7 @@ should go?
 
 Test_test(Test, test_unexplored_cells_exist)
 {
-    stdout = &mystdout;
+    //stdout = &mystdout;
     uint16_t prevPosx = g_startPosX;
     uint16_t prevPosY = g_startPosY;
     uint16_t startposx = g_startPosX;
@@ -592,13 +595,13 @@ Test_test(Test, test_unexplored_cells_exist)
     MakeEmpty(24,0);
     g_startPosY = 200;
     g_startPosX = 9600;
-    //Test_assertEquals(unexplored_cells_exist(), false);
+    Test_assertEquals(unexplored_cells_exist(), false);
     MakeEmpty(24,1);
     MakeEmpty(24,1);
     MakeEmpty(24,2);
     MakeEmpty(25,0);
     MakeEmpty(25,0);
-    //Test_assertEquals(unexplored_cells_exist(), true);
+    Test_assertEquals(unexplored_cells_exist(), true);
     MakeWall(25,1);
     MakeWall(26,0);
     MakeWall(25,2);
