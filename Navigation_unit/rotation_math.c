@@ -35,6 +35,15 @@
 #define AXLE_WIDTH 170
 #define MID_TO_WHEEL_CENTER 110
 
+
+#define MAX_HEADING_DIFF FULL_TURN/32
+
+// how much of the perceived angle change should be updated
+// in one tick
+#define ADJUST_RATIO 4
+
+#define MIN_ADJUST_SENSORS_HEADING 3
+
 #define M_TAU (2 * M_PI)
 #define min(x, y) x < y ? x : y
 double g_cosHeading = 0;
@@ -94,6 +103,7 @@ int8_t mark_empty_rev(uint8_t y, uint8_t x);
 bool mark_wall(uint8_t x, uint8_t y);
 
 int8_t draw_laser_line(struct laser_data* ld);
+int8_t adjust_heading(struct sensor_data* sd);
 
 void send_position(void);
 void send_heading(void);
@@ -376,12 +386,6 @@ double cwh2(struct laser_data* ld)
 }
 #define SQUARE(x) ((x)*(x))
 //#include <stdio.h>
-#define MAX_HEADING_DIFF FULL_TURN/16
-
-// how much of the perceived angle change should be updated
-// in one tick
-#define ADJUST_RATIO 4
-#define MIN_SENSORS_FOR_ADJUST 3
 
 int8_t adjust_heading_2(struct sensor_data* sd)
 {
@@ -400,7 +404,7 @@ int8_t adjust_heading_2(struct sensor_data* sd)
     {
         double diff = 9999;
         calculate_laser_data(sd, &ld, i);
-        if (ld.reliable == 2 || ld.corner_error)
+        if (ld.reliable == 1 || ld.reliable == 2 || ld.corner_error)
         {
             continue;
         }
@@ -510,9 +514,9 @@ int8_t adjust_heading_2(struct sensor_data* sd)
         }
     }
     //printf("\nsum: %f, count: %d, %u\n", sum, count, radian_to_heading(sum/count));
-    if (count >= MIN_SENSORS_FOR_ADJUST)
+    if (count >= MIN_ADJUST_SENSORS_HEADING)
     {
-        g_currentHeading += radian_to_heading(sum / count) / ADJUST_RATIO;
+        g_currentHeading += radian_to_heading(sum / count / ADJUST_RATIO);
         update_trig_cache();
         send_heading();
         return true;
@@ -524,36 +528,36 @@ int8_t adjust_heading_2(struct sensor_data* sd)
 // i.e. is the function increasing (1) or decreasing (0)
 // which can be used to see if our heading is too small or too large
 // when checking the offset of each laser
-int8_t COS_DELTA(+1, +1, -1, -1);
-int8_t SIN_DELTA(-1, +1, +1, -1);
+int8_t COS_DELTA[] = {+1, +1, -1, -1};
+int8_t SIN_DELTA[] = {-1, +1, +1, -1};
 
 int8_t adjust_dir(struct laser_data* ld)
 {
-    if (ld.offset = 0)
+    if (ld->offset == 0)
     {
         return 0;
     }
-    if (ld.collision_type & 1)
+    if (ld->collision_type & 1)
     {
         // y hit
-        if (ld.offset < 0)
+        if (ld->offset < 0)
         {
-            return SIN_DELTA(ld.quadrant);
+            return SIN_DELTA[ld->quadrant];
         }
         else
         {
-            return -SIN_DELTA(ld.quadrant);
+            return -SIN_DELTA[ld->quadrant];
         }
     }
     else
     {
-        if (ld.offset < 0)
+        if (ld->offset < 0)
         {
-            return COS_DELTA(ld.quadrant);
+            return COS_DELTA[ld->quadrant];
         }
         else
         {
-            return -COS_DELTA(ld.quadrant);
+            return -COS_DELTA[ld->quadrant];
         }
     }
 }
@@ -630,16 +634,16 @@ int8_t adjust_heading(struct sensor_data* sd)
 {
     struct laser_data ld;
 
-    int8_t count = 0;
+    //int8_t count = 0;
     int8_t sum = 0;
-    double distance;
-    double s_distance;
-    double wanted_heading_rad;
-    double heading_shift;
-    double curr_heading = heading_to_radian(g_currentHeading);
+    //double distance;
+    //double s_distance;
+    //double wanted_heading_rad;
+    //double heading_shift;
+    //double curr_heading = heading_to_radian(g_currentHeading);
     for (int8_t i = 0; i < 6; ++i)
     {
-        double diff = 9999;
+        //double diff = 9999;
         calculate_laser_data(sd, &ld, i);
         // if the laser fails to detect a wall, or is too close to a corner
         // it's unusable
@@ -656,6 +660,7 @@ int8_t adjust_heading(struct sensor_data* sd)
         }
         sum += adjust_dir(&ld);
     }
+    return 0;
 }
 #if __TEST__
 struct foo {

@@ -1,4 +1,3 @@
-from struct import pack
 from tkinter import *
 import serial
 import threading
@@ -6,7 +5,7 @@ import time
 
 """port needs to be changed depending on which computer you are using"""
 """ ser = serial.Serial(
-    port='/dev/rfcomm0', #this port should be changed to your own port
+    port='/dev/rfcomm0',  # this port should be changed to your own port
     baudrate=115200,
     parity=serial.PARITY_EVEN,
     stopbits=serial.STOPBITS_ONE,
@@ -27,8 +26,11 @@ g_output = []
 
 g_sensor_data = []
 g_map_data = []
+
 g_pos_data = []
 g_currentpos_data = []
+
+g_direction = []
 
 g_dict = {"command": 0xB2, "kd": 0xE2, "kp": 0xD2}
 
@@ -41,7 +43,7 @@ class Constants:
 
     FRAME_WIDTH = 1445
     FRAME_HEIGHT = 1000
-    DELAY = 50
+    DELAY = 1
     ONE_STEP = 20
     CELL_SIZE = 20
     PADDING = 10
@@ -70,7 +72,8 @@ class Map(LabelFrame):
             for y in range(25):
 
                 # Create an "xy" tag for each rectangle on the map
-                coord = (x, y)
+                mirrored_x = 48 - x
+                coord = (mirrored_x, y)
                 stringTuple = tuple(map(str, coord))
                 tag = stringTuple[0] + "," + stringTuple[1]
 
@@ -89,15 +92,18 @@ class Map(LabelFrame):
             y = g_map_data[0][1]
             cell_type = g_map_data[0][2]
             cell = self.canvas.find_withtag(str(x) + "," + str(y))
-
-            #print("map debug: ", x, y, cell_type)
+            print(len(g_map_data))
+            print("map debug: ", x, y, cell_type)
 
             # wall
-            if cell_type < 0:
+            if cell_type < 20:
                 self.canvas.itemconfig(cell, fill=Constants.WALL_COLOR)
             # empty
-            elif cell_type > 0:
+            elif cell_type > -20:
                 self.canvas.itemconfig(cell, fill=Constants.EMPTY_COLOR)
+            else:
+                pass
+
             g_map_data.pop(0)
 
     def moveRobot(self):
@@ -112,10 +118,10 @@ class Map(LabelFrame):
         if g_currentpos_data:
             x = g_currentpos_data[0][0]
             y = g_currentpos_data[0][1]
-            print("x: ", x)
-            print("y: ", y)
+            #print("x: ", x)
+            #print("y: ", y)
             robot = self.canvas.find_withtag('robot')
-            self.canvas.move(robot, (x - g_robot_x)*cellsize,
+            self.canvas.move(robot, -(x - g_robot_x)*cellsize,
                              (y - g_robot_y)*cellsize)
             g_robot_x = x
             g_robot_y = y
@@ -340,7 +346,7 @@ class Information(LabelFrame):
         self.canvas.create_text(Constants.PADDING,
                                 Constants.PADDING, font=("Purisa", 20), text="Position: ", anchor=NW, tags="position_text")
         self.canvas.create_text(Constants.PADDING,
-                                Constants.PADDING * 4, font=("Purisa", 20), text="Direction: ", anchor=NW, tags="heading_text")
+                                Constants.PADDING * 4, font=("Purisa", 20), text="Direction: ", anchor=NW, tags="direction_text")
         self.canvas.create_text(Constants.PADDING, Constants.PADDING * 7,
                                 font=("Purisa", 20), text="Mode: ", anchor=NW, tags="mode_text")
         self.canvas.pack(side=LEFT)
@@ -348,8 +354,22 @@ class Information(LabelFrame):
     def updateInformation(self):
         """updates the console"""
         global g_autonomous
+        global g_currentpos_data
         mode = self.canvas.find_withtag("mode_text")
-        #pos = self.canvas.find_withtag("position_text")
+        pos = self.canvas.find_withtag("position_text")
+        dir = self.canvas.find_withtag("direction_text")
+        x, y = 0
+        if g_currentpos_data:
+            x, y = mm_to_grid(g_currentpos_data[0][0], g_currentpos_data[0][1])
+
+        if g_currentpos_data:
+            g_currentpos_data.pop(0)
+        if g_direction:
+            g_direction.pop(0)
+
+        self.canvas.itemconfig(pos, text="Position: " + str(x) + ", " + str(y))
+        self.canvas.itemconfig(dir, text="Direction: " + g_direction[0])
+
         if(g_autonomous):
             self.canvas.itemconfig(mode, text="Mode: AUTONOMOUS")
         else:
@@ -400,6 +420,7 @@ def listener():
                 out.append(result)
                 i += 1
             g_output.append(out.copy())
+            # packet_parser()
         else:
             print("In valid header recived not printe to file: ", header)
 
@@ -432,6 +453,7 @@ def packet_parser():
     global g_sensor_data
     global g_pos_data
     global g_currentpos_data
+    global g_direction
 
     while True:
         if g_output:
@@ -593,6 +615,7 @@ def packet_parser():
                 if len(g_output[0]) == 4:
                     nrOut = g_output[0][3] << 8 | g_output[0][2]
                     nrOut = "Direction: " + str(nrOut)
+                    g_direction.append(nrOut)
                 else:
                     nrOut = "Direction paket miss match " + str(g_output[0])
 
@@ -612,7 +635,6 @@ def packet_parser():
                     str(g_output[0])
 
             g_sensor_data.append(nrOut)
-            #print("nrOut: ", nrOut)
             g_output.pop(0)
 
 
@@ -620,8 +642,8 @@ def uint16_to_int16(value):
     """
     convert from an unsigned 16 bit to signed bit 16
     """
-    if (value > 32768):
-        return value - 65536
+    if (value > 32767):
+        return value - 65534
     return value
 
 
@@ -629,8 +651,8 @@ def uint8_to_int8(value):
     """
     convert from an unsigned 8 bit to signed bit 8
     """
-    if (value > 128):
-        return value - 256
+    if (value > 127):
+        return value - 254
     return value
 
 
