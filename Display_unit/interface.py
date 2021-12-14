@@ -1,4 +1,3 @@
-from struct import pack
 from tkinter import *
 import serial
 import threading
@@ -70,7 +69,8 @@ class Map(LabelFrame):
             for y in range(25):
 
                 # Create an "xy" tag for each rectangle on the map
-                coord = (x, y)
+                mirrored_x = 48 - x
+                coord = (mirrored_x, y)
                 stringTuple = tuple(map(str, coord))
                 tag = stringTuple[0] + "," + stringTuple[1]
 
@@ -115,7 +115,7 @@ class Map(LabelFrame):
             print("x: ", x)
             print("y: ", y)
             robot = self.canvas.find_withtag('robot')
-            self.canvas.move(robot, (x - g_robot_x)*cellsize,
+            self.canvas.move(robot, -(x - g_robot_x)*cellsize,
                              (y - g_robot_y)*cellsize)
             g_robot_x = x
             g_robot_y = y
