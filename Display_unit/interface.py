@@ -31,6 +31,8 @@ g_map_data = []
 g_pos_data = []
 g_currentpos_data = []
 
+g_direction = []
+
 g_dict = {"command": 0xB2, "kd": 0xE2, "kp": 0xD2}
 
 g_robot_x = 24
@@ -345,7 +347,7 @@ class Information(LabelFrame):
         self.canvas.create_text(Constants.PADDING,
                                 Constants.PADDING, font=("Purisa", 20), text="Position: ", anchor=NW, tags="position_text")
         self.canvas.create_text(Constants.PADDING,
-                                Constants.PADDING * 4, font=("Purisa", 20), text="Direction: ", anchor=NW, tags="heading_text")
+                                Constants.PADDING * 4, font=("Purisa", 20), text="Direction: ", anchor=NW, tags="direction_text")
         self.canvas.create_text(Constants.PADDING, Constants.PADDING * 7,
                                 font=("Purisa", 20), text="Mode: ", anchor=NW, tags="mode_text")
         self.canvas.pack(side=LEFT)
@@ -353,12 +355,37 @@ class Information(LabelFrame):
     def updateInformation(self):
         """updates the console"""
         global g_autonomous
+        global g_currentpos_data
         mode = self.canvas.find_withtag("mode_text")
-        #pos = self.canvas.find_withtag("position_text")
+        pos = self.canvas.find_withtag("position_text")
+        dir = self.canvas.find_withtag("direction_text")
+        if g_currentpos_data:
+            x, y = mm_to_grid(g_currentpos_data[0][0], g_currentpos_data[0][1])
+        direction = ""
+
+        if g_direction:
+            if g_direction[0] == 0:
+                direction = "RIGHT"
+            elif g_direction[0] == 1:
+                direction = "UP"
+            elif g_direction[0] == 2:
+                direction = "LEFT"
+            elif g_direction[0] == 3:
+                direction = "DOWN"
+
+        if g_currentpos_data:
+            g_currentpos_data.pop(0)
+        if g_direction:
+            g_direction.pop(0)
+
+        self.canvas.itemconfig(pos, text="Position: " + str(x) + ", " + str(y))
+        self.canvas.itemconfig(dir, text="Direction: " + direction)
+
         if(g_autonomous):
             self.canvas.itemconfig(mode, text="Mode: AUTONOMOUS")
         else:
             self.canvas.itemconfig(mode, text="Mode: MANUAL")
+
 
     def onTimer(self):
         '''creates a cycle each timer event'''
@@ -438,6 +465,7 @@ def packet_parser():
     global g_sensor_data
     global g_pos_data
     global g_currentpos_data
+    global g_direction
 
     global g_map_used_date
 
@@ -601,6 +629,8 @@ def packet_parser():
                 if len(g_output[0]) == 4:
                     nrOut = g_output[0][3] << 8 | g_output[0][2]
                     nrOut = "Direction: " + str(nrOut)
+                    dir = g_output[0][3] >> 5
+                    g_direction.append(dir)
                 else:
                     nrOut = "Direction paket miss match " + str(g_output[0])
 
