@@ -1,30 +1,27 @@
 #include "navigation.h"
 #include <stdlib.h>
 
-int      queueSize            = 0;
-int      adjacentCellsSize    = 0;
-int      traversableCellsSize = 0;
+//int      queueSize            = 0;
+//int      adjacentCellsSize    = 0;
+//int      traversableCellsSize = 0;
 //uint8_t  g_queue[QUEUE_ROWS][COLS];
 //uint8_t  g_adjacentCells[ROWS_ADJACENT][COLS];
 //uint8_t  g_traversableCells[ROWS_ADJACENT][COLS];
 //uint8_t  g_endPoint[COORD_SIZE];
-uint16_t g_startPosX;
-uint16_t g_startPosY;
+uint16_t g_startPosX = 24;
+uint16_t g_startPosY = 0;
 
 uint8_t get_robot_adjacent_coord(int direction, int xy);
 // uint8_t get_adjacent_cell(int direction, int xy, uint8_t* currentCell);
 
-void get_adjacent_cell(uint8_t  direction,
+/*void get_adjacent_cell(uint8_t  direction,
                        uint8_t* x,
                        uint8_t* y,
-                       uint8_t* currentCell);
+                       uint8_t* currentCell);*/
 
 bool    cell_is_wall(uint8_t cell[COLS]);
-bool    is_wall(uint8_t dir);
-void    move_one_cell(uint8_t queue[QUEUE_ROWS][COLS]);
-bool    left_opening();
-bool    right_opening();
-bool    wall_in_front();
+//void    move_one_cell(uint8_t queue[QUEUE_ROWS][COLS]);
+//bool    wall_in_front();
 bool    is_wall(uint8_t dir);
 uint8_t get_heading();
 bool    at_start_pos();
@@ -51,29 +48,19 @@ bool unexplored_cells_exist()
     return BFS();
 }
 
-bool isValidCell(uint16_t x, uint16_t y, bool visited[MAP_X_MAX][MAP_Y_MAX])
+bool isValidCell(uint16_t x, uint16_t y)
 {
-    if  (x > MAP_X_MAX || x < 0 || y < 0 || y > MAP_Y_MAX)
-    {
-        return false;
-    }
-    if (visited[x][y] || IsWall(x,y))
-    {
-        return false;
-    }
-    return true;
+    return x < MAP_X_MAX && y < MAP_Y_MAX && !IsWall(x, y);
 }
 
 struct Queue
 {
-    int front, rear, size;
+    int16_t front, rear, size;
     unsigned capacity;
-    int array[MAP_X_MAX*MAP_Y_MAX];
+    int8_t array[MAP_X_MAX*MAP_Y_MAX];
 };
-struct Queue g_queue;
-struct Queue* createQueue(unsigned capacity)
+struct Queue* createQueue(struct Queue* queue, unsigned capacity)
 {
-    struct Queue* queue = &g_queue;
     queue->capacity = capacity;
     queue->front = queue->size = 0;
     queue->rear = capacity - 1;
@@ -114,37 +101,42 @@ void printQueue(struct Queue* queue)
         }
     }
 }
+
+void addSquare(int8_t x, int8_t y, struct Queue* queue,
+        bool visited[MAP_X_MAX][MAP_Y_MAX])
+{
+    if (!visited[x][y])
+    {
+        visited[x][y] = true;
+        enqueue(queue, x);
+        enqueue(queue, y);
+    }
+}
 bool BFS()
 {
-    int x = MmToGrid(g_currentPosX);
-    int y = MmToGrid(g_currentPosY);
+    int8_t x = MmToGrid(g_currentPosX);
+    int8_t y = MmToGrid(g_currentPosY);
     bool visited[MAP_X_MAX][MAP_Y_MAX] = {0};
-    struct Queue* queue = createQueue(MAP_Y_MAX*MAP_X_MAX);
-    bool result = false;
-    enqueue(queue, x);
-    enqueue(queue, y);
-    while(!isEmpty(queue))
+    struct Queue queue;
+    createQueue(&queue, MAP_Y_MAX*MAP_X_MAX);
+
+    enqueue(&queue, x);
+    enqueue(&queue, y);
+    while(!isEmpty(&queue))
     {
         //printQueue(queue);
-        x = dequeue(queue);
-        y = dequeue(queue);
-        if (isValidCell(x, y, visited))
+        x = dequeue(&queue);
+        y = dequeue(&queue);
+        if (isValidCell(x, y))
         {
             if (IsUnknown(x,y))
             {
                 return true;
             }
-            //should be done better
-            
-            visited[x][y] = true;
-            enqueue(queue, x+1);
-            enqueue(queue, y);
-            enqueue(queue, x-1);
-            enqueue(queue, y);
-            enqueue(queue, x);
-            enqueue(queue, y+1);
-            enqueue(queue, x);
-            enqueue(queue, y-1);
+            addSquare(x+1, y, &queue, visited);
+            addSquare(x-1, y, &queue, visited);
+            addSquare(x, y+1, &queue, visited);
+            addSquare(x, y-1, &queue, visited);
         }
     }
     return false;
@@ -213,6 +205,7 @@ bool at_start_pos()
 // Position robot so that its left side faces a wall
 void init_wall_follow()
 {
+    save_start_pos();
     uint8_t dir = get_heading();
     if (!is_wall(dir + 1))
     {
@@ -227,10 +220,10 @@ bool wall_follow()
     // left opening?
     if (!is_wall(dir + 1))
     {
-		if (is_unknown(dir+1))
-		{
-			return false;
-		}
+        if (is_unknown(dir+1))
+        {
+            return false;
+        }
         command_set_target_square(FW_LEFT);
     }
     else
@@ -572,26 +565,29 @@ should go?
 Test_test(Test, test_unexplored_cells_exist)
 {
     //stdout = &mystdout;
-    uint16_t prevPosx = g_startPosX;
-    uint16_t prevPosY = g_startPosY;
-    uint16_t startposx = g_startPosX;
-    uint16_t startposy = g_startPosY;
-    g_startPosY = 0;
-    g_startPosX = 24;
+    uint16_t prevPosX = g_currentPosX;
+    uint16_t prevPosY = g_currentPosY;
     Test_assertEquals(unexplored_cells_exist(),true);
+
     MakeWall(24,1);
     MakeWall(25,0);
     MakeWall(23,0);
     MakeEmpty(24,0);
-    g_startPosY = 200;
-    g_startPosX = 9600;
     Test_assertEquals(unexplored_cells_exist(), false);
-    MakeEmpty(24,1);
+    MakeUnknown(24,1);
+
+    g_currentPosX = GridToMm(26);
+    g_currentPosY = GridToMm(0);
+    Test_assertEquals(unexplored_cells_exist(), true);
+    MakeUnknown(25,0);
+
+    g_currentPosX = GridToMm(24);
+    g_currentPosY = GridToMm(0);
     MakeEmpty(24,1);
     MakeEmpty(24,2);
     MakeEmpty(25,0);
-    MakeEmpty(25,0);
     Test_assertEquals(unexplored_cells_exist(), true);
+
     MakeWall(25,1);
     MakeWall(26,0);
     MakeWall(25,2);
@@ -599,6 +595,7 @@ Test_test(Test, test_unexplored_cells_exist)
     MakeWall(23,2);
     MakeWall(24,3);
     Test_assertEquals(unexplored_cells_exist(),false);
+
     //reset map
     for (int x = 0; x < 49; x++)
     {
@@ -607,19 +604,16 @@ Test_test(Test, test_unexplored_cells_exist)
             MakeUnknown(x, y);
         }
     }
-    g_startPosY = startposy;
-    g_startPosX = startposx;
+    g_currentPosX = prevPosX;
     g_currentPosY = prevPosY;
-    g_currentPosX = prevPosx;
-    g_currentPosX = GridToMm(24);
-    g_currentPosY = GridToMm(0);
 }
 
 Test_test(Test, test_queue)
 {
-    struct Queue* queue = createQueue(10);
-    enqueue(queue,10);
-    Test_assertEquals(dequeue(queue), 10);
+    struct Queue queue;
+    createQueue(&queue, 10);
+    enqueue(&queue,10);
+    Test_assertEquals(dequeue(&queue), 10);
 }
 
 Test_test(Test, test_cells_exist)
