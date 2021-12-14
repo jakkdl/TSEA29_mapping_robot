@@ -44,10 +44,10 @@ const double COS_QUARTERS[] = { 1.0, 0, -1.0, 0 };
 const double SIN_QUARTERS[] = { 0, 1, 0, -1 };
 struct laser_data
 {
-    uint16_t startX;
-    uint16_t startY;
-    int16_t endX;
-    int16_t endY;
+    double startX;
+    double startY;
+    double endX;
+    double endY;
 
     // which side of a cell are we hitting
     // 0 left, 1 bottom, 2 right, 3 top
@@ -58,7 +58,7 @@ struct laser_data
     int8_t quadrant;
 
     // end - (round(end/GRID_SIZE)*GRID_SIZE)
-    int16_t offset;
+    double offset;
     double cos;
     double sin;
 
@@ -94,6 +94,7 @@ int8_t mark_empty_rev(uint8_t y, uint8_t x);
 bool mark_wall(uint8_t x, uint8_t y);
 
 int8_t draw_laser_line(struct laser_data* ld);
+int8_t adjust_heading(struct sensor_data* sd);
 
 void send_position(void);
 void send_heading(void);
@@ -121,13 +122,13 @@ uint16_t radian_to_heading(double angle)
     return round(angle * FULL_TURN / M_TAU);
 }
 
-int16_t calculate_dif(int16_t pos)
+double calculate_dif(double pos)
 {
     if (pos < 0)
     {
         return pos;
     }
-    int16_t res = pos % GRID_SIZE;
+    double res = fmod(pos, GRID_SIZE);
     if (res > GRID_SIZE/2)
     {
         return res-GRID_SIZE;
@@ -144,12 +145,10 @@ void update_trig_cache(void)
 
 // helper function to calculate the coordinates of a sensor on the robot
 void calculate_sensor_position(int8_t x, int8_t y,
-        uint16_t* start_x, uint16_t* start_y)
+        double* start_x, double* start_y)
 {
-    *start_x = g_currentPosX + round(
-            g_cosHeading * x + laser_cos(1) * y);
-    *start_y = g_currentPosY + round(
-            g_sinHeading * x + laser_sin(1) * y);
+    *start_x = g_currentPosX + g_cosHeading * x + laser_cos(1) * y;
+    *start_y = g_currentPosY + g_sinHeading * x + laser_sin(1) * y;
 }
 
 // calculate heading change, using only the odometers
@@ -267,6 +266,7 @@ int8_t update_heading_and_position(struct sensor_data* data)
 {
     calculate_heading_and_position(data);
     adjust_position(data);
+    //adjust_heading(data);
     return 0;
 }
 
@@ -303,32 +303,54 @@ void send_heading(void)
     //adjust_position(data);
 }*/
 
-double calculate_wanted_heading(struct laser_data* ld, uint16_t distance)
+double calculate_wanted_heading(struct laser_data* ld, double distance)
 {
     double wanted_heading_rad;
     if (ld->collision_type & 0x1)
     {
         //y collision
         double ratio = ((double)ld->endY - ld->offset - g_currentPosY) / distance;
-        if (abs(ratio) > 1)
+        //printf("ratio: %f, endY: %f, offset: %f, pos: %u, distance: %f\n",
+                //ratio, ld->endY, ld->offset, g_currentPosY, distance);
+        if (ratio > 1)
         {
-            return NAN;
+            //return NAN;
+            //printf("+yNAN\n");
+            wanted_heading_rad = M_PI/2;
         }
-        wanted_heading_rad = asin(ratio);
+        else if (ratio < -1)
+        {
+            //printf("+yNAN\n");
+            wanted_heading_rad = -M_PI/2;
+        }
+        else
+        {
+            wanted_heading_rad = asin(ratio);
+        }
         if ((ld->quadrant == 1 || ld->quadrant == 2) && abs(ratio)< 1)
         {
             // mirror across y axis
             wanted_heading_rad = M_PI - wanted_heading_rad;
+            //printf("mirror: %f ", wanted_heading_rad);
         }
     }
     else
     {
         double ratio = ((double)ld->endX - ld->offset - g_currentPosX) / distance;
-        if (abs(ratio) > 1)
+        if (ratio > 1)
         {
-            return NAN;
+            //printf("+xNAN\n");
+            wanted_heading_rad = 0;
         }
-        wanted_heading_rad = acos(ratio);
+        else if (ratio < -1)
+        {
+            //printf("-xNAN\n");
+            wanted_heading_rad = M_PI;
+        }
+        else
+        {
+            wanted_heading_rad = acos(ratio);
+        }
         if (ld->quadrant & 0x2 && abs(ratio) < 1)
         {
             // mirror across x axis
@@ -337,48 +359,160 @@ double calculate_wanted_heading(struct laser_data* ld, uint16_t distance)
     }
     return wanted_heading_rad;
 }
+
+double cwh2(struct laser_data* ld)
+{
+    double wanted_heading_rad;
+    if (ld->collision_type & 0x1)
+    {
+        double a = (double) ld->endX - g_currentPosX;
+        double b = (double) ld->endY - g_currentPosY;
+        double c = (double) ld->endY - ld->offset - g_currentPosY;
+        //printf("%f %f %f %f %f\n", ld->endX, ld->endY, a, b, c);
+        wanted_heading_rad = 2* atan2(sqrt(a*a+b*b-c*c)-a, b-c);
+        return wanted_heading_rad;
+    }
+    return NAN;
+
+}
+#define SQUARE(x) ((x)*(x))
 //#include <stdio.h>
-#define MAX_HEADING_DIFF FULL_TURN/64
+#define MAX_HEADING_DIFF FULL_TURN/16
+
+// how much of the perceived angle change should be updated
+// in one tick
+#define ADJUST_RATIO 4
+
 int8_t adjust_heading(struct sensor_data* sd)
 {
-    int16_t sum = 0;
-    uint16_t wanted_heading;
-    int16_t diff;
-    int8_t count = 0;
     struct laser_data ld;
-    uint16_t distance;
+
+    int8_t count = 0;
+    double sum = 0.0;
+    //double wanted_heading;
+    double diff1;
+    double distance;
+    double s_distance;
     double wanted_heading_rad;
+    double heading_shift;
+    double curr_heading = heading_to_radian(g_currentHeading);
     for (int8_t i = 0; i < 6; ++i)
     {
-        if (!calculate_laser_data(sd, &ld, i))
+        double diff = 9999;
+        calculate_laser_data(sd, &ld, i);
+        if (ld.reliable == 2 || ld.corner_error)
         {
-            //printf("%d\n", i);
             continue;
         }
-        distance = ((uint16_t*)sd)[i];
+        //printf("%d ", i);
+        s_distance = ((uint16_t*)sd)[i];
         if (LASER_DIRECTION[i] & 0x1)
         {
-            distance += abs(LASER_POSITION_Y[i]);
+            //printf("dirY ");
+            distance = sqrt((uint16_t)SQUARE(LASER_POSITION_X[i])+
+                    SQUARE(abs(LASER_POSITION_Y[i]) + s_distance));
+            //printf("dist: %f = (%d)**2+(%d + %f)**2\n",
+                    //distance, LASER_POSITION_X[i],
+                    //LASER_POSITION_Y[i], s_distance);
+            heading_shift = acos((abs(LASER_POSITION_Y[i])+s_distance) / distance);
         }
         else
         {
-            distance += abs(LASER_POSITION_X[i]);
+            //printf("dirX ");
+            //distance += abs(LASER_POSITION_X[i]);
+            distance = sqrt((uint16_t)SQUARE(LASER_POSITION_Y[i])+
+                    SQUARE(abs(LASER_POSITION_X[i]) + s_distance));
+            heading_shift = acos((abs(LASER_POSITION_X[i])+s_distance) / distance);
         }
+        /*printf("endX: %f ", ld.endX);
+        printf("endY: %f ", ld.endY);
+        printf("%d %d %f\t",
+                ld.collision_type,
+                ld.quadrant,
+                ld.offset);
+        printf("dist: %f\n", distance);*/
+        //double aoeu = cwh2(&ld);
+        //printf("cwh2: %f %u\n", aoeu, radian_to_heading(aoeu));
         wanted_heading_rad = calculate_wanted_heading(&ld, distance);
+        double laser_dir = LASER_DIRECTION[i]*M_TAU/4;
+        /*printf("whr: %.2f hs: %.2f whr+hs+dir: %.2f whr-hs+dir: %.2f whr+hs-dir: %.2f whr-hs-dir: %.2f\n",
+                wanted_heading_rad,
+                heading_shift,
+                wanted_heading_rad + heading_shift + laser_dir,
+                wanted_heading_rad - heading_shift + laser_dir,
+                wanted_heading_rad + heading_shift - laser_dir,
+                wanted_heading_rad - heading_shift - laser_dir
+                );*/
 
-        wanted_heading = radian_to_heading(wanted_heading_rad) - LASER_DIRECTION[i]*FULL_TURN/4;
-        diff = (int16_t)(wanted_heading - g_currentHeading);
-        //printf("%d %f %u %u\n", i, wanted_heading_rad, wanted_heading, diff);
+        /*if (ld.quadrant == -1)
+        {
+            wanted_heading = wanted_heading_rad + LASER_DIRECTION[i]*M_TAU/4;
+        }
+        else
+        {
+            wanted_heading = wanted_heading_rad - LASER_DIRECTION[i]*M_TAU/4;
+        }*/
+        /*if ((LASER_POSITION_X[i] > 0) ^ (LASER_DIRECTION[i] > 2))
+        {
+            wanted_heading += heading_shift;
+            //printf("whr+hs: %f, hs: %f  ", wanted_heading, heading_shift);
+        }
+        else
+        {
+            wanted_heading -= heading_shift;
+            //printf("whr-hs: %f, hs: %f  ", wanted_heading, heading_shift);
+        }*/
+        // there's some logic to whethere you should add or subtract heading
+        // shift, but I'm failing to figure it out atm
+        if (heading_shift > 0)
+        {
+            for (int i=-1; i < 2; i+=2)
+            {
+                for (int j=-1; j < 2; j+=2)
+                {
+                    diff1 = fmod(wanted_heading_rad - curr_heading
+                            + i * heading_shift
+                            + j * laser_dir, M_TAU);
+                    if (diff1 > M_TAU/2)
+                    {
+                        diff1 -= M_TAU;
+                    }
+                    else if (diff1 < -M_TAU/2)
+                    {
+                        diff1 += M_TAU;
+                    }
+                    //printf(" %f ", diff1);
+                    if (fabs(diff1) < fabs(diff))
+                    {
+                        diff = diff1;
+                    }
+                }
+            }
+        }
+        else
+        {
+            diff = fmod(wanted_heading_rad - curr_heading - laser_dir, M_TAU);
+            if (diff > M_TAU/2)
+            {
+                diff -= M_TAU;
+            }
+            else if (diff < -M_TAU/2)
+            {
+                diff += M_TAU;
+            }
+        }
+
+        //printf("\n%d %f %f\n", i, wanted_heading_rad, diff);
         if (abs(diff) < MAX_HEADING_DIFF)
         {
             sum += diff;
             ++count;
         }
-
     }
+    //printf("\nsum: %f, count: %d, %u\n", sum, count, radian_to_heading(sum/count));
     if (count >= 1)
     {
-        g_currentHeading += round((double)sum / count);
+        g_currentHeading += radian_to_heading(sum / count) / ADJUST_RATIO;
         update_trig_cache();
         send_heading();
         return true;
@@ -451,6 +585,24 @@ Test_test(Test, calculate_wanted_heading_y)
 
     RESTORE(g_currentPosY);
 }
+/*Test_test(Test, calculate_wanted_heading_y_2)
+{
+    uint16_t SAVE(g_currentPosY);
+    struct laser_data ld;
+    double res;
+
+    g_currentPosY = GridToMm(10);
+    ld.endY = 4400;
+    ld.offset = 0;
+    ld.collision_type = 1;
+    ld.quadrant = 1;
+    printf("calc\n");
+    res = calculate_wanted_heading(&ld, 114 + 70);
+    printf("res: %f\n", res);
+    Test_assertEquals(radian_to_heading(res), FULL_TURN/16);
+
+    RESTORE(g_currentPosY);
+}*/
 Test_test(Test, calculate_wanted_heading_x)
 {
     uint16_t SAVE(g_currentPosX);
@@ -498,6 +650,24 @@ Test_test(Test, calculate_wanted_heading_x)
 
     RESTORE(g_currentPosX);
 }
+Test_test(Test, adjust_heading_8)
+{
+    uint16_t SAVE(g_currentHeading);
+    uint16_t SAVE(g_currentPosX);
+    uint16_t SAVE(g_currentPosY);
+
+    g_currentHeading = FULL_TURN/8*7+FULL_TURN/128;
+    g_currentPosX = GridToMm(24);
+    g_currentPosY = GridToMm(10);
+    update_trig_cache();
+
+    struct foo sd = { .arr = {563, 563, 133, 128, 133, 128}};
+    Test_assertEquals(adjust_heading((struct sensor_data*) &sd), true);
+    Test_assertEquals(g_currentHeading, 58343); //theory: 57344
+    RESTORE(g_currentHeading);
+    RESTORE(g_currentPosX);
+    RESTORE(g_currentPosY);
+}
 Test_test(Test, adjust_heading)
 {
     uint16_t SAVE(g_currentHeading);
@@ -509,19 +679,40 @@ Test_test(Test, adjust_heading)
     g_currentPosY = GridToMm(10);
     update_trig_cache();
 
-    struct foo sd = { .arr = {1280, 1280, 530, 530, 530, 530}};
+    struct foo sd = { .arr = {1280, 1280, 130, 130, 130, 130}};
+    Test_assertEquals(adjust_heading((struct sensor_data*) &sd), true);
+    Test_assertEquals(g_currentHeading, FULL_TURN/4);
+
+    g_currentHeading = FULL_TURN/4-FULL_TURN/128;
+    update_trig_cache();
+    Test_assertEquals(adjust_heading((struct sensor_data*) &sd), true);
+    Test_assertEquals(g_currentHeading, FULL_TURN/4);
+
+    g_currentHeading = FULL_TURN/4;
+    update_trig_cache();
     Test_assertEquals(adjust_heading((struct sensor_data*) &sd), true);
     Test_assertEquals(g_currentHeading, FULL_TURN/4);
 
     g_currentHeading = FULL_TURN/16+FULL_TURN/128;
-    g_currentPosX = GridToMm(24);
-    g_currentPosY = GridToMm(10);
     update_trig_cache();
 
-    //TODO: broken test or broken code, don't know
-    sd = (struct foo){ .arr = {529, 529, 452, 452, 452, 452}};
+    sd = (struct foo){ .arr = {96, 96, 113, 182, 180, 111}};
     Test_assertEquals(adjust_heading((struct sensor_data*) &sd), true);
-    //Test_assertEquals(g_currentHeading, FULL_TURN/16);
+    Test_assertEquals(g_currentHeading, 4239); //theory 4096
+
+    g_currentHeading = FULL_TURN/16;
+    update_trig_cache();
+
+    sd = (struct foo){ .arr = {96, 96, 113, 182, 180, 111}};
+    Test_assertEquals(adjust_heading((struct sensor_data*) &sd), true);
+    Test_assertEquals(g_currentHeading, 4215); //theory 4096
+
+    g_currentHeading = FULL_TURN/16*5 + FULL_TURN/64;
+    update_trig_cache();
+
+    sd = (struct foo){ .arr = {96, 96, 113, 182, 180, 111}};
+    Test_assertEquals(adjust_heading((struct sensor_data*) &sd), true);
+    Test_assertEquals(g_currentHeading, 20623); //theory 20480
 
     RESTORE(g_currentHeading);
     RESTORE(g_currentPosX);
@@ -657,11 +848,11 @@ bool calculate_laser_data(
         ld->reliable = 0;
     }
 
-    ld->endX = ld->startX + round(ld->cos * distance);
-    ld->endY = ld->startY + round(ld->sin * distance);
+    ld->endX = ld->startX + ld->cos * distance;
+    ld->endY = ld->startY + ld->sin * distance;
 
-    int16_t x_dif = calculate_dif(ld->endX);
-    int16_t y_dif = calculate_dif(ld->endY);
+    double x_dif = calculate_dif(ld->endX);
+    double y_dif = calculate_dif(ld->endY);
 
     // in which quadrant is the laser pointing
     ld->quadrant = ((g_currentHeading >> 14) + laser_dir) & 3;
@@ -795,8 +986,8 @@ int8_t draw_laser_line(struct laser_data* ld)
         cot = fabs(ld->cos / ld->sin);
     }
 
-    uint16_t endx = ld->endX;
-    uint16_t endy = ld->endY;
+    double endx = ld->endX;
+    double endy = ld->endY;
     if (ld->collision_type & 0x1)
     {
         endy -= ld->offset;
@@ -1000,7 +1191,7 @@ void send_map_update(uint8_t x, uint8_t y, int8_t value)
 
 Test_test(Test, calc_sensor_pos)
 {
-    uint16_t x, y;
+    double x, y;
     uint16_t SAVE(g_currentPosX);
     uint16_t SAVE(g_currentPosY);
     uint16_t SAVE(g_currentHeading);
@@ -1036,7 +1227,7 @@ Test_test(Test, calc_sensor_pos)
 
     calculate_sensor_position(-50, 45, &x, &y);
     Test_assertEquals(x, 55);
-    Test_assertEquals(y, 40);
+    Test_assertEquals(round(y), 40);
 
     calculate_sensor_position(50, -45, &x, &y);
     Test_assertEquals(x, 145);
@@ -1050,7 +1241,7 @@ Test_test(Test, calc_sensor_pos)
     update_trig_cache();
     calculate_sensor_position(50, 45, &x, &y);
     Test_assertEquals(x, 50);
-    Test_assertEquals(y, 45);
+    Test_assertEquals(round(y), 45);
 
     g_currentHeading = 49152;
     update_trig_cache();
@@ -1551,7 +1742,7 @@ Test_test(Test, draw_laser_line_2)
     Test_assertEquals(ld.startX, 9771);
     Test_assertEquals(ld.startY, 4980);
     Test_assertEquals(ld.endX, 9406);
-    Test_assertEquals(ld.endY, 65517);
+    Test_assertEquals(round(ld.endY), 65518);
     Test_assertEquals(ld.reliable, 0);
 
     Test_assertEquals(draw_laser_line(&ld), 0);

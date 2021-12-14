@@ -22,7 +22,7 @@ void MODULE##_test_##NAME(void)
 #include <stdbool.h>
 #include <stdio.h>
 
-#define MSG_LEN 100
+#define MSG_LEN 120
 // typedefs
 typedef enum TestResult
 {
