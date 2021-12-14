@@ -53,12 +53,13 @@ bool unexplored_cells_exist()
 
 bool isValidCell(uint16_t x, uint16_t y, bool visited[MAP_X_MAX][MAP_Y_MAX])
 {
-    if  (x > MAP_X_MAX || y > MAP_Y_MAX)
+    if  (x > MAP_X_MAX || x < 0 || y < 0 || y > MAP_Y_MAX)
     {
         return false;
     }
     if (visited[x][y] || IsWall(x,y))
     {
+        printf("visited: %d wall: %d\n", visited[x][y], IsWall(x,y));
         return false;
     }
     return true;
@@ -68,16 +69,15 @@ struct Queue
 {
     int front, rear, size;
     unsigned capacity;
-    int* array;
+    int array[MAP_X_MAX*MAP_Y_MAX];
 };
 
 struct Queue* createQueue(unsigned capacity)
 {
-    struct Queue* queue = (struct Queue*)malloc(sizeof(struct Queue));
+    struct Queue* queue;
     queue->capacity = capacity;
     queue->front = queue->size = 0;
     queue->rear = capacity - 1;
-    queue->array = (int*)malloc(queue->capacity * sizeof(int));
     return queue;
 }
 
@@ -100,24 +100,38 @@ int dequeue(struct Queue* queue)
     queue->size = queue->size - 1;
     return i;
 }
-
+void printQueue(struct Queue* queue)
+{
+    printf("queue:\n");
+    for(int i = queue->front; i <= queue->rear; i++)
+    {
+        if(i%2 == 0)
+        {
+            printf("x = %d", queue->array[i]);
+        }
+        else
+        {
+            printf("y = %d\n", queue->array[i]);
+        }
+    }
+}
 bool BFS()
 {
-    int x = 24;
-    int y = 0;
-    printf("x1 = %d, y1 = %d\n", x, y);
+    int x = MmToGrid(g_currentPosX);
+    int y = MmToGrid(g_currentPosY);
     bool visited[MAP_X_MAX][MAP_Y_MAX];
     struct Queue* queue = createQueue(MAP_Y_MAX*MAP_X_MAX);
     enqueue(queue, x);
     enqueue(queue, y);
     while(!isEmpty(queue))
     {
-        //printf("x = %d, y = %d\n", cord->x, cord->y);
+        printQueue(queue);
         x = dequeue(queue);
         y = dequeue(queue);
+        printf("x1 = %d, y1 = %d\n", x, y);
+        printf("size: %d\n", queue->size);
         if (isValidCell(x, y, visited))
         {
-            printf("x2 = %d, y2 = %d\n", x, y);
             if (IsUnknown(x,y))
             {
                 return true;
@@ -137,7 +151,8 @@ bool BFS()
             enqueue(queue, y);
             y -= 2;
             enqueue(queue, x);
-            enqueue(queue, x);        }
+            enqueue(queue, y);
+        }
     }
     return false;
 }
@@ -570,16 +585,27 @@ Test_test(Test, test_unexplored_cells_exist)
     uint16_t startposy = g_startPosY;
     g_startPosY = 0;
     g_startPosX = 24;
-    Test_assertTrue(unexplored_cells_exist());
+    Test_assertEquals(unexplored_cells_exist(),true);
     MakeWall(24,1);
     MakeWall(25,0);
     MakeWall(23,0);
     MakeEmpty(24,0);
-    Test_assertEquals(MmToGrid(200), 0);
-    Test_assertEquals(MmToGrid(9600), 24);
     g_startPosY = 200;
     g_startPosX = 9600;
-    Test_assertEquals(unexplored_cells_exist(), false);
+    //Test_assertEquals(unexplored_cells_exist(), false);
+    MakeEmpty(24,1);
+    MakeEmpty(24,1);
+    MakeEmpty(24,2);
+    MakeEmpty(25,0);
+    MakeEmpty(25,0);
+    //Test_assertEquals(unexplored_cells_exist(), true);
+    MakeWall(25,1);
+    MakeWall(26,0);
+    MakeWall(25,2);
+    MakeWall(23,1);
+    MakeWall(23,2);
+    MakeWall(24,3);
+    Test_assertEquals(unexplored_cells_exist(),false);
     //reset map
     for (int x = 0; x < 49; x++)
     {
@@ -592,6 +618,15 @@ Test_test(Test, test_unexplored_cells_exist)
     g_startPosX = startposx;
     g_currentPosY = prevPosY;
     g_currentPosX = prevPosx;
+    g_currentPosX = GridToMm(24);
+    g_currentPosY = GridToMm(0);
+}
+
+Test_test(Test, test_queue)
+{
+    struct Queue* queue = createQueue(10);
+    enqueue(queue,10);
+    Test_assertEquals(dequeue(queue), 10);
 }
 
 Test_test(Test, test_cells_exist)
