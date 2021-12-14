@@ -615,7 +615,7 @@ def packet_parser():
                 if len(g_output[0]) == 4:
                     nrOut = g_output[0][3] << 8 | g_output[0][2]
                     nrOut = "Direction: " + str(nrOut)
-                    g_direction.append(g_output[0][3])
+                    g_direction.append(nrOut)
                 else:
                     nrOut = "Direction paket miss match " + str(g_output[0])
 
