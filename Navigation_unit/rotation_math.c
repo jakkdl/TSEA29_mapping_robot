@@ -35,6 +35,15 @@
 #define AXLE_WIDTH 170
 #define MID_TO_WHEEL_CENTER 110
 
+
+#define MAX_HEADING_DIFF FULL_TURN/32
+
+// how much of the perceived angle change should be updated
+// in one tick
+#define ADJUST_RATIO 4
+
+#define MIN_ADJUST_SENSORS_HEADING 3
+
 #define M_TAU (2 * M_PI)
 #define min(x, y) x < y ? x : y
 double g_cosHeading = 0;
@@ -266,7 +275,7 @@ int8_t update_heading_and_position(struct sensor_data* data)
 {
     calculate_heading_and_position(data);
     adjust_position(data);
-    //adjust_heading(data);
+    adjust_heading(data);
     return 0;
 }
 
@@ -377,11 +386,6 @@ double cwh2(struct laser_data* ld)
 }
 #define SQUARE(x) ((x)*(x))
 //#include <stdio.h>
-#define MAX_HEADING_DIFF FULL_TURN/16
-
-// how much of the perceived angle change should be updated
-// in one tick
-#define ADJUST_RATIO 4
 
 int8_t adjust_heading(struct sensor_data* sd)
 {
@@ -400,7 +404,7 @@ int8_t adjust_heading(struct sensor_data* sd)
     {
         double diff = 9999;
         calculate_laser_data(sd, &ld, i);
-        if (ld.reliable == 2 || ld.corner_error)
+        if (ld.reliable == 1 || ld.reliable == 2 || ld.corner_error)
         {
             continue;
         }
@@ -510,9 +514,9 @@ int8_t adjust_heading(struct sensor_data* sd)
         }
     }
     //printf("\nsum: %f, count: %d, %u\n", sum, count, radian_to_heading(sum/count));
-    if (count >= 1)
+    if (count >= MIN_ADJUST_SENSORS_HEADING)
     {
-        g_currentHeading += radian_to_heading(sum / count) / ADJUST_RATIO;
+        g_currentHeading += radian_to_heading(sum / count / ADJUST_RATIO);
         update_trig_cache();
         send_heading();
         return true;

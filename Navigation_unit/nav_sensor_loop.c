@@ -119,7 +119,7 @@ int8_t nav_main(void)
     struct sensor_data* data = current_sensor_data;
 
     // send sensor data to display
-    send_sensor_data(data);
+    //send_sensor_data(data);
 
     // updates g_currentHeading, g_currentPosX and g_currentPosY
     // sends them to display if updated
