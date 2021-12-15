@@ -4,15 +4,6 @@ import threading
 import time
 
 """port needs to be changed depending on which computer you are using"""
-""" ser = serial.Serial(
-    port='/dev/rfcomm0',  # this port should be changed to your own port
-    baudrate=115200,
-    parity=serial.PARITY_EVEN,
-    stopbits=serial.STOPBITS_ONE,
-    bytesize=serial.EIGHTBITS,
-    timeout=1
-) """
-
 ser = serial.Serial(
     port='/dev/rfcomm0',  # this port should be changed to your own port
     baudrate=115200,
@@ -20,7 +11,16 @@ ser = serial.Serial(
     stopbits=serial.STOPBITS_ONE,
     bytesize=serial.EIGHTBITS,
     timeout=1
-)
+) 
+
+# ser = serial.Serial(
+#     port='/dev/tty.Firefly-71B7-SPP',  # this port should be changed to your own port
+#     baudrate=115200,
+#     parity=serial.PARITY_EVEN,
+#     stopbits=serial.STOPBITS_ONE,
+#     bytesize=serial.EIGHTBITS,
+#     timeout=1
+# )
 
 g_output = []
 
@@ -91,20 +91,20 @@ class Map(LabelFrame):
             x = g_map_data[0][0]
             y = g_map_data[0][1]
             cell_type = g_map_data[0][2]
+            g_map_data.pop(0)
+
             cell = self.canvas.find_withtag(str(x) + "," + str(y))
             print(len(g_map_data))
             print("map debug: ", x, y, cell_type)
 
             # wall
-            if cell_type < 20:
+            if cell_type < 0:
                 self.canvas.itemconfig(cell, fill=Constants.WALL_COLOR)
             # empty
-            elif cell_type > -20:
+            elif cell_type > 0:
                 self.canvas.itemconfig(cell, fill=Constants.EMPTY_COLOR)
-            else:
-                pass
 
-            g_map_data.pop(0)
+            
 
     def moveRobot(self):
         """animates the robot's movement"""
@@ -355,24 +355,33 @@ class Information(LabelFrame):
         """updates the console"""
         global g_autonomous
         global g_currentpos_data
-        mode = self.canvas.find_withtag("mode_text")
-        pos = self.canvas.find_withtag("position_text")
-        dir = self.canvas.find_withtag("direction_text")
-        x, y = 0
-        if g_currentpos_data:
-            x, y = mm_to_grid(g_currentpos_data[0][0], g_currentpos_data[0][1])
+        global g_pos_data
+        global g_direction
+        
+         
 
-        if g_currentpos_data:
-            g_currentpos_data.pop(0)
+        if g_pos_data:
+            print(len(g_pos_data))
+            pos = self.canvas.find_withtag("position_text")
+            
+            x, y = mm_to_grid(g_pos_data[0][0], g_pos_data[0][1])
+            self.canvas.itemconfig(pos, text="Position: " + str(x) + ", " + str(y))
+            print(x, y)
+            g_pos_data.pop(0)
+
         if g_direction:
+            dir = self.canvas.find_withtag("direction_text") 
+            self.canvas.itemconfig(dir, text="Direction: " + g_direction[0])
             g_direction.pop(0)
 
-        self.canvas.itemconfig(pos, text="Position: " + str(x) + ", " + str(y))
-        self.canvas.itemconfig(dir, text="Direction: " + g_direction[0])
+        
+        
 
         if(g_autonomous):
+            mode = self.canvas.find_withtag("mode_text")
             self.canvas.itemconfig(mode, text="Mode: AUTONOMOUS")
         else:
+            mode = self.canvas.find_withtag("mode_text")
             self.canvas.itemconfig(mode, text="Mode: MANUAL")
 
     def onTimer(self):
@@ -457,6 +466,8 @@ def packet_parser():
 
     while True:
         if g_output:
+            if len(g_output) > 500:
+                g_output = []
             nrOut = ""
 
             # debug
@@ -602,11 +613,13 @@ def packet_parser():
                         str(g_output[0][3] << 8 | g_output[0][2])
                     nrOut += "\nPositionY: " + \
                         str(g_output[0][5] << 8 | g_output[0][4])
+
                     g_pos_data.append(
                         [(g_output[0][3] << 8 | g_output[0][2]), (g_output[0][5] << 8 | g_output[0][4])])
+
                     x, y = mm_to_grid(
                         (g_output[0][3] << 8 | g_output[0][2]), g_output[0][5] << 8 | g_output[0][4])
-                    g_currentpos_data.append([x, y])
+                    g_currentpos_data.append([x,y])
                 else:
                     nrOut = "Position paket miss match " + str(g_output[0])
 
@@ -615,17 +628,20 @@ def packet_parser():
                 if len(g_output[0]) == 4:
                     nrOut = g_output[0][3] << 8 | g_output[0][2]
                     nrOut = "Direction: " + str(nrOut)
-                    g_direction.append(g_output[0][3])
+                    g_direction.append(nrOut)
                 else:
                     nrOut = "Direction paket miss match " + str(g_output[0])
 
                 # map update
             elif g_output[0][0] == 10:
                 if len(g_output[0]) == 5:
-                    nrOut = "Map update: " + str(g_output[0][2]) + " " + str(
-                        g_output[0][3]) + " " + str(uint8_to_int8(g_output[0][4]))
-                    g_map_data.append(
-                        [(g_output[0][2]), (g_output[0][3]), uint8_to_int8(g_output[0][4])])
+                    x,y = (g_output[0][2]), (g_output[0][3])
+                    nrOut = "Map update: " + str(x) + " " + str(y) + " " + str(uint8_to_int8(g_output[0][4]))
+                    g_map_data.append( [ x, y, uint8_to_int8(g_output[0][4])] )
+
+                    if len(g_map_data) > 200:
+                        g_map_data = []
+
                 else:
                     nrOut = "Map update paket miss match " + str(g_output[0])
 
@@ -643,7 +659,7 @@ def uint16_to_int16(value):
     convert from an unsigned 16 bit to signed bit 16
     """
     if (value > 32767):
-        return value - 65534
+        return value - 65535
     return value
 
 
@@ -652,7 +668,7 @@ def uint8_to_int8(value):
     convert from an unsigned 8 bit to signed bit 8
     """
     if (value > 127):
-        return value - 254
+        return value - 256
     return value
 
 
