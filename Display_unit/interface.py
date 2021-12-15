@@ -25,7 +25,7 @@ ser = serial.Serial(
 g_output = []
 
 g_sensor_data = []
-g_map_data = []
+g_map_data = [[24, 0, 128]]
 
 g_pos_data = []
 g_currentpos_data = []
@@ -43,7 +43,7 @@ class Constants:
 
     FRAME_WIDTH = 1445
     FRAME_HEIGHT = 1000
-    DELAY = 1
+    DELAY = 0
     ONE_STEP = 20
     CELL_SIZE = 20
     PADDING = 10
@@ -364,7 +364,8 @@ class Information(LabelFrame):
             print(len(g_pos_data))
             pos = self.canvas.find_withtag("position_text")
             
-            x, y = mm_to_grid(g_pos_data[0][0], g_pos_data[0][1])
+            #x, y = mm_to_grid(g_pos_data[0][0], g_pos_data[0][1])
+            x, y = g_pos_data[0][0], g_pos_data[0][1]
             self.canvas.itemconfig(pos, text="Position: " + str(x) + ", " + str(y))
             print(x, y)
             g_pos_data.pop(0)
@@ -659,7 +660,7 @@ def uint16_to_int16(value):
     convert from an unsigned 16 bit to signed bit 16
     """
     if (value > 32767):
-        return value - 65535
+        return value - 65536
     return value
 
 
