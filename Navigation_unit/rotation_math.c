@@ -1083,7 +1083,7 @@ int8_t mark_empty(uint8_t x, uint8_t y)
     else if (g_navigationMap[x][y] != INT8_MAX)
     {
         g_navigationMap[x][y] += 1;
-        send_map_update(x, y, g_navigationMap[x][y]);
+        //send_map_update(x, y, g_navigationMap[x][y]);
     }
     else
     {
@@ -1095,9 +1095,13 @@ int8_t mark_empty(uint8_t x, uint8_t y)
 // marks a square as a wall and calls send_map_update
 bool mark_wall(uint8_t x, uint8_t y)
 {
+    if (x >= MAP_X_MAX || y >= MAP_Y_MAX)
+    {
+        return -1;
+    }
     if (g_navigationMap[x][y] == INT8_MIN)
     {
-        send_map_update(x, y, INT8_MIN);
+        //send_map_update(x, y, INT8_MIN);
         return false;
     }
     // mark as wall
@@ -1115,7 +1119,7 @@ bool mark_wall(uint8_t x, uint8_t y)
     else
     {
         // always send update atm
-        send_map_update(x, y, g_navigationMap[x][y]);
+        //send_map_update(x, y, g_navigationMap[x][y]);
     }
     return true;
 }
