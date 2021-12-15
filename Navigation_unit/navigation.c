@@ -1,33 +1,17 @@
 #include "navigation.h"
+#include <stdlib.h>
 
-int      queueSize            = 0;
-int      adjacentCellsSize    = 0;
-int      traversableCellsSize = 0;
-uint8_t  g_queue[QUEUE_ROWS][COLS];
-uint8_t  g_adjacentCells[ROWS_ADJACENT][COLS];
-uint8_t  g_traversableCells[ROWS_ADJACENT][COLS];
-uint8_t  g_endPoint[COORD_SIZE];
-uint16_t g_startPosX;
-uint16_t g_startPosY;
+uint16_t g_startPosX = 24;
+uint16_t g_startPosY = 0;
 
 uint8_t get_robot_adjacent_coord(int direction, int xy);
-// uint8_t get_adjacent_cell(int direction, int xy, uint8_t* currentCell);
-
-void get_adjacent_cell(uint8_t  direction,
-                       uint8_t* x,
-                       uint8_t* y,
-                       uint8_t* currentCell);
 
 bool    cell_is_wall(uint8_t cell[COLS]);
-bool    is_wall(uint8_t dir);
-void    move_one_cell(uint8_t queue[QUEUE_ROWS][COLS]);
-bool    left_opening();
-bool    right_opening();
-bool    wall_in_front();
 bool    is_wall(uint8_t dir);
 uint8_t get_heading();
 bool    at_start_pos();
 void    save_start_pos();
+bool    BFS();
 
 uint16_t get_start_pos(int xy)
 {
@@ -46,21 +30,103 @@ void save_start_pos()
 
 bool unexplored_cells_exist()
 {
-    for (int x = 0; x < 49; x++)
+    return BFS();
+}
+
+bool isValidCell(uint16_t x, uint16_t y)
+{
+    return x < MAP_X_MAX && y < MAP_Y_MAX && !IsWall(x, y);
+}
+
+struct Queue
+{
+    int16_t front, rear, size;
+    unsigned capacity;
+    int8_t array[MAP_X_MAX*MAP_Y_MAX];
+};
+struct Queue* createQueue(struct Queue* queue, unsigned capacity)
+{
+    queue->capacity = capacity;
+    queue->front = queue->size = 0;
+    queue->rear = capacity - 1;
+    return queue;
+}
+
+bool isEmpty(struct Queue* queue)
+{
+    return(queue->size == 0);
+}
+
+void enqueue(struct Queue* queue, int val)
+{
+    queue->rear = (queue->rear + 1) % queue->capacity;
+    queue->array[queue->rear] = val;
+    queue->size = queue->size + 1;
+}
+
+int dequeue(struct Queue* queue)
+{
+    int i = queue->array[queue->front];
+    queue->front = (queue->front + 1) % queue->capacity;
+    queue->size = queue->size - 1;
+    return i;
+}
+void printQueue(struct Queue* queue)
+{
+    //purely for academic purposes
+    printf("queue:\n");
+    for(int i = queue->front; i <= queue->rear; i++)
     {
-        for (int y = 0; y < 25; y++)
+        if(i%2 == 0)
         {
-            if (IsUnknown(x, y))
+            printf("x = %d", queue->array[i]);
+        }
+        else
+        {
+            printf("y = %d\n", queue->array[i]);
+        }
+    }
+}
+
+void addSquare(int8_t x, int8_t y, struct Queue* queue,
+        bool visited[MAP_X_MAX][MAP_Y_MAX])
+{
+    if (!visited[x][y])
+    {
+        visited[x][y] = true;
+        enqueue(queue, x);
+        enqueue(queue, y);
+    }
+}
+bool BFS()
+{
+    int8_t x = MmToGrid(g_currentPosX);
+    int8_t y = MmToGrid(g_currentPosY);
+    bool visited[MAP_X_MAX][MAP_Y_MAX] = {0};
+    struct Queue queue;
+    createQueue(&queue, MAP_Y_MAX*MAP_X_MAX);
+
+    enqueue(&queue, x);
+    enqueue(&queue, y);
+    while(!isEmpty(&queue))
+    {
+        //printQueue(queue);
+        x = dequeue(&queue);
+        y = dequeue(&queue);
+        if (isValidCell(x, y))
+        {
+            if (IsUnknown(x,y))
             {
-                g_endPoint[0] = x;
-                g_endPoint[1] = y;
                 return true;
             }
+            addSquare(x+1, y, &queue, visited);
+            addSquare(x-1, y, &queue, visited);
+            addSquare(x, y+1, &queue, visited);
+            addSquare(x, y-1, &queue, visited);
         }
     }
     return false;
 }
-
 // checks if cell at g_navigationMap[x][y] is a wall
 bool is_wall(uint8_t dir)
 {
@@ -125,6 +191,7 @@ bool at_start_pos()
 // Position robot so that its left side faces a wall
 void init_wall_follow()
 {
+    save_start_pos();
     uint8_t dir = get_heading();
     if (!is_wall(dir + 1))
     {
@@ -139,10 +206,10 @@ bool wall_follow()
     // left opening?
     if (!is_wall(dir + 1))
     {
-		if (is_unknown(dir+1))
-		{
-			return false;
-		}
+        if (is_unknown(dir+1))
+        {
+            return false;
+        }
         command_set_target_square(FW_LEFT);
     }
     else
@@ -177,141 +244,6 @@ bool wall_follow()
     }
     return false;
 }
-
-// Path finding algorithm that might not work as expected. Can probably be
-// replaced easily if so.
-/* void sample_search()
-{
-    int counter = 0;
-    bool adjacentInQueue = false;
-    bool endPointInQueue = false;
-    int queueIndex = 0;
-
-    queue[0][0] = MmToGrid(g_currentPosX);
-    queue[0][1] = MmToGrid(g_currentPosY);
-    queue[0][2] = counter;
-    counter++;
-    queueSize++;
-
-    while (queueIndex < queueSize)
-    {
-        for (int direction = 0; direction < 4; direction++)
-        {
-            for (int j = 0; j < 3; j++)
-            {
-                if (j < 2)
-                {
-                    adjacentCells[direction][j] = get_adjacent_cell(direction,
-j, queue[queueIndex]);
-                }
-                else
-                {
-                    adjacentCells[direction][j] = counter;
-                }
-            }
-        }
-        for (int i = 0; i < 4; i++)
-        {
-            if (!cell_is_wall(adjacentCells[i]))
-            {
-                for (int j = 0; j < queueSize; j++)
-                {
-                    //Check if the queue contains the adjacent cell
-                    if (adjacentCells[i] == queue[j])
-                    {
-                        adjacentInQueue = true;
-                        break;
-                    }
-                }
-                if (!adjacentInQueue)
-                {
-                    //Add the cells to the queue
-                    queueIndex++;
-                    queueSize++;
-                    queue[queueIndex][0] = adjacentCells[i][0];
-                    queue[queueIndex][1] = adjacentCells[i][1];
-                    queue[queueIndex][2] = adjacentCells[i][2];
-                    adjacentInQueue = false;
-                }
-            }
-        }
-        for (int i = 0; i < queueSize; i++)
-        {
-            if (queue[i] == endPoint)
-            {
-                endPointInQueue = true;
-                break;
-            }
-        }
-        if (!endPointInQueue)
-        {
-            queueIndex++;
-            counter++;
-        }
-        else
-        {
-            //break the loop, a path has been found
-            endPointInQueue = false;
-            queueIndex = queueSize;
-        }
-    }
-    move_one_cell(queue);
-} */
-
-// For sample search
-/* void get_adjacent_cell(uint8_t  direction,
-                       uint8_t* x,
-                       uint8_t* y,
-                       uint8_t* currentCell)
-{
-    // each case returns the x & y coordinate for the adjacent cell separately.
-    // direction == 0: right cell
-    // direction == 1: upper cell
-    // direction == 2: left cell
-    // direction == 3: lower cell
-
-        switch (direction)
-        {
-            case 0:
-                if (xy == 0)
-                {
-                    return currentCell[0] + 1;
-                }
-                else
-                {
-                    return currentCell[1];
-                }
-            case 1:
-                if (xy == 0)
-                {
-                    return currentCell[0];
-                }
-                else
-                {
-                    return currentCell[1] + 1;
-                }
-            case 2:
-                if (xy == 0)
-                {
-                    return currentCell[0] - 1;
-                }
-                else
-                {
-                    return currentCell[1];
-                }
-            case 3:
-                if (xy == 0)
-                {
-                    return currentCell[0];
-                }
-                else
-                {
-                    return currentCell[1] - 1;
-                }
-            default:
-                return 0;
-        }
-} */
 
 // For robot
 uint8_t get_robot_adjacent_coord(int dir, int xy)
@@ -365,125 +297,60 @@ uint8_t get_robot_adjacent_coord(int dir, int xy)
     }
 }
 
-/* bool cell_is_wall(uint8_t cell[COLS])
-{
-    if(){
-        false;
-    }
-    else{
-        return true;
-    }
-    return false;
-} */
-
-/* void move_one_cell(uint8_t queue[QUEUE_ROWS][COLS])
-{
-    //Create array of the robot's adjacent cells
-
-    for (int direction = 0; direction < 4; direction++)
-    {
-        for (int i = 0; i < 3; i++)
-        {
-            if (i < 2)
-            {
-                adjacentCells[direction][i] =
-get_robot_adjacent_coord(direction, i);
-            }
-            else
-            {
-                adjacentCells[direction][i] = 0;
-            }
-        }
-    }
-
-    //Compare the robot's adjacent cells to those in the queue.
-    //If one or more of them exist in the queue, add them to the array of
-    //traversable cells.
-
-    for (int i = 0; i < ROWS_ADJACENT; i++)
-    {
-        for (int j = 0; j < queueSize; j++)
-        {
-            if (adjacentCells[i][0] == queue[j][0] && adjacentCells[i][1] ==
-queue[j][1])
-            {
-                traversableCells[i][0] = queue[j][0];
-                traversableCells[i][1] = queue[j][1];
-                traversableCells[i][2] = queue[j][2];
-            }
-        }
-    }
-
-    //Pick the traversable cell with the lowest counter number
-    int temp = 1000;
-    int index;
-    for (int i = 0; i < sizeof(traversableCells); i++)
-    {
-        if (traversableCells[i][2] < temp && traversableCells[i][2] != 0)
-        {
-            temp = traversableCells[i][2];
-            index = i;
-        }
-    }
-
-    //The grid's direction is stationary, but the robot is not.
-    //How do we know which way the robot is facing and so in which direction it
-should go?
-
-    turn_towards_cell();
-    if (!wall_in_front)
-    {
-        go_to_cell(traversableCells[index], queue);
-    }
-    else
-    {
-    }
-} */
-
-/* void turn_towards_cell()
-{
-} */
-
-/* int wall_in_front()
-{
-    //if(wall_one_cell_ahead())
-    //return true
-    //else
-    //return false
-} */
-
-/* void go_to_cell(int *cell, int **queue)
-{
-    //update robotCoord
-    if (robotPosition == endPoint)
-    {
-        if (robotPosition == islandStartPosition)
-        {
-            //return to initial starting position
-        }
-        else
-        {
-            if (unexplored_cells_exist())
-            {
-                sample_search();
-            }
-            else
-            {
-                //return to initial starting position
-            }
-        }
-    }
-    else
-    {
-        move_one_cell(queue);
-    }
-} */
-
 /* TESTS */
 
 Test_test(Test, test_unexplored_cells_exist)
 {
-    Test_assertTrue(unexplored_cells_exist());
+    //stdout = &mystdout;
+    uint16_t prevPosX = g_currentPosX;
+    uint16_t prevPosY = g_currentPosY;
+    Test_assertEquals(unexplored_cells_exist(),true);
+
+    MakeWall(24,1);
+    MakeWall(25,0);
+    MakeWall(23,0);
+    MakeEmpty(24,0);
+    Test_assertEquals(unexplored_cells_exist(), false);
+    MakeUnknown(24,1);
+
+    g_currentPosX = GridToMm(26);
+    g_currentPosY = GridToMm(0);
+    Test_assertEquals(unexplored_cells_exist(), true);
+    MakeUnknown(25,0);
+
+    g_currentPosX = GridToMm(24);
+    g_currentPosY = GridToMm(0);
+    MakeEmpty(24,1);
+    MakeEmpty(24,2);
+    MakeEmpty(25,0);
+    Test_assertEquals(unexplored_cells_exist(), true);
+
+    MakeWall(25,1);
+    MakeWall(26,0);
+    MakeWall(25,2);
+    MakeWall(23,1);
+    MakeWall(23,2);
+    MakeWall(24,3);
+    Test_assertEquals(unexplored_cells_exist(),false);
+
+    //reset map
+    for (int x = 0; x < 49; x++)
+    {
+        for (int y = 0; y < 25; y++)
+        {
+            MakeUnknown(x, y);
+        }
+    }
+    g_currentPosX = prevPosX;
+    g_currentPosY = prevPosY;
+}
+
+Test_test(Test, test_queue)
+{
+    struct Queue queue;
+    createQueue(&queue, 10);
+    enqueue(&queue,10);
+    Test_assertEquals(dequeue(&queue), 10);
 }
 
 Test_test(Test, test_cells_exist)
@@ -492,12 +359,17 @@ Test_test(Test, test_cells_exist)
     {
         for (int y = 0; y < 25; y++)
         {
-            MakeWall(x, y);
+            MakeEmpty(x, y);
         }
     }
     Test_assertEquals(unexplored_cells_exist(), false);
-    MakeUnknown(0, 1);
+    MakeUnknown(48,24);
     Test_assertEquals(unexplored_cells_exist(), true);
+    MakeUnknown(48,23);
+    MakeUnknown(47,24);
+    MakeWall(48,23);
+    MakeWall(47,24);
+    Test_assertEquals(unexplored_cells_exist(), false);
     // reset map
     for (int x = 0; x < 49; x++)
     {

@@ -89,7 +89,7 @@ void Uart_Send_0(struct data_packet *packet)
     UCSR0B |= 1 << UDRIE0;
 }
 #else
-void Uart_Send_0(struct data_packet*)
+void Uart_Send_0(struct data_packet* packet)
 { }
 #endif
 #endif
