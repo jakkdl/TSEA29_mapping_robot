@@ -1,27 +1,12 @@
 #include "navigation.h"
 #include <stdlib.h>
 
-//int      queueSize            = 0;
-//int      adjacentCellsSize    = 0;
-//int      traversableCellsSize = 0;
-//uint8_t  g_queue[QUEUE_ROWS][COLS];
-//uint8_t  g_adjacentCells[ROWS_ADJACENT][COLS];
-//uint8_t  g_traversableCells[ROWS_ADJACENT][COLS];
-//uint8_t  g_endPoint[COORD_SIZE];
 uint16_t g_startPosX = 24;
 uint16_t g_startPosY = 0;
 
 uint8_t get_robot_adjacent_coord(int direction, int xy);
-// uint8_t get_adjacent_cell(int direction, int xy, uint8_t* currentCell);
-
-/*void get_adjacent_cell(uint8_t  direction,
-                       uint8_t* x,
-                       uint8_t* y,
-                       uint8_t* currentCell);*/
 
 bool    cell_is_wall(uint8_t cell[COLS]);
-//void    move_one_cell(uint8_t queue[QUEUE_ROWS][COLS]);
-//bool    wall_in_front();
 bool    is_wall(uint8_t dir);
 uint8_t get_heading();
 bool    at_start_pos();
@@ -88,16 +73,17 @@ int dequeue(struct Queue* queue)
 }
 void printQueue(struct Queue* queue)
 {
-    //printf("queue:\n");
+    //purely for academic purposes
+    printf("queue:\n");
     for(int i = queue->front; i <= queue->rear; i++)
     {
         if(i%2 == 0)
         {
-            //printf("x = %d", queue->array[i]);
+            printf("x = %d", queue->array[i]);
         }
         else
         {
-            //printf("y = %d\n", queue->array[i]);
+            printf("y = %d\n", queue->array[i]);
         }
     }
 }
@@ -259,141 +245,6 @@ bool wall_follow()
     return false;
 }
 
-// Path finding algorithm that might not work as expected. Can probably be
-// replaced easily if so.
-/* void sample_search()
-{
-    int counter = 0;
-    bool adjacentInQueue = false;
-    bool endPointInQueue = false;
-    int queueIndex = 0;
-
-    queue[0][0] = MmToGrid(g_currentPosX);
-    queue[0][1] = MmToGrid(g_currentPosY);
-    queue[0][2] = counter;
-    counter++;
-    queueSize++;
-
-    while (queueIndex < queueSize)
-    {
-        for (int direction = 0; direction < 4; direction++)
-        {
-            for (int j = 0; j < 3; j++)
-            {
-                if (j < 2)
-                {
-                    adjacentCells[direction][j] = get_adjacent_cell(direction,
-j, queue[queueIndex]);
-                }
-                else
-                {
-                    adjacentCells[direction][j] = counter;
-                }
-            }
-        }
-        for (int i = 0; i < 4; i++)
-        {
-            if (!cell_is_wall(adjacentCells[i]))
-            {
-                for (int j = 0; j < queueSize; j++)
-                {
-                    //Check if the queue contains the adjacent cell
-                    if (adjacentCells[i] == queue[j])
-                    {
-                        adjacentInQueue = true;
-                        break;
-                    }
-                }
-                if (!adjacentInQueue)
-                {
-                    //Add the cells to the queue
-                    queueIndex++;
-                    queueSize++;
-                    queue[queueIndex][0] = adjacentCells[i][0];
-                    queue[queueIndex][1] = adjacentCells[i][1];
-                    queue[queueIndex][2] = adjacentCells[i][2];
-                    adjacentInQueue = false;
-                }
-            }
-        }
-        for (int i = 0; i < queueSize; i++)
-        {
-            if (queue[i] == endPoint)
-            {
-                endPointInQueue = true;
-                break;
-            }
-        }
-        if (!endPointInQueue)
-        {
-            queueIndex++;
-            counter++;
-        }
-        else
-        {
-            //break the loop, a path has been found
-            endPointInQueue = false;
-            queueIndex = queueSize;
-        }
-    }
-    move_one_cell(queue);
-} */
-
-// For sample search
-/* void get_adjacent_cell(uint8_t  direction,
-                       uint8_t* x,
-                       uint8_t* y,
-                       uint8_t* currentCell)
-{
-    // each case returns the x & y coordinate for the adjacent cell separately.
-    // direction == 0: right cell
-    // direction == 1: upper cell
-    // direction == 2: left cell
-    // direction == 3: lower cell
-
-        switch (direction)
-        {
-            case 0:
-                if (xy == 0)
-                {
-                    return currentCell[0] + 1;
-                }
-                else
-                {
-                    return currentCell[1];
-                }
-            case 1:
-                if (xy == 0)
-                {
-                    return currentCell[0];
-                }
-                else
-                {
-                    return currentCell[1] + 1;
-                }
-            case 2:
-                if (xy == 0)
-                {
-                    return currentCell[0] - 1;
-                }
-                else
-                {
-                    return currentCell[1];
-                }
-            case 3:
-                if (xy == 0)
-                {
-                    return currentCell[0];
-                }
-                else
-                {
-                    return currentCell[1] - 1;
-                }
-            default:
-                return 0;
-        }
-} */
-
 // For robot
 uint8_t get_robot_adjacent_coord(int dir, int xy)
 {
@@ -445,120 +296,6 @@ uint8_t get_robot_adjacent_coord(int dir, int xy)
             return 0;
     }
 }
-
-/* bool cell_is_wall(uint8_t cell[COLS])
-{
-    if(){
-        false;
-    }
-    else{
-        return true;
-    }
-    return false;
-} */
-
-/* void move_one_cell(uint8_t queue[QUEUE_ROWS][COLS])
-{
-    //Create array of the robot's adjacent cells
-
-    for (int direction = 0; direction < 4; direction++)
-    {
-        for (int i = 0; i < 3; i++)
-        {
-            if (i < 2)
-            {
-                adjacentCells[direction][i] =
-get_robot_adjacent_coord(direction, i);
-            }
-            else
-            {
-                adjacentCells[direction][i] = 0;
-            }
-        }
-    }
-
-    //Compare the robot's adjacent cells to those in the queue.
-    //If one or more of them exist in the queue, add them to the array of
-    //traversable cells.
-
-    for (int i = 0; i < ROWS_ADJACENT; i++)
-    {
-        for (int j = 0; j < queueSize; j++)
-        {
-            if (adjacentCells[i][0] == queue[j][0] && adjacentCells[i][1] ==
-queue[j][1])
-            {
-                traversableCells[i][0] = queue[j][0];
-                traversableCells[i][1] = queue[j][1];
-                traversableCells[i][2] = queue[j][2];
-            }
-        }
-    }
-
-    //Pick the traversable cell with the lowest counter number
-    int temp = 1000;
-    int index;
-    for (int i = 0; i < sizeof(traversableCells); i++)
-    {
-        if (traversableCells[i][2] < temp && traversableCells[i][2] != 0)
-        {
-            temp = traversableCells[i][2];
-            index = i;
-        }
-    }
-
-    //The grid's direction is stationary, but the robot is not.
-    //How do we know which way the robot is facing and so in which direction it
-should go?
-
-    turn_towards_cell();
-    if (!wall_in_front)
-    {
-        go_to_cell(traversableCells[index], queue);
-    }
-    else
-    {
-    }
-} */
-
-/* void turn_towards_cell()
-{
-} */
-
-/* int wall_in_front()
-{
-    //if(wall_one_cell_ahead())
-    //return true
-    //else
-    //return false
-} */
-
-/* void go_to_cell(int *cell, int **queue)
-{
-    //update robotCoord
-    if (robotPosition == endPoint)
-    {
-        if (robotPosition == islandStartPosition)
-        {
-            //return to initial starting position
-        }
-        else
-        {
-            if (unexplored_cells_exist())
-            {
-                sample_search();
-            }
-            else
-            {
-                //return to initial starting position
-            }
-        }
-    }
-    else
-    {
-        move_one_cell(queue);
-    }
-} */
 
 /* TESTS */
 
@@ -622,9 +359,16 @@ Test_test(Test, test_cells_exist)
     {
         for (int y = 0; y < 25; y++)
         {
-            MakeWall(x, y);
+            MakeEmpty(x, y);
         }
     }
+    Test_assertEquals(unexplored_cells_exist(), false);
+    MakeUnknown(48,24);
+    Test_assertEquals(unexplored_cells_exist(), true);
+    MakeUnknown(48,23);
+    MakeUnknown(47,24);
+    MakeWall(48,23);
+    MakeWall(47,24);
     Test_assertEquals(unexplored_cells_exist(), false);
     // reset map
     for (int x = 0; x < 49; x++)
