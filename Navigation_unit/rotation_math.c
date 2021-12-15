@@ -437,6 +437,7 @@ int8_t adjust_heading(struct sensor_data* sd)
     double best_diff = 0xFFFF;
     uint16_t oldHeading = g_currentHeading;
     struct laser_data ld;
+    int8_t tried_directions = 0;
 
     for (int8_t j = -2; j < 3; ++j)
     {
@@ -455,7 +456,7 @@ int8_t adjust_heading(struct sensor_data* sd)
             if (ld.reliable == 1)
             {
                 // we can probably use these, but being conservative for now
-                continue;
+                //continue;
             }
             ++count;
             sum += fabs(ld.offset);
@@ -463,13 +464,24 @@ int8_t adjust_heading(struct sensor_data* sd)
         }
         //printf("\n");
         sum /= count;
-        if (sum < best_diff)
+        if (count > 4)
         {
-            best_diff = sum;
-            best_adjust = j;
+            ++tried_directions;
+            if (sum < best_diff)
+            {
+                best_diff = sum;
+                best_adjust = j;
+            }
         }
     }
-    g_currentHeading = oldHeading + best_adjust * ADJUST_AMOUNT;
+    if (tried_directions >= 3)
+    {
+        g_currentHeading = oldHeading + best_adjust * ADJUST_AMOUNT / 2;
+    }
+    else
+    {
+        g_currentHeading = oldHeading;
+    }
     update_trig_cache();
     return best_adjust;
 }
